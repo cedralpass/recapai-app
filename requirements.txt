@@ -1,0 +1,4 @@
+Flask==3.0.2  #flask development framework
+flask-sqlalchemy
+flask-migrate
+environs==10.3.0 #utility to load and validate environment variables
