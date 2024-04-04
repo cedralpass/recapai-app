@@ -1,2 +1,24 @@
-recap/.gitignore
-.vscode/launch.json
+*.pyc
+__pycache__/
+
+instance/
+
+.pytest_cache/
+.coverage
+htmlcov/
+
+dist/
+build/
+*.egg-info/
+.env
+flasker/.env
+*.log
+.vscode
+
+#redis dump file
+dump.rdb
+
+# CDK asset staging directory
+.cdk.staging
+cdk.out
+.DS_Store
