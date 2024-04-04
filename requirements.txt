@@ -4,3 +4,4 @@ flask-migrate
 environs==10.3.0 #utility to load and validate environment variables
 redis==5.0.3
 rq==1.16.1 
+openai==1.14.2 #openai library to call openai

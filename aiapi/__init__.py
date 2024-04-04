@@ -22,8 +22,8 @@ def create_app():
     except OSError:
         pass
 
-    # from . import classify
-    # app.register_blueprint(classify.bp) #register the auth blueprint
+    from . import classify
+    app.register_blueprint(classify.bp) #register the auth blueprint
 
     # a simple page that says hello
     @app.route('/hello')
