@@ -2,7 +2,9 @@ from datetime import datetime, timezone
 from typing import Optional
 import sqlalchemy as sa
 import sqlalchemy.orm as so
+from sqlalchemy import Uuid
 from recap import db
+import uuid
 
 class User(db.Model):
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
@@ -35,3 +37,10 @@ class Article(db.Model):
 
     def __repr__(self):
         return '<Article {}>'.format(self.url_path)
+
+class Topic(db.Model):
+    id: so.Mapped[Uuid] = so.mapped_column(sa.Uuid(),primary_key=True, default=lambda: uuid.uuid4())
+    name: so.Mapped[str] = so.mapped_column(sa.String(140), nullable=True)
+
+    def __repr__(self):
+        return '<Topic {}>'.format(self.name)

@@ -2,3 +2,5 @@ Flask==3.0.2  #flask development framework
 flask-sqlalchemy
 flask-migrate
 environs==10.3.0 #utility to load and validate environment variables
+redis==5.0.3
+rq==1.16.1 
