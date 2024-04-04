@@ -1,9 +1,6 @@
 *.pyc
 __pycache__/
 
-
-aiapi_app.log
-
 instance/
 
 .pytest_cache/
