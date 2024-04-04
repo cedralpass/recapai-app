@@ -40,7 +40,8 @@ class Article(db.Model):
 
 class Topic(db.Model):
     id: so.Mapped[Uuid] = so.mapped_column(sa.Uuid(),primary_key=True, default=lambda: uuid.uuid4())
-    name: so.Mapped[str] = so.mapped_column(sa.String(140), nullable=True)
+    name: so.Mapped[str] = so.mapped_column(sa.String(140))
+    definition: so.Mapped[str] = so.mapped_column(sa.String(4000), nullable=True)
 
     def __repr__(self):
         return '<Topic {}>'.format(self.name)
