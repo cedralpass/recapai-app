@@ -5,8 +5,13 @@ import sqlalchemy.orm as so
 from sqlalchemy import Uuid
 from recap import db
 import uuid
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin #flask_login has a user mixin that implements the 4 required methods
+from recap import login_manager
 
-class User(db.Model):
+
+
+class User(UserMixin, db.Model):
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     username: so.Mapped[str] = so.mapped_column(sa.String(64), index=True,
                                                 unique=True)
@@ -19,6 +24,19 @@ class User(db.Model):
 
     def __repr__(self):
         return '<User {}>'.format(self.username)
+    
+    # set password_hash
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    # check password
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+    
+    @login_manager.user_loader
+    def load_user(id):
+        return db.session.get(User, int(id))
+    
 
 class Article(db.Model):
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
