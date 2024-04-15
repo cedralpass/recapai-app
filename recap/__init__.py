@@ -12,7 +12,6 @@ migrate = Migrate()
 login_manager = LoginManager()
 
 
-
 def create_app():
     app = Flask(__name__)
     configure_app(app, 'dev')
@@ -21,6 +20,7 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     from recap.models import User, Article
+    
 
     #configure login manager
     login_manager.init_app(app)
@@ -32,6 +32,9 @@ def create_app():
 
     from . import routes
     app.register_blueprint(routes.bp) #register the routes blueprint
+    from . import errors
+    app.register_blueprint(errors.bp) #register the errors blueprint
+
 
     return app
 

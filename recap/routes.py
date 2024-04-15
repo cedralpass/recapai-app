@@ -82,13 +82,12 @@ def user(username):
 @bp.route('/edit_profile', methods=['GET', 'POST'])
 @login_required
 def edit_profile():
-    form = EditProfileForm()
+    form = EditProfileForm(current_user.username)
     if form.validate_on_submit():
         current_user.username = form.username.data
         current_user.phone = form.phone.data
         db.session.commit()
         flash('Your changes have been saved.')
-        #TODO: handled exceptions on unique constraint
         return redirect(url_for('routes.edit_profile'))
     elif request.method == 'GET':
         form.username.data = current_user.username
