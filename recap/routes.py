@@ -5,7 +5,7 @@ from recap.forms import LoginForm
 from flask_login import current_user, login_user, logout_user, login_required
 import sqlalchemy as sa
 from recap import db
-from recap.forms import RegistrationForm
+from recap.forms import RegistrationForm, EditProfileForm
 from recap.models import User
 from urllib.parse import urlsplit
 
@@ -67,6 +67,34 @@ def register():
         flash('Congratulations, you are now a registered user!')
         return redirect(url_for('routes.login'))
     return render_template('register.html', title='Register', form=form)
+
+@bp.route('/user/<username>')
+@login_required
+def user(username):
+    user = db.first_or_404(sa.select(User).where(User.username == username))
+    articles = [
+        {'user': user, 'summary': 'Test post #1'},
+        {'user': user, 'summary': 'Test post #2'}
+    ]
+    return render_template('user.html', user=user, articles=articles)
+
+
+@bp.route('/edit_profile', methods=['GET', 'POST'])
+@login_required
+def edit_profile():
+    form = EditProfileForm()
+    if form.validate_on_submit():
+        current_user.username = form.username.data
+        current_user.phone = form.phone.data
+        db.session.commit()
+        flash('Your changes have been saved.')
+        #TODO: handled exceptions on unique constraint
+        return redirect(url_for('routes.edit_profile'))
+    elif request.method == 'GET':
+        form.username.data = current_user.username
+        form.phone.data = current_user.phone
+    return render_template('edit_profile.html', title='Edit Profile',
+                           form=form)
 
 # TODO - understand args and kwargs better for dynamic params 
 def launch_task(name, description, *args, **kwargs):

@@ -18,6 +18,7 @@ class User(UserMixin, db.Model):
     email: so.Mapped[str] = so.mapped_column(sa.String(120), index=True,
                                              unique=True)
     password_hash: so.Mapped[Optional[str]] = so.mapped_column(sa.String(256))
+    phone: so.Mapped[str] = so.mapped_column(sa.String(15), nullable=True)
 
     articles: so.WriteOnlyMapped['Article'] = so.relationship(
         back_populates='user')

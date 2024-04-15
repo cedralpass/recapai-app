@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+
+
+{% block content %}
+{% if user == current_user %}
+    <p><a href="{{ url_for('routes.edit_profile') }}">Edit your profile</a></p>
+{% endif %}
+    <h1>User: {{ user.username }}</h1>
+    <hr>
+    {% for article in articles %}
+    <p>
+        {% include '_post.html' %}
+    </p>
+    {% endfor %}
+{% endblock %}
