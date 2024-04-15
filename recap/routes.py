@@ -5,6 +5,7 @@ from recap.forms import LoginForm
 from flask_login import current_user, login_user, logout_user, login_required
 import sqlalchemy as sa
 from recap import db
+from recap.forms import RegistrationForm
 from recap.models import User
 from urllib.parse import urlsplit
 
@@ -52,6 +53,20 @@ def job_show(id):
     job = current_app.task_queue.fetch_job(job_id=id)
     
     return 'Job is Executing ' + job.id + ' its status ' + job.get_status(refresh=True)
+
+@bp.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        user = User(username=form.username.data, email=form.email.data)
+        user.set_password(form.password.data)
+        db.session.add(user)
+        db.session.commit()
+        flash('Congratulations, you are now a registered user!')
+        return redirect(url_for('routes.login'))
+    return render_template('register.html', title='Register', form=form)
 
 # TODO - understand args and kwargs better for dynamic params 
 def launch_task(name, description, *args, **kwargs):

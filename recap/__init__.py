@@ -4,7 +4,6 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from redis import Redis
 import rq
-from recap.forms import LoginForm
 from flask_login import LoginManager
 
 
