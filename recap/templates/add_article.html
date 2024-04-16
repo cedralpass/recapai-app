@@ -1,8 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-    {% if current_user.is_authenticated %}
-    <h1>Hi, {{ current_user.username }}!</h1>
+    <h1>Add Article</h1>
     <form action="" method="post">
         {{ form.hidden_tag() }}
         <p>
@@ -14,13 +13,4 @@
         </p>
         <p>{{ form.submit() }}</p>
     </form>
-    {% for article in articles %}
-    <p>
-    {{ article.user.username }} says: <b>{{ article.url_path }}</b>
-    </p>
-    {% endfor %}
-    {% else %}
-    <h1>Hello and Welcome!</h1>
-    <div>We are building fast! comeback soon!</div>
-    {% endif %}
 {% endblock %}

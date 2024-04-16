@@ -38,6 +38,18 @@ class User(UserMixin, db.Model):
     def load_user(id):
         return db.session.get(User, int(id))
     
+    #get articles for user
+    def get_articles(self,page=1, per_page=2):
+        #select all articles of the current_user
+        stmt = sa.select(Article).where(Article.user_id == self.id).order_by(Article.id.desc())
+        print(stmt)
+        articles = db.session.scalars(stmt).all()
+        #articles = db.paginate(stmt, page=page, per_page=per_page, error_out=False).items
+        return articles
+    
+        
+        
+    
 
 class Article(db.Model):
     id: so.Mapped[int] = so.mapped_column(primary_key=True)

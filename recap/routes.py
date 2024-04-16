@@ -5,16 +5,38 @@ from recap.forms import LoginForm
 from flask_login import current_user, login_user, logout_user, login_required
 import sqlalchemy as sa
 from recap import db
-from recap.forms import RegistrationForm, EditProfileForm
-from recap.models import User
+from recap.forms import RegistrationForm, EditProfileForm, ArticleForm
+from recap.models import User, Article
 from urllib.parse import urlsplit
 
 bp = Blueprint('routes', __name__)
 
-@bp.route('/')
-@bp.route('/index')
+@bp.route('/', methods=['GET', 'POST'])
+@bp.route('/index', methods=['GET', 'POST'])
 def index():
-    return render_template("index.html", title='Home Page')
+    form = ArticleForm()
+    if form.validate_on_submit():
+        article = Article(url_path=form.url_path.data, user=current_user)
+        db.session.add(article)
+        db.session.commit()
+        flash('Your article is being classified!')
+        return redirect(url_for('routes.index'))
+    # articles = [
+    #     {
+    #         'user': {'username': 'John'},
+    #         'url_path': 'http://article1'
+    #     },
+    #     {
+    #         'user': {'username': 'Susan'},
+    #         'url_path': 'http://article2'
+    #     }
+    # ]
+    
+    #select all articles of the current_user
+    articles = current_user.get_articles()
+
+    return render_template("index.html", title='Home Page', form=form,
+                           articles=articles)
 
  #TODO: move login to a blueprint requires, flash, render_template, redirect
 @bp.route('/login', methods=['GET', 'POST'])
@@ -72,10 +94,8 @@ def register():
 @login_required
 def user(username):
     user = db.first_or_404(sa.select(User).where(User.username == username))
-    articles = [
-        {'user': user, 'summary': 'Test post #1'},
-        {'user': user, 'summary': 'Test post #2'}
-    ]
+    #select all articles of the current_user
+    articles = current_user.get_articles()
     return render_template('user.html', user=user, articles=articles)
 
 
@@ -94,6 +114,21 @@ def edit_profile():
         form.phone.data = current_user.phone
     return render_template('edit_profile.html', title='Edit Profile',
                            form=form)
+
+@bp.route('/add_article', methods=['GET', 'POST'])
+@login_required
+def add_article():
+    form = ArticleForm()
+    if form.validate_on_submit():
+        article = Article(url_path=form.url_path.data, user=current_user)
+        db.session.add(article)
+        db.session.commit()
+        flash('Your article is being classified!')
+        return redirect(url_for('routes.index'))
+    else:
+        return render_template('add_article.html', title='add_article',
+                           form=form)
+    
 
 # TODO - understand args and kwargs better for dynamic params 
 def launch_task(name, description, *args, **kwargs):
