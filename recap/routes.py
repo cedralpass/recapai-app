@@ -8,6 +8,7 @@ from recap import db
 from recap.forms import RegistrationForm, EditProfileForm, ArticleForm
 from recap.models import User, Article
 from urllib.parse import urlsplit
+from recap.config import  Config
 
 bp = Blueprint('routes', __name__)
 
@@ -21,22 +22,19 @@ def index():
         db.session.commit()
         flash('Your article is being classified!')
         return redirect(url_for('routes.index'))
-    # articles = [
-    #     {
-    #         'user': {'username': 'John'},
-    #         'url_path': 'http://article1'
-    #     },
-    #     {
-    #         'user': {'username': 'Susan'},
-    #         'url_path': 'http://article2'
-    #     }
-    # ]
     
-    #select all articles of the current_user
-    articles = current_user.get_articles()
+    page = request.args.get('page', 1, type=int)
 
+    #get_articles(self,page=1, per_page=2)
+    articles_paginator = current_user.get_articles(page=page, per_page=Config.ARTICLES_PER_PAGE)
+    articles = articles_paginator.items
+    next_url = url_for('routes.index', page=articles_paginator.next_num) \
+        if articles_paginator.has_next else None
+    prev_url = url_for('routes.index', page=articles_paginator.prev_num) \
+        if articles_paginator.has_prev else None
+    
     return render_template("index.html", title='Home Page', form=form,
-                           articles=articles)
+                           articles=articles, next_url=next_url, prev_url=prev_url)
 
  #TODO: move login to a blueprint requires, flash, render_template, redirect
 @bp.route('/login', methods=['GET', 'POST'])
@@ -94,9 +92,18 @@ def register():
 @login_required
 def user(username):
     user = db.first_or_404(sa.select(User).where(User.username == username))
-    #select all articles of the current_user
-    articles = current_user.get_articles()
-    return render_template('user.html', user=user, articles=articles)
+    page = request.args.get('page', 1, type=int)
+
+    #get_articles(self,page=1, per_page=2)
+    articles_paginator = current_user.get_articles(page=page, per_page=Config.ARTICLES_PER_PAGE)
+    articles = articles_paginator.items
+    next_url = url_for('routes.user',username=user.username, page=articles_paginator.next_num) \
+        if articles_paginator.has_next else None
+    prev_url = url_for('routes.user',username=user.username, page=articles_paginator.prev_num) \
+        if articles_paginator.has_prev else None
+
+    return render_template('user.html', user=user, articles=articles,
+                           next_url=next_url, prev_url=prev_url)
 
 
 @bp.route('/edit_profile', methods=['GET', 'POST'])

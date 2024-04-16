@@ -19,6 +19,12 @@
     {{ article.user.username }} says: <b>{{ article.url_path }}</b>
     </p>
     {% endfor %}
+    {% if prev_url %}
+    <a href="{{ prev_url }}">Newer Articles</a>
+    {% endif %}
+    {% if next_url %}
+    <a href="{{ next_url }}">Older Articles</a>
+    {% endif %}
     {% else %}
     <h1>Hello and Welcome!</h1>
     <div>We are building fast! comeback soon!</div>

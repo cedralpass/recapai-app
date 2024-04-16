@@ -9,4 +9,5 @@ class Config:
     RECAP_SECRET_KEY=env.str("SECRET_KEY")
     RECAP_REDIS_URL=env.str("RECAP_REDIS_URL")
     RECAP_RQ_QUEUE=env.str("RECAP_RQ_QUEUE")
+    ARTICLES_PER_PAGE=env.int("ARTICLES_PER_PAGE")
     
