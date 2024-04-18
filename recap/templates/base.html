@@ -1,21 +1,25 @@
 <!doctype html>
 <html>
     <head>
-      {% if title %}
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="{{url_for('static',filename='css/output.css')}}" rel="stylesheet">
+         {% if title %}
       <title>{{ title }} - Microblog</title>
       {% else %}
       <title>Welcome to Microblog</title>
       {% endif %}
+      
     </head>
     <body>
-        <div>
+        <div class="inline-grid grid-cols-4 gap-1 items-center text-xl font-medium text-black">
             Microblog:
-            <a href="{{ url_for('routes.index') }}">Home</a>
+            <span><a href="{{ url_for('routes.index') }}" class="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Home</a></span>
             {% if current_user.is_anonymous %}
-            <a href="{{ url_for('routes.login') }}">Login</a>
+            <span><a href="{{ url_for('routes.login') }}" class="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Login</a></span>
             {% else %}
-            <a href="{{ url_for('routes.user', username=current_user.username) }}">Profile</a>
-            <a href="{{ url_for('routes.logout') }}">Logout</a>
+            <span><a href="{{ url_for('routes.user', username=current_user.username) }}" class="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Profile</a></span>
+            <span><a href="{{ url_for('routes.logout') }}" class="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Logout</a></span>
             {% endif %}
         </div>
         <div>{% with messages = get_flashed_messages() %}

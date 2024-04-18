@@ -1,0 +1,75 @@
+installing node for use with tailwind css
+
+# brew install node@21
+
+Check version
+
+# node -v
+
+returns "v21.7.3"
+
+#https://flowbite.com/docs/getting-started/flask/
+#https://www.codewithharry.com/blogpost/using-tailwind-with-flask/
+
+Initialize npm with
+#npm init -y
+
+this creates a package.json file in the root directory. 
+
+Wrote to /Users/geoffreysmalling/development/recapai-app/package.json:
+
+{
+  "name": "recapai-app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
+
+Install and setup tailwind css
+
+# npm i tailwindcss
+
+This creates a node_modules directory with many libraries.  112 items for the first run
+it also adds tailwind to the package.json file
+
+"dependencies": {
+    "tailwindcss": "^3.4.3"
+  }
+
+
+
+initialize tailwind
+
+# npx tailwindcss init
+
+This creates a tailwind.css config file  here "tailwind.config.js"
+
+update tailwind.config.js to the path for HTML
+
+example -> content: ["./recap/templates/*.html"],
+** I MISSED this PART** 
+
+
+build output.css
+# npx tailwindcss -i ./recap/static/css/input.css -o ./recap/static/css/output.css --watch
+
+This turns the components in input.css to css structures in output.css
+
+Made a helper to run the build -> 
+# npm run bldrecapcss
+
+this runs the build process in a background, listening for changes in html and generates the css
+
+see package.json
+#"bldrecapcss": "npx tailwindcss -i ./recap/static/css/input.css -o ./recap/static/css/output.css --watch"
+
+
+
+
+

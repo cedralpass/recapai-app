@@ -23,4 +23,7 @@ dump.rdb
 cdk.out
 .DS_Store
 
+#node ignore
+node_modules/
+
 

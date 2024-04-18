@@ -3,16 +3,16 @@
 {% block content %}
     {% if current_user.is_authenticated %}
     <h1>Hi, {{ current_user.username }}!</h1>
-    <form action="" method="post">
+    <form action="" method="post" class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
         {{ form.hidden_tag() }}
         <p>
             {{ form.url_path.label }}<br>
-            {{ form.url_path(size=32) }}<br>
+            {{ form.url_path(size=32, class_="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}<br>
             {% for error in form.url_path.errors %}
             <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
-        <p>{{ form.submit() }}</p>
+        <p class="pt-4">{{ form.submit(class_="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline") }}</p>
     </form>
     {% for article in articles %}
     <p>
