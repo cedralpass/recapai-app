@@ -16,4 +16,5 @@ class Config:
     MAIL_USERNAME= env.str("MAIL_USERNAME")
     MAIL_PASSWORD= env.str("MAIL_PASSWORD")
     MAIL_DEFUALT_FROM= env.str("MAIL_DEFUALT_FROM")
+    TASK_SERVER_NAME= env.str("TASK_SERVER_NAME")
     

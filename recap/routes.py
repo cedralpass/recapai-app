@@ -11,6 +11,7 @@ from urllib.parse import urlsplit
 from recap.config import  Config
 from recap.email import send_password_reset_email
 
+
 bp = Blueprint('routes', __name__)
 
 @bp.route('/', methods=['GET', 'POST'])
@@ -155,7 +156,9 @@ def reset_password_request():
         user = db.session.scalar(
             sa.select(User).where(User.email == form.email.data))
         if user:
-            send_password_reset_email(user)
+            #send_password_reset_email(user)
+            job = launch_task(name='recap.tasks.send_password_reset_email_task', description='reset password email', user_id=user.id)
+            print(job)
         flash('Check your email for the instructions to reset your password')
         return redirect(url_for('routes.login'))
     return render_template('reset_password_request.html',
