@@ -34,6 +34,7 @@ class RegistrationForm(FlaskForm):
 class EditProfileForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
     phone = StringField('Phone',validators=[Length(min=10, max=10)])
+    email = StringField('Email', validators=[DataRequired(), Email()])
     submit = SubmitField('Submit')
     
     def __init__(self, original_username, *args, **kwargs):
@@ -50,3 +51,13 @@ class EditProfileForm(FlaskForm):
 class ArticleForm(FlaskForm):
     url_path = StringField('URL', validators=[DataRequired()])
     submit = SubmitField('Submit')
+
+class ResetPasswordRequestForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    submit = SubmitField('Request Password Reset')
+
+class ResetPasswordForm(FlaskForm):
+    password = PasswordField('Password', validators=[DataRequired()])
+    password2 = PasswordField(
+        'Repeat Password', validators=[DataRequired(), EqualTo('password')])
+    submit = SubmitField('Request Password Reset')

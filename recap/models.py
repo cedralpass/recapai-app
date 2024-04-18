@@ -8,6 +8,9 @@ import uuid
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin #flask_login has a user mixin that implements the 4 required methods
 from recap import login_manager
+from recap import Config
+import jwt
+from time import time
 
 
 
@@ -44,6 +47,20 @@ class User(UserMixin, db.Model):
         stmt = sa.select(Article).where(Article.user_id == self.id).order_by(Article.id.desc())
         articles = db.paginate(stmt, page=page, per_page=per_page, error_out=False)
         return articles
+   
+    def get_reset_password_token(self, expires_in=600):
+        return jwt.encode(
+            {'reset_password': self.id, 'exp': time() + expires_in},
+           Config.RECAP_SECRET_KEY, algorithm='HS256')
+
+    @staticmethod
+    def verify_reset_password_token(token):
+        try:
+            id = jwt.decode(token, Config.RECAP_SECRET_KEY,
+                            algorithms=['HS256'])['reset_password']
+        except:
+            return
+        return db.session.get(User, id)
     
         
         

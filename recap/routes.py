@@ -5,10 +5,11 @@ from recap.forms import LoginForm
 from flask_login import current_user, login_user, logout_user, login_required
 import sqlalchemy as sa
 from recap import db
-from recap.forms import RegistrationForm, EditProfileForm, ArticleForm
+from recap.forms import RegistrationForm, EditProfileForm, ArticleForm, ResetPasswordRequestForm, ResetPasswordForm
 from recap.models import User, Article
 from urllib.parse import urlsplit
 from recap.config import  Config
+from recap.email import send_password_reset_email
 
 bp = Blueprint('routes', __name__)
 
@@ -26,13 +27,19 @@ def index():
     page = request.args.get('page', 1, type=int)
 
     #get_articles(self,page=1, per_page=2)
-    articles_paginator = current_user.get_articles(page=page, per_page=Config.ARTICLES_PER_PAGE)
-    articles = articles_paginator.items
-    next_url = url_for('routes.index', page=articles_paginator.next_num) \
-        if articles_paginator.has_next else None
-    prev_url = url_for('routes.index', page=articles_paginator.prev_num) \
-        if articles_paginator.has_prev else None
-    
+    #set articles, next_url, prev_url to None
+    articles = None
+    next_url = None
+    prev_url = None
+    if current_user.is_authenticated:
+        current_user.get_articles(page=page, per_page=Config.ARTICLES_PER_PAGE)
+        articles_paginator = current_user.get_articles(page=page, per_page=Config.ARTICLES_PER_PAGE)
+        articles = articles_paginator.items
+        next_url = url_for('routes.index', page=articles_paginator.next_num) \
+            if articles_paginator.has_next else None
+        prev_url = url_for('routes.index', page=articles_paginator.prev_num) \
+            if articles_paginator.has_prev else None
+        
     return render_template("index.html", title='Home Page', form=form,
                            articles=articles, next_url=next_url, prev_url=prev_url)
 
@@ -40,7 +47,7 @@ def index():
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('index'))
+        return redirect(url_for('routes.index'))
     form = LoginForm()
     if form.validate_on_submit():
         user = db.session.scalar(
@@ -113,12 +120,14 @@ def edit_profile():
     if form.validate_on_submit():
         current_user.username = form.username.data
         current_user.phone = form.phone.data
+        current_user.email = form.email.data
         db.session.commit()
         flash('Your changes have been saved.')
         return redirect(url_for('routes.edit_profile'))
     elif request.method == 'GET':
         form.username.data = current_user.username
         form.phone.data = current_user.phone
+        form.email.data = current_user.email
     return render_template('edit_profile.html', title='Edit Profile',
                            form=form)
 
@@ -136,6 +145,36 @@ def add_article():
         return render_template('add_article.html', title='add_article',
                            form=form)
     
+
+@bp.route('/reset_password_request', methods=['GET', 'POST'])
+def reset_password_request():
+    if current_user.is_authenticated:
+        return redirect(url_for('routes.index'))
+    form = ResetPasswordRequestForm()
+    if form.validate_on_submit():
+        user = db.session.scalar(
+            sa.select(User).where(User.email == form.email.data))
+        if user:
+            send_password_reset_email(user)
+        flash('Check your email for the instructions to reset your password')
+        return redirect(url_for('routes.login'))
+    return render_template('reset_password_request.html',
+                           title='Reset Password', form=form)
+
+@bp.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('routes.index'))
+    user = User.verify_reset_password_token(token)
+    if not user:
+        return redirect(url_for('routes.index'))
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        user.set_password(form.password.data)
+        db.session.commit()
+        flash('Your password has been reset.')
+        return redirect(url_for('routes.login'))
+    return render_template('reset_password.html', form=form)
 
 # TODO - understand args and kwargs better for dynamic params 
 def launch_task(name, description, *args, **kwargs):
