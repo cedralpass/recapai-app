@@ -8,10 +8,10 @@ html{
 }
 
 input[type=text]{
-    @apply shadow appearance-none border rounded  py-2 px-2 my-2 mx-2  text-gray-700 leading-tight focus:outline-slate-500
+    @apply shadow appearance-none border rounded  py-2 px-2 my-2   text-gray-700 leading-tight focus:outline-slate-500
 }
 input[type=password]{
-    @apply shadow appearance-none border rounded py-2 px-2 my-2 mx-2  text-gray-700 leading-tight focus:outline-slate-500
+    @apply shadow appearance-none border rounded py-2 px-2 my-2   text-gray-700 leading-tight focus:outline-slate-500
 }
 
 

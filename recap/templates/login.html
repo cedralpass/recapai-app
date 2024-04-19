@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>Sign In</h1>
+<div class="bg-white shadow-lg rounded px-2 pt-4 pb-4 mb-2">
+<h1>Sign In</h1>
     <form action="" method="post" novalidate>
         {{ form.hidden_tag() }}
         <p>
@@ -15,9 +16,11 @@
         <p>{{ form.remember_me() }} {{ form.remember_me.label }}</p>
         <p>{{ form.submit() }}</p>
     </form>
+    <br/>
     <p>New User? <a href="{{ url_for('routes.register') }}">Click to Register!</a></p>
     <p>
         Forgot Your Password?
         <a href="{{ url_for('routes.reset_password_request') }}">Click to Reset It</a>
     </p>
+</div> 
 {% endblock %}
