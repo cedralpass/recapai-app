@@ -1,11 +1,10 @@
 from flask import (
     Blueprint, flash, g, redirect, render_template, request, session, url_for, current_app
 )
-from recap.forms import LoginForm
 from flask_login import current_user, login_user, logout_user, login_required
 import sqlalchemy as sa
 from recap import db
-from recap.forms import RegistrationForm, EditProfileForm, ArticleForm, ResetPasswordRequestForm, ResetPasswordForm
+from recap.forms import EditProfileForm, ArticleForm
 from recap.models import User, Article
 from urllib.parse import urlsplit
 from recap.config import  Config
@@ -65,7 +64,6 @@ def job_show(id):
     return 'Job is Executing ' + job.id + ' its status ' + job.get_status(refresh=True)
 
 
-
 @bp.route('/user/<username>')
 @login_required
 def user(username):
@@ -115,8 +113,6 @@ def add_article():
     else:
         return render_template('add_article.html', title='add_article',
                            form=form)
-    
-
 
 
 # TODO - understand args and kwargs better for dynamic params 

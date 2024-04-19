@@ -1,7 +1,7 @@
 from flask import (
     Blueprint, flash, g, redirect, render_template, request, session, url_for, current_app
 )
-from recap.forms import LoginForm, RegistrationForm, ResetPasswordForm,ResetPasswordRequestForm
+from recap.auth.forms import LoginForm, RegistrationForm, ResetPasswordForm,ResetPasswordRequestForm
 from flask_login import current_user, login_user, logout_user, login_required
 import sqlalchemy as sa
 from recap import db
