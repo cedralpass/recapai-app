@@ -38,8 +38,10 @@ def create_app():
 
     from . import routes
     app.register_blueprint(routes.bp) #register the routes blueprint
-    from . import errors
-    app.register_blueprint(errors.bp) #register the errors blueprint
+    # from . import errors
+    # app.register_blueprint(errors.bp) #register the errors blueprint
+    from recap.errors import bp as errors_bp
+    app.register_blueprint(errors_bp)
 
 
     return app
