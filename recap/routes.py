@@ -9,7 +9,7 @@ from recap.forms import RegistrationForm, EditProfileForm, ArticleForm, ResetPas
 from recap.models import User, Article
 from urllib.parse import urlsplit
 from recap.config import  Config
-from recap.email import send_password_reset_email
+from recap.auth.email import send_password_reset_email
 
 
 bp = Blueprint('routes', __name__)

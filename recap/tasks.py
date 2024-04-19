@@ -4,7 +4,7 @@ from recap import create_app
 import json
 from recap.models import User
 from flask_mail import Mail, Message
-from recap.email import send_password_reset_email 
+from recap.auth.email import send_password_reset_email 
 from recap.config import Config
 
 app = create_app()
