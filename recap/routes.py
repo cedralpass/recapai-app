@@ -11,6 +11,8 @@ from recap.config import  Config
 from recap.auth.email import send_password_reset_email
 
 
+
+
 bp = Blueprint('routes', __name__)
 
 @bp.route('/', methods=['GET', 'POST'])
@@ -21,6 +23,8 @@ def index():
         article = Article(url_path=form.url_path.data, user=current_user)
         db.session.add(article)
         db.session.commit()
+        job = launch_task(name='recap.tasks.classify_url', description='using AI to classify url', url=article.url_path, user_id=current_user.id)
+        print(job.id)
         flash('Your article is being classified!')
         return redirect(url_for('routes.index'))
     
@@ -71,11 +75,29 @@ def add_article():
         article = Article(url_path=form.url_path.data, user=current_user)
         db.session.add(article)
         db.session.commit()
+
+        job = launch_task(name='recap.tasks.classify_url', description='using AI to classify url', url=article.url_path, user_id=current_user.id)
+        print(job.id)
+
         flash('Your article is being classified!')
         return redirect(url_for('routes.index'))
     else:
         return render_template('add_article.html', title='add_article',
                            form=form)
+@bp.route('/<int:id>/show', methods=('GET','POST'))
+@login_required
+def show(id):
+    article = None
+    try:
+        stmt = sa.select(Article).where(Article.id == id, Article.user_id == current_user.id).order_by(Article.id.desc())  
+        article= db.session.execute(stmt).scalar_one()
+    except sa.exc.NoResultFound as nre:
+        flash('Article not found')
+        print(nre)
+    except Exception as ex:
+        flash('General Exception')
+        print(ex)
+    return render_template('article/show.html', article=article, sub_categories=article.get_sub_categories_json())
 
 
 # TODO - understand args and kwargs better for dynamic params 

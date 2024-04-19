@@ -11,6 +11,7 @@ from recap import login_manager
 from recap import Config
 import jwt
 from time import time
+import json
 
 
 
@@ -83,6 +84,20 @@ class Article(db.Model):
 
     def __repr__(self):
         return '<Article {}>'.format(self.url_path)
+    @staticmethod
+    def get_article_by_url_path(url_path,user_id):
+        #select all articles of the current_user
+        stmt = sa.select(Article).where(Article.user_id == user_id).where(Article.url_path==url_path).order_by(Article.id.desc())
+        article= db.session.execute(stmt).scalar()
+        return article
+    
+    def get_sub_categories_json(self):
+        sub_categories_json = json.loads(self.sub_categories)
+        return sub_categories_json
+    
+    def get_key_topics_json(self):
+        key_topics_json = json.loads(self.key_topics)
+        return key_topics_json
 
 class Topic(db.Model):
     id: so.Mapped[Uuid] = so.mapped_column(sa.Uuid(),primary_key=True, default=lambda: uuid.uuid4())

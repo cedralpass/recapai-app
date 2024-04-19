@@ -17,4 +17,5 @@ class Config:
     MAIL_PASSWORD= env.str("MAIL_PASSWORD")
     MAIL_DEFUALT_FROM= env.str("MAIL_DEFUALT_FROM")
     TASK_SERVER_NAME= env.str("TASK_SERVER_NAME")
+    RECAP_AI_API_URL= env.str("RECAP_AI_API_URL") #config for calling classification service
     
