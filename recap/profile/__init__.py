@@ -24,7 +24,7 @@ def user(username):
     prev_url = url_for('profile.user',username=user.username, page=articles_paginator.prev_num) \
         if articles_paginator.has_prev else None
 
-    return render_template('user.html', user=user, articles=articles,
+    return render_template('profile/user.html', user=user, articles=articles,
                            next_url=next_url, prev_url=prev_url)
 
 
@@ -43,5 +43,5 @@ def edit_profile():
         form.username.data = current_user.username
         form.phone.data = current_user.phone
         form.email.data = current_user.email
-    return render_template('edit_profile.html', title='Edit Profile',
+    return render_template('profile/edit_profile.html', title='Edit Profile',
                            form=form)
