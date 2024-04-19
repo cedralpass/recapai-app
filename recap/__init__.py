@@ -46,6 +46,9 @@ def create_app():
     from recap.auth import bp as auth_bp
     app.register_blueprint(auth_bp, url_prefix='/auth')
 
+    from recap.profile import bp as profile_bp 
+    app.register_blueprint(profile_bp)
+
 
     return app
 
