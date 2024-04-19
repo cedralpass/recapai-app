@@ -46,6 +46,7 @@ def index():
 
 @bp.route('/css', methods=['GET', 'POST'])
 def css():
+    flash('Invalid username or password')
     return render_template("css.html", title='CSS')
 
  #TODO: move login to a blueprint requires, flash, render_template, redirect

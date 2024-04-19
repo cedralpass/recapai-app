@@ -2,23 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
+/* setup base html to be a sans serif font */
+html{
+    @apply font-sans
+}
 
 input[type=text]{
-    @apply shadow appearance-none border rounded w-full py-2 px-3 my-2 mx-2  text-gray-700 leading-tight focus:outline-slate-500
+    @apply shadow appearance-none border rounded  py-2 px-2 my-2 mx-2  text-gray-700 leading-tight focus:outline-slate-500
 }
 input[type=password]{
-    @apply shadow appearance-none border rounded w-full py-2 px-3 my-2 mx-2  text-gray-700 leading-tight focus:outline-slate-500
+    @apply shadow appearance-none border rounded py-2 px-2 my-2 mx-2  text-gray-700 leading-tight focus:outline-slate-500
 }
 
 
 input[type=submit]{
-    @apply bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded my-2 focus:outline-none
-}
-
-label{
-    @apply my-2 mx-2 text-gray-700
+    @apply bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded focus:outline-none
 }
 
 h1 {
-    @apply text-gray-800
+    @apply text-gray-800 text-lg
+}
+a{
+    @apply text-blue-600 underline dark:text-blue-500 hover:no-underline
 }

@@ -6,19 +6,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="{{url_for('static',filename='css/output.css')}}" rel="stylesheet">
     {% if title %}
-    <title>{{ title }} - Microblog</title>
+    <title>{{ title }} - Recap AI</title>
     {% else %}
-    <title>Welcome to Microblog</title>
+    <title>Welcome to Recap AI</title>
     {% endif %}
 
 </head>
 
 <body class="">
-    <div class="flex flex-nowrap gap-0 text-xl font-medium bg-black text-slate-200">
+    <div class="flex flex-nowrap gap-0 text-xl font-medium bg-black text-slate-200 py-2">
         <div class="flex-auto px-3">
-            Recap AI:
+            <b>Recap AI</b>: Summarize articles for reading later
         </div>
-        <div class="flex-auto items-end">
+        <div class="flex-auto items-end text-base">
             <div class="float-right px-3">
                 <span class=""><a href="{{ url_for('routes.index') }}"
                         class="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Home</a></span>
@@ -34,17 +34,20 @@
             </div>
         </div>
     </div>
-    <div class="px-5">{% with messages = get_flashed_messages() %}
-        {% if messages %}
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <div class="px-2 bg-green-200 text-slate-900 rounded-xl py-2 my-2 mx-2 text-base">
+       
         <ul>
             {% for message in messages %}
             <li>{{ message }}</li>
             {% endfor %}
         </ul>
-        {% endif %}
-        {% endwith %}
+        
     </div>
-    <div class="px-3">{% block content %}{% endblock %}</div>
+    {% endif %}
+    {% endwith %}
+    <div class="px-3 py-2">{% block content %}{% endblock %}</div>
 </body>
 
 </html>

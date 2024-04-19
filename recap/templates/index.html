@@ -2,29 +2,34 @@
 
 {% block content %}
     {% if current_user.is_authenticated %}
-    <h1>Hi, {{ current_user.username }}!</h1>
-    <form action="" method="post" class="bg-white shadow-md rounded px-4 pt-4 pb-4 mb-2">
+    <form action="" method="post" class="bg-white shadow-lg rounded px-2 pt-4 pb-4 mb-2">
         {{ form.hidden_tag() }}
-        <p>
-            {{ form.url_path.label }}<br>
-            {{ form.url_path(class_="flex-auto") }}<br>
+        <div class="flex flex-nowrap">
+        <div class="flex-grow">
+            <h1>{{ form.url_path.label }}</h1>
+            {{ form.url_path(class_="flex-auto w-96") }} {{ form.submit(class_="align-middle") }}<br>
             {% for error in form.url_path.errors %}
             <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
-        </p>
-        <p class="pt-4">{{ form.submit(class_="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline") }}</p>
+        </div>
+    </div>
     </form>
-    {% for article in articles %}
-    <p>
-    {{ article.user.username }} says: <b>{{ article.url_path }}</b>
-    </p>
-    {% endfor %}
-    {% if prev_url %}
-    <a href="{{ prev_url }}">Newer Articles</a>
-    {% endif %}
-    {% if next_url %}
-    <a href="{{ next_url }}">Older Articles</a>
-    {% endif %}
+    <div class="bg-white shadow-lg rounded px-2 pt-4 pb-4 mb-2">
+        <h1>Articles you should read:</h1>
+        <div class="px-2">
+        {% for article in articles %}
+        <p class="text-base">{{ article.url_path }}
+        </p>
+        {% endfor %}
+        {% if prev_url %}
+        <a href="{{ prev_url }}" class="text-sm text-blue-600 underline dark:text-blue-500 hover:no-underline">Newer Articles</a>
+        {% endif %}
+        {% if next_url %}
+        <a href="{{ next_url }}" class="text-sm text-blue-600 underline dark:text-blue-500 hover:no-underline">Older Articles</a>
+        {% endif %}
+    </div>
+    </div>
+   
     {% else %}
     <h1>Hello and Welcome!</h1>
     <div>We are building fast! comeback soon!</div>
