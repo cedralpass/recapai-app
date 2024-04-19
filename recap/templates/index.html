@@ -3,11 +3,11 @@
 {% block content %}
     {% if current_user.is_authenticated %}
     <h1>Hi, {{ current_user.username }}!</h1>
-    <form action="" method="post" class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+    <form action="" method="post" class="bg-white shadow-md rounded px-4 pt-4 pb-4 mb-2">
         {{ form.hidden_tag() }}
         <p>
             {{ form.url_path.label }}<br>
-            {{ form.url_path(size=32, class_="") }}<br>
+            {{ form.url_path(class_="flex-auto") }}<br>
             {% for error in form.url_path.errors %}
             <span style="color: red;">[{{ error }}]</span>
             {% endfor %}

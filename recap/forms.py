@@ -49,7 +49,7 @@ class EditProfileForm(FlaskForm):
                 raise ValidationError('Please use a different username.')
 
 class ArticleForm(FlaskForm):
-    url_path = StringField('URL', validators=[DataRequired()])
+    url_path = StringField('Url to Summarize', validators=[DataRequired()])
     submit = SubmitField('Submit')
 
 class ResetPasswordRequestForm(FlaskForm):

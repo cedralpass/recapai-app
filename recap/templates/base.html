@@ -1,37 +1,50 @@
 <!doctype html>
 <html>
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link href="{{url_for('static',filename='css/output.css')}}" rel="stylesheet">
-         {% if title %}
-      <title>{{ title }} - Microblog</title>
-      {% else %}
-      <title>Welcome to Microblog</title>
-      {% endif %}
-      
-    </head>
-    <body>
-        <div class="inline-grid grid-cols-4 gap-1 items-center text-xl font-medium text-black">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="{{url_for('static',filename='css/output.css')}}" rel="stylesheet">
+    {% if title %}
+    <title>{{ title }} - Microblog</title>
+    {% else %}
+    <title>Welcome to Microblog</title>
+    {% endif %}
+
+</head>
+
+<body class="">
+    <div class="flex flex-nowrap gap-0 text-xl font-medium bg-black text-slate-200">
+        <div class="flex-auto px-3">
             Microblog:
-            <span><a href="{{ url_for('routes.index') }}" class="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Home</a></span>
-            {% if current_user.is_anonymous %}
-            <span><a href="{{ url_for('routes.login') }}" class="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Login</a></span>
-            {% else %}
-            <span><a href="{{ url_for('routes.user', username=current_user.username) }}" class="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Profile</a></span>
-            <span><a href="{{ url_for('routes.logout') }}" class="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Logout</a></span>
-            {% endif %}
         </div>
-        <div>{% with messages = get_flashed_messages() %}
-            {% if messages %}
-            <ul>
-                {% for message in messages %}
-                <li>{{ message }}</li>
-                {% endfor %}
-            </ul>
-            {% endif %}
-            {% endwith %}
+        <div class="flex-auto items-end">
+            <div class="float-right px-3">
+                <span class=""><a href="{{ url_for('routes.index') }}"
+                        class="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Home</a></span>
+                {% if current_user.is_anonymous %}
+                <span class=""><a href="{{ url_for('routes.login') }}"
+                        class="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Login</a></span>
+                {% else %}
+                <span class=""><a href="{{ url_for('routes.user', username=current_user.username) }}"
+                        class="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Profile</a></span>
+                <span class=""><a href="{{ url_for('routes.logout') }}"
+                        class="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Logout</a></span>
+                {% endif %}
+            </div>
         </div>
-        <div>{% block content %}{% endblock %}</div>
-    </body>
+    </div>
+    <div class="px-5">{% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <ul>
+            {% for message in messages %}
+            <li>{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% endwith %}
+    </div>
+    <div class="px-5">{% block content %}{% endblock %}</div>
+</body>
+
 </html>
