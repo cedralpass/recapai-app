@@ -7,7 +7,7 @@
         {{ form.hidden_tag() }}
         <p>
             {{ form.url_path.label }}<br>
-            {{ form.url_path(size=32, class_="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}<br>
+            {{ form.url_path(size=32, class_="") }}<br>
             {% for error in form.url_path.errors %}
             <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
