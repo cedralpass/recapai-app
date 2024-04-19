@@ -44,6 +44,10 @@ def index():
     return render_template("index.html", title='Home Page', form=form,
                            articles=articles, next_url=next_url, prev_url=prev_url)
 
+@bp.route('/css', methods=['GET', 'POST'])
+def css():
+    return render_template("css.html", title='CSS')
+
  #TODO: move login to a blueprint requires, flash, render_template, redirect
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
