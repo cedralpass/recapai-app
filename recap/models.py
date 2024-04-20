@@ -92,11 +92,15 @@ class Article(db.Model):
         return article
     
     def get_sub_categories_json(self):
-        sub_categories_json = json.loads(self.sub_categories)
+        sub_categories_json = None
+        if self.sub_categories is not None:
+            sub_categories_json = json.loads(self.sub_categories)
         return sub_categories_json
     
     def get_key_topics_json(self):
-        key_topics_json = json.loads(self.key_topics)
+        key_topics_json = None
+        if self.key_topics is not None:
+            key_topics_json = json.loads(self.key_topics)
         return key_topics_json
 
 class Topic(db.Model):

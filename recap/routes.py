@@ -99,6 +99,28 @@ def show(id):
         print(ex)
     return render_template('article/show.html', article=article, sub_categories=article.get_sub_categories_json())
 
+@bp.route('/<int:id>/reclassify', methods=('GET','POST'))
+@login_required
+def reclassify(id):
+    print("inside reclassify")
+    stmt = sa.select(Article).where(Article.id == id, Article.user_id == current_user.id).order_by(Article.id.desc())  
+    article= db.session.execute(stmt).scalar_one()
+   # current_app.logger.info("calling async Classification Service for article %s", article['url_path'])
+    #recap.tasks.classify_url(url_path, g.user['id'])
+    job = launch_task(name='recap.tasks.classify_url', description='url classification', url=article.url_path, user_id=current_user.id)
+    print('Job is Executing ' + job.id + ' its status ' + job.get_status(refresh=True))
+    flash('Article is being reclassified by job' + job.id + '. Articles will be classified within 20 seconds')
+    #current_app.logger.info("Classification Service returned")               
+    return redirect(url_for('routes.index'))
+
+@bp.route('/<int:id>/delete', methods=('GET',))
+@login_required
+def delete(id):
+    stmt = sa.select(Article).where(Article.id == id, Article.user_id == current_user.id).order_by(Article.id.desc())  
+    article= db.session.execute(stmt).scalar_one()
+    db.session.delete(article)
+    flash('Article is deteled')
+    return redirect(url_for('routes.index'))
 
 # TODO - understand args and kwargs better for dynamic params 
 def launch_task(name, description, *args, **kwargs):

@@ -18,7 +18,7 @@
         <h1>Articles you should read:</h1>
         <div class="px-2">
         {% for article in articles %}
-        <p class="text-base">{{ article.url_path }}
+        <p class="text-base">{{ article.url_path }} <a class="action" href="{{ url_for('routes.show', id=article.id) }}">View</a>
         </p>
         {% endfor %}
         {% if prev_url %}
