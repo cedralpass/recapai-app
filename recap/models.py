@@ -81,6 +81,7 @@ class Article(db.Model):
     key_topics: so.Mapped[str] = so.mapped_column(sa.TEXT(), nullable=True)
     sub_categories: so.Mapped[str] = so.mapped_column(sa.TEXT(), nullable=True)
     user: so.Mapped[User] = so.relationship(back_populates='articles')
+    classified: so.Mapped[datetime] = so.mapped_column(sa.DateTime(), nullable=True)
 
     def __repr__(self):
         return '<Article {}>'.format(self.url_path)

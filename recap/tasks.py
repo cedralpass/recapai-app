@@ -8,6 +8,7 @@ from recap.auth.email import send_password_reset_email
 from recap.config import Config
 from recap.aiapi_helper import AiApiHelper
 from recap import db  
+from datetime import datetime, timezone
 
 app = create_app()
 app.app_context().push()
@@ -67,5 +68,7 @@ def save_classification_result(classify_result, article):
         classify_result['sub_categories'] = []
     article.key_topics = json.dumps(classify_result['key_topics'])
     article.sub_categories = json.dumps(classify_result['sub_categories'])
+    # set classified to datetime now in utc timezone
+    article.classified = datetime.now(timezone.utc)
     
     
