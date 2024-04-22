@@ -14,8 +14,8 @@ echo "ECR Repository URL: $do_repository"
 #builds the aiapi only
 docker build -t recap-aiapi . -f ./devops/Dockerfile.aiapi
 
-#builds the full app with aiapi and workers
-docker build -t recap-full . -f ./devops/Dockerfile.full
+#builds the full app with aiapi and workers and postgres
+docker build -t recap-full . -f ./devops/Dockerfile.full.do
 
 # Tag your Docker image
 docker tag recap-aiapi:latest "$do_repository/recap-aiapi:latest"

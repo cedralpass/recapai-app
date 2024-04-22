@@ -6,3 +6,8 @@ docker  run --detach  -p 8000:8000 recap-aiapi
 docker build -t recap-full . -f ./devops/Dockerfile.full
 
 docker  run --detach  -p 8000:8000 recap-full
+
+docker build -t recap-full-beta . -f ./devops/Dockerfile.full.do
+
+
+docker  run --detach  -p 8000:8000 recap-full-beta

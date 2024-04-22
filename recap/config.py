@@ -27,5 +27,9 @@ class Config:
     POSTGRES_DB=env.str("RECAP_POSTGRES_DB")
     #Sqllite DB
     #SQLALCHEMY_DATABASE_URI='sqlite:////Users/geoffreysmalling/development/instance/recap_sqla.sqlite'
-    SQLALCHEMY_DATABASE_URI=f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+   
+    if "neon.tech" in POSTGRES_HOST:
+        SQLALCHEMY_DATABASE_URI=f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}?sslmode=require"
+    else:
+        SQLALCHEMY_DATABASE_URI=f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
     
