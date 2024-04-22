@@ -1,6 +1,7 @@
 Flask==3.0.2  #flask development framework
-flask-sqlalchemy
-flask-migrate
+flask-sqlalchemy==3.1.1
+flask-migrate==4.0.7
+psycopg2-binary==2.9.9 # driver to postgres
 environs==10.3.0 #utility to load and validate environment variables
 redis==5.0.3
 rq==1.16.1 

@@ -30,12 +30,19 @@ Add portmapping
 
 docker run --name local-dev-postgres-16.2 --env-file ./devops/.env.postgres.dev -p 5432:5432  -v postgres_data:/var/lib/postgresql/data -d postgres:16.2-alpine
 
- 
-Login: 
- psql -U dev_user -d recap
+Ensure postgres is listening to connections on any port:
 
  psql conf file is located here
  /var/lib/postgresql/data
+
+ check postgres conf file for listen_addresses = '*'
+
+#listen_addresses = 'localhost'
+ 
+Login withing container: 
+ psql -U dev_user -d recap
+
+
 
 
 
