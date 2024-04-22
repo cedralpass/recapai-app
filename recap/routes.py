@@ -119,6 +119,7 @@ def delete(id):
     stmt = sa.select(Article).where(Article.id == id, Article.user_id == current_user.id).order_by(Article.id.desc())  
     article= db.session.execute(stmt).scalar_one()
     db.session.delete(article)
+    db.session.commit()
     flash('Article is deteled')
     return redirect(url_for('routes.index'))
 
