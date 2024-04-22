@@ -1,5 +1,35 @@
-<table>
-    <tr valign="top">
-        <td>{{ article.user.username }} says:<br>{{ article.url_path }}</td>
-    </tr>
-</table>
+<div class="bg-white shadow-lg rounded px-2 pt-4 pb-4 mb-2 w-96">
+    <h1 class="font-bold text-lg">Articles you have bookmarked:</h1>
+    <div>
+        {% for article in articles %}
+        {% if article.classified is none %}
+        <!-- TODO: check progress on job and make dynamic -->
+        <div class="bg-green-200 shadow-md rounded px-2 pt-4 pb-4 mb-2 ">
+            <div>Your article is being summarized. <br />
+                If you want to read it directly, view here: <a class="action" target="_blank"
+                    href="{{ article.url_path }}">{{ article.url_path }}</a></div>
+        </div>
+        {% else %}
+        <div class="bg-white shadow-lg rounded px-2 pt-4 pb-4 mb-2">
+            <div> <b>{{article.title}}</b> - {{article.author_name}}<br />
+                {{article.category}}<br />
+                <a class="action" href="{{ url_for('routes.show', id=article.id) }}">View Summary</a>
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+        <div>&nbsp;
+            <div class="float-right my-1">
+                {% if prev_url %}
+                <a href="{{ prev_url }}"
+                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded focus:outline-none">Newer
+                    Articles</a>
+                {% endif %}
+                {% if next_url %}
+                <a href="{{ next_url }}"
+                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded focus:outline-none">Older
+                    Articles</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>

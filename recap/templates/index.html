@@ -1,37 +1,23 @@
 {% extends "base.html" %}
 
 {% block content %}
-    {% if current_user.is_authenticated %}
-    <form action="" method="post" class="bg-white shadow-lg rounded px-2 pt-4 pb-4 mb-2">
-        {{ form.hidden_tag() }}
-        <div class="flex flex-nowrap">
+{% if current_user.is_authenticated %}
+<form action="" method="post" class="bg-white shadow-lg rounded px-2 pt-4 pb-4 mb-2">
+    {{ form.hidden_tag() }}
+    <div class="flex flex-nowrap">
         <div class="flex-grow">
-            <h1>{{ form.url_path.label }}</h1>
+            <h1 class="font-bold text-lg">{{ form.url_path.label }}</h1>
             {{ form.url_path(class_="flex-auto w-96") }} {{ form.submit(class_="align-middle") }}<br>
             {% for error in form.url_path.errors %}
             <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </div>
     </div>
-    </form>
-    <div class="bg-white shadow-lg rounded px-2 pt-4 pb-4 mb-2">
-        <h1>Articles you should read:</h1>
-        <div class="px-2">
-        {% for article in articles %}
-        <p class="text-base">{{ article.url_path }} <a class="action" href="{{ url_for('routes.show', id=article.id) }}">View</a>
-        </p>
-        {% endfor %}
-        {% if prev_url %}
-        <a href="{{ prev_url }}" class="text-sm text-blue-600 underline dark:text-blue-500 hover:no-underline">Newer Articles</a>
-        {% endif %}
-        {% if next_url %}
-        <a href="{{ next_url }}" class="text-sm text-blue-600 underline dark:text-blue-500 hover:no-underline">Older Articles</a>
-        {% endif %}
-    </div>
-    </div>
-   
-    {% else %}
-    <h1>Hello and Welcome!</h1>
-    <div>We are building fast! comeback soon!</div>
-    {% endif %}
+</form>
+{% include '_article.html' %}
+
+{% else %}
+<h1>Hello and Welcome!</h1>
+<div>We are building fast! comeback soon!</div>
+{% endif %}
 {% endblock %}

@@ -4,21 +4,19 @@
 
 {% block content %}
 {% if user == current_user %}
-    <p><a href="{{ url_for('profile.edit_profile') }}">Edit your profile</a></p>
-{% endif %}
-    <h1>User: {{ user.username }}</h1>
-    <hr>
-    {% for article in articles %}
-    <p>
-        {% include '_article.html' %}
-    </p>
-    {% endfor %}
-   <div>
-    {% if prev_url %}
-        <a href="{{ prev_url }}">Newer posts</a>
-        {% endif %}
-        {% if next_url %}
-        <a href="{{ next_url }}">Older posts</a>
-        {% endif %}
+<div class="bg-white shadow-lg rounded px-2 pt-4 pb-4 mb-2 w-96">
+    <h1 class="text-lg font-bold">User: {{ user.username }}</h1>
+    Phone: {{ user.phone }}<br />
+    email: {{user.email}}<br />
+    <div>&nbsp;<br />&nbsp;<p class="float-right">
+            <a href="{{ url_for('profile.edit_profile') }}"
+                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded focus:outline-none">Edit
+                profile</a>
+        </p>
     </div>
+</div>
+
+{% endif %}
+{% include '_article.html' %}
+</div>
 {% endblock %}
