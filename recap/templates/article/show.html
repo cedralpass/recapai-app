@@ -14,7 +14,9 @@
         {%endif%}<br />
         <span class="text-sm text-red-900">Content Category: {{ article.category }}</SPAN><br /><br />
         {{ article.summary }}
-        <a class="" href="{{ article['url_path'] }}" target="_blank">Read Full Article</a>
+        <a class="" href="{{ article['url_path'] }}" target="_blank">Read full Article</a>
+        <br>
+        <a href="{{ url_for('routes.index') }}">Back to articles</a>
       </div>
     </div>
   </div>
@@ -25,8 +27,9 @@
       <li>{{ category }}</li>
       {% endfor %}
     </ul>
-    <br/>
-    <b>Key Topics</b><ul>
+    <br />
+    <b>Key Topics</b>
+    <ul>
       {% for topic in article.get_key_topics_json() %}
       <li>{{ topic }}</li>
       {% endfor %}
