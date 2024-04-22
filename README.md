@@ -82,7 +82,7 @@ Dockerfile is Dockerfile.aws.full
 
 ### Build with this command
 
-```docker build -t recap-full . -f Dockerfile.aws.full```
+```docker build -t recap-full . -f Dockerfile.full```
 
 ### Run with this command
 ```docker run --detach  -p 8000:8000 -t recap-full```
