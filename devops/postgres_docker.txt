@@ -1,0 +1,42 @@
+Setting up postgres in docker for local dev...
+
+Following this document -> https://www.docker.com/blog/how-to-use-the-postgres-docker-official-image/
+
+#1 pull a docker image
+
+docker pull postgres
+
+For specific image use -> docker pull postgres:14.5
+See Images here -> https://hub.docker.com/_/postgres
+16.2 is latest -> https://www.postgresql.org/docs/release/16.2/
+
+
+  postgres:16.2  16.2-alpine
+
+
+Run postgres
+
+docker run --name some-postgres -e POSTGRES_PASSWORD=mysecretpassword POSTGRES_USER=dev_user POSTGRES_DB=recap -d postgres:16.2-alpine
+
+adding variables
+
+POSTGRES_USER - specifies the super Users
+POSTGRES_DB - specifies the db name
+
+
+docker run --name local-dev-postgres-16.2 --env-file ./devops/.env.postgres.dev -d postgres:16.2-alpine
+
+Add portmapping 
+
+docker run --name local-dev-postgres-16.2 --env-file ./devops/.env.postgres.dev -p 5432:5432  -v postgres_data:/var/lib/postgresql/data -d postgres:16.2-alpine
+
+ 
+Login: 
+ psql -U dev_user -d recap
+
+ psql conf file is located here
+ /var/lib/postgresql/data
+
+
+
+ 
