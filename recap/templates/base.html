@@ -21,15 +21,15 @@
         <div class="flex-auto items-end text-base">
             <div class="float-right px-3">
                 <span class=""><a href="{{ url_for('routes.index') }}"
-                        class="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Home</a></span>
+                        class="font-medium text-slate-200 underline dark:text-slate-500 hover:no-underline">Home</a></span>
                 {% if current_user.is_anonymous %}
                 <span class=""><a href="{{ url_for('auth.login') }}"
-                        class="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Login</a></span>
+                        class="font-medium text-slate-200 underline dark:text-slate-500 hover:no-underline">Login</a></span>
                 {% else %}
                 <span class=""><a href="{{ url_for('profile.user', username=current_user.username) }}"
-                        class="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Profile</a></span>
+                        class="font-medium text-slate-200 underline dark:text-slate-500 hover:no-underline">Profile</a></span>
                 <span class=""><a href="{{ url_for('auth.logout') }}"
-                        class="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Logout</a></span>
+                        class="font-medium text-slate-200 underline dark:text-slate-500 hover:no-underline">Logout</a></span>
                 {% endif %}
             </div>
         </div>
