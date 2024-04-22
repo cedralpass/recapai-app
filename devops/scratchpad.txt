@@ -1,0 +1,8 @@
+docker build -t recap-aiapi . -f ./devops/Dockerfile.aiapi
+
+docker  run -p 8000:8000 recap-aiapi
+
+
+docker build -t recap-full . -f ./devops/Dockerfile.full
+
+docker  run -p 8000:8000 recap-full
