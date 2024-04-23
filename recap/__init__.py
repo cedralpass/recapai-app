@@ -19,6 +19,10 @@ def create_app():
     configure_app(app, 'dev')
     
     #configure DB
+    #set the pool timeout to 10 seconds
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_timeout': 27  # Set your desired timeout value in seconds
+}
     db.init_app(app)
     migrate.init_app(app, db)
     from recap.models import User, Article
