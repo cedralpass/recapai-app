@@ -1,10 +1,23 @@
-{% extends "base.html" %}
+<!doctype html>
+<html>
 
-{% block content %}
-<div class="flex flex-nowrap gap-1 ">
-    <div class="flex-auto w-10/12 bg-red-500">
-        <div class="flex justify-center">
-            <div class="w-96 font-sans">Bacon ipsum dolor amet fatback andouille filet mignon venison short ribs, short loin jowl
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="{{url_for('static',filename='css/output.css')}}" rel="stylesheet">
+    {% if title %}
+    <title>{{ title }} - Recap AI</title>
+    {% else %}
+    <title>Welcome to Recap AI</title>
+    {% endif %}
+
+</head>
+
+<body class="">
+    <div class="flex flex-wrap gap-0 -mb-4">
+        <div class="w-10/12 bg-red-500 mb-4">
+            <div class="font-sans">Bacon ipsum dolor amet fatback andouille filet mignon venison short ribs, short loin
+                jowl
                 frankfurter. Frankfurter ribeye tongue pork belly cow. Chicken pork loin fatback burgdoggen hamburger.
                 Venison pork loin meatball, beef boudin pork chop shank chislic short loin fatback tail tri-tip pork
                 filet mignon.
@@ -33,13 +46,12 @@
                 Does your lorem ipsum text long for something a little meatier? Give our generator a try… it’s tasty!
             </div>
         </div>
+        <div class="w-2/12 bg-blue-500 mb-4">
+            <ul>
+                <li>Software Architecture</li>
+                <li>Transformer architecture adaptation for images</li>
+                <li>Attention mechanism in image processing</li>
+            </ul>
+        </div>
     </div>
-    <div class="flex-auto w-2/12 bg-blue-500 px-2">
-        <ul>
-            <li>topic 1</li>
-            <li>topic 2</li>
-            <li>topic 3</li>
-        </ul>
-    </div>
-</div>
-{% endblock %}
+</body>

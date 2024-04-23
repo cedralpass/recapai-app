@@ -7,7 +7,7 @@
     <div class="flex flex-nowrap">
         <div class="flex-grow">
             <h1 class="font-bold text-lg">{{ form.url_path.label }}</h1>
-            {{ form.url_path(class_="flex-auto w-96") }} {{ form.submit(class_="align-middle") }}<br>
+            {{ form.url_path(class_="flex-auto w-80") }} {{ form.submit(class_="align-middle") }}<br>
             {% for error in form.url_path.errors %}
             <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
