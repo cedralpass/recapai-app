@@ -11,3 +11,16 @@ docker build -t recap-full-beta . -f ./devops/Dockerfile.full.do
 
 
 docker  run --detach  -p 8000:8000 recap-full-beta
+
+
+failure error
+
+sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) SSL connection has been closed unexpectedly
+
+[SQL: SELECT "user".id AS user_id, "user".username AS user_username, "user".email AS user_email, "user".password_hash AS user_password_hash, "user".phone AS user_phone
+FROM "user"
+WHERE "user".id = %(pk_1)s]
+[parameters: {'pk_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+Solution: https://community.neon.tech/t/cannot-connect-to-database/385/3

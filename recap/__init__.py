@@ -21,7 +21,8 @@ def create_app():
     #configure DB
     #set the pool timeout to 10 seconds
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_timeout': 27  # Set your desired timeout value in seconds
+    'pool_timeout': 27,  # Set your desired timeout value in seconds,
+    'pool_pre_ping':True # Set to True to enable pre-ping
 }
     db.init_app(app)
     migrate.init_app(app, db)
