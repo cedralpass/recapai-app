@@ -45,6 +45,7 @@ def classify_url():
             )
     
     if len(response.choices)>=1:
+        current_app.logger.info("classify: recieved response with >=1 choice from OpenAI")
         current_app.logger.info(response.choices[0].message.content)
         json_return = response.choices[0].message.content
         current_app.logger.info("model %s cost %s", response.model, response.usage)
@@ -54,17 +55,18 @@ def classify_url():
     response_json = json.loads(json_return)
     if ref_key is not None:
         response_json['ref_key']=ref_key
-
-
+    else:
+        current_app.logger.error("error: missing ref_key")
+    
     return jsonify(response_json)
 
 def extract_from_request(key):
     value=None
-    if request.form.get(key) is not None:
-        value = request.form.get(key)
-    else:
-         current_app.logger.error("error: must supply key for url for classification")
-    current_app.logger.info("value to missing for %s", key)
+    current_app.logger.info("classify: request form keys: " + str(request.form.keys()))
+    value = request.form.get(key)
+    if value is None:
+        current_app.logger.error("error: must supply url and secret for url for classification.  Supply a ref_key for refeference to an object.")
+        current_app.logger.info("extract_from_request: value to missing for %s with value", key, value)
     return value
 
 def build_prompt(url):
