@@ -35,17 +35,23 @@ def index():
     articles = None
     next_url = None
     prev_url = None
+    category = None
     if current_user.is_authenticated:
-        current_user.get_articles(page=page, per_page=Config.ARTICLES_PER_PAGE)
-        articles_paginator = current_user.get_articles(page=page, per_page=Config.ARTICLES_PER_PAGE)
+        category = request.args.get('category')
+        #current_user.get_articles(page=page, per_page=Config.ARTICLES_PER_PAGE, category=category)
+        articles_paginator = current_user.get_articles(page=page, per_page=Config.ARTICLES_PER_PAGE, category=category)
         articles = articles_paginator.items
-        next_url = url_for('routes.index', page=articles_paginator.next_num) \
+
+        next_url = url_for('routes.index', page=articles_paginator.next_num, category=category) \
             if articles_paginator.has_next else None
-        prev_url = url_for('routes.index', page=articles_paginator.prev_num) \
+        prev_url = url_for('routes.index', page=articles_paginator.prev_num, category=category) \
             if articles_paginator.has_prev else None
         
+        # list grouping of categories for article for the given user
+        groupings = current_user.get_categories()
+        
     return render_template("index.html", title='Home Page', form=form,
-                           articles=articles, next_url=next_url, prev_url=prev_url)
+                           articles=articles, next_url=next_url, prev_url=prev_url, groupings=groupings)
 
 @bp.route('/css', methods=['GET', 'POST'])
 def css():

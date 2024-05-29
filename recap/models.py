@@ -12,6 +12,7 @@ from recap import Config
 import jwt
 from time import time
 import json
+from flask import current_app
 
 
 
@@ -43,9 +44,11 @@ class User(UserMixin, db.Model):
         return db.session.get(User, int(id))
     
     #get articles for user
-    def get_articles(self,page=1, per_page=2):
+    def get_articles(self,page=1, per_page=2, category=None):
         #select all articles of the current_user
         stmt = sa.select(Article).where(Article.user_id == self.id).order_by(Article.id.desc())
+        if category:
+            stmt = stmt.where(Article.category == category)
         articles = db.paginate(stmt, page=page, per_page=per_page, error_out=False)
         return articles
    
@@ -53,6 +56,21 @@ class User(UserMixin, db.Model):
         return jwt.encode(
             {'reset_password': self.id, 'exp': time() + expires_in},
            Config.RECAP_SECRET_KEY, algorithm='HS256')
+    
+    def get_categories(self):
+        groupings =  db.session.query(
+        Article.category,
+        sa.func.count(Article.id).label('count')
+        ).filter(
+            Article.user_id == self.id
+            ).group_by(
+                Article.category
+                ).order_by(
+                    sa.desc('count')
+                    ).all()
+        
+        current_app.logger.debug(groupings)
+        return groupings
 
     @staticmethod
     def verify_reset_password_token(token):

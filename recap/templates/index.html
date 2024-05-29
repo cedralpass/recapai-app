@@ -14,6 +14,21 @@
         </div>
     </div>
 </form>
+<div class="container mx-auto p-2">
+    <ul class="flex flex-row flex-wrap w-80 text-sm text-center">
+        {% if groupings is not none %}
+        <li class="flex-1 h-12 m-1 p-1 bg-gray-200 text-sm"><a
+            href="{{ url_for('routes.index' )}}">All</a></li>
+        {% for grouping in groupings %}
+        <li class="flex-1 h-12 m-1 p-1 bg-gray-200 text-sm text-center"><a
+                href="{{ url_for('routes.index', category=grouping.category )}}">{{grouping.category}}({{grouping.count}})</a>
+        </li>
+        {% endfor %}
+        {% endif %}
+    </ul>
+</div>
+
+
 {% include '_article.html' %}
 
 {% else %}
