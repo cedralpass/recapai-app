@@ -24,6 +24,8 @@ def create_app():
 
     from . import classify
     app.register_blueprint(classify.bp) #register the auth blueprint
+    from . import task_processor
+    app.register_blueprint(task_processor.bp) #register the auth blueprint
 
     # a simple page that says hello
     @app.route('/hello')
