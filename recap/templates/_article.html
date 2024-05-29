@@ -1,10 +1,10 @@
-<div class="bg-white shadow-lg rounded px-2 pt-4 pb-4 mb-2 w-96">
+<div class="bg-white  px-1 pt-4 pb-4 mb-2 w-96">
     <h1 class="font-bold text-lg">Articles you have bookmarked:</h1>
     <div>
         {% for article in articles %}
         {% if article.classified is none %}
         <!-- TODO: check progress on job and make dynamic -->
-        <div class="bg-green-200 shadow-md rounded px-2 pt-4 pb-4 mb-2 ">
+        <div class="bg-green-200 shadow-md rounded px-2">
             <div>Your article is being summarized. <br />
                 If you want to read it directly, view here: <a class="action" target="_blank"
                     href="{{ article.url_path }}">{{ article.url_path }}</a></div>
