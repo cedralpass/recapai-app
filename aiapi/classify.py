@@ -5,6 +5,7 @@ from werkzeug.exceptions import abort
 import functools
 import json
 from openai import OpenAI
+from aiapi.config import AIAPIConfig
 
 bp = Blueprint('classify', __name__)
 
@@ -34,8 +35,7 @@ def classify_url():
     
     #make OpenAI Call
     response = client.chat.completions.create(
-        model="gpt-4-turbo-preview",
-        #model="gpt-3.5-turbo",
+        model=AIAPIConfig.AI_OPEN_AI_MODEL,
         messages=build_prompt(url),
             response_format={ "type": "json_object" },
             temperature=0.9,
