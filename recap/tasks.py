@@ -35,26 +35,25 @@ def send_password_reset_email_task(user_id):
     send_password_reset_email(user)
 
 def classify_url(url, user_id):
-    print('inside classify_url')
+    app.logger.debug('inside classify_url')
     classify_result=None
-
     try:
       #find article by url_ref for user 
-      print("finding article")
+      app.logger.debug("finding article to classify for %s", url)
       article = Article.get_article_by_url_path(url,user_id)
       print(article)
       #classify artitle using  AiAPIHelper
       classify_result = AiApiHelper.ClassifyUrl(url, user_id) #TODO : should be the article id, but using user-id for now
       #save resutls to article found
-      print("saving results to article")
-      print(classify_result['summary'])
+      app.logger.debug("saving results to article")
+      app.logger.debug(classify_result['summary'])
       save_classification_result(classify_result, article)
-      print("saving article")
+      app.logger.debug("saving article")
       db.session.add(article)
       db.session.commit()
-      print("article saved")
+      app.logger.debug("article saved")
     except Exception as e:
-      print("Error in Classification Service: %s", e)
+      app.logger.debug("Error in Classification Service: %s", e)
     return classify_result
 
 def save_classification_result(classify_result, article):

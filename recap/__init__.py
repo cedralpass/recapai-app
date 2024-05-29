@@ -6,6 +6,8 @@ from redis import Redis
 import rq
 from flask_login import LoginManager
 from flask_mail import Mail
+from logging.handlers import RotatingFileHandler
+from logging.config import dictConfig
 
 
 db = SQLAlchemy()
@@ -28,6 +30,7 @@ def create_app():
     migrate.init_app(app, db)
     from recap.models import User, Article
 
+    configure_loggging()
     #configure login manager
     login_manager.init_app(app)
     login_manager.login_view = 'routes.login' #view for required login
@@ -68,3 +71,34 @@ def configure_app(app, env):
     app.config['MAIL_USE_TLS'] = Config.MAIL_USE_TLS
     app.config['MAIL_USERNAME'] = Config.MAIL_USERNAME
     app.config['MAIL_PASSWORD'] = Config.MAIL_PASSWORD
+
+def configure_loggging():
+    log_level = Config.RECAP_Log_Level
+
+    # good example of logging from here: https://betterstack.com/community/guides/logging/how-to-start-logging-with-flask/
+    # this must be configured before loading the app context
+    dictConfig(
+        {
+            "version": 1,
+            "formatters": {
+                "default": {
+                    "format": "[%(asctime)s] %(process)d %(levelname)s in %(module)s: %(message)s",
+                }
+            },
+            "handlers": {
+                "console": {
+                    "class": "logging.StreamHandler",
+                    "stream": "ext://sys.stdout",
+                    "formatter": "default",
+                },
+                "file": {
+                "class": "logging.handlers.RotatingFileHandler",
+                "filename": "recap.log",
+                "maxBytes": 1024*1024,
+                "backupCount": 2,
+                "formatter": "default",
+            }
+            },
+            "root": {"level": log_level, "handlers": ["console","file"]},
+        }
+    )
