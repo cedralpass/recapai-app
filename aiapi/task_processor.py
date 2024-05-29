@@ -29,17 +29,18 @@ def process_task():
     prompt = extract_from_request('prompt')
     format = extract_from_request('format')
     ref_key = extract_from_request('ref_key')
-    
+
     json_return={}
+    response_format =  { "type": "json_object" } 
 
     #create OpenAI request
     client = OpenAI(api_key=current_app.config["AI_API_OPENAI"])
-    
+
     #make OpenAI Call
     response = client.chat.completions.create(
         model=AIAPIConfig.AI_OPEN_AI_MODEL,
         messages=build_prompt(context, prompt, format),
-            response_format={ "type": "json_object" },
+            response_format=response_format,
             temperature=0.9,
             max_tokens=512,
             frequency_penalty=0,
@@ -73,29 +74,27 @@ def extract_from_request(key):
         current_app.logger.debug("extract_from_request: value to missing for %s with value", key, value)
     return value
 
-def build_prompt(context, prompt, format):
-    
-    context_element =  {
-                "role": "system",
-                "content": context
-            }
-    
+def build_prompt(context, prompt, format_instructions=None):
+    """
+    Builds a prompt array for an AI model with the given context, prompt, and optional format instructions.
 
-    prompt_element=        {
-                "role": "user",
-                "content": prompt
-            }
-    
-    prompt_array = [context_element , prompt_element]
-    
-    if format:
-     format_element =  {
-                "role": "system",
-                "content": format
-            }
-     prompt_array.append(format_element)
-     
-    
-    current_app.logger.debug("prompt to classify: %s", prompt_array)
+    Args:
+        context (str): The context or system message for the prompt.
+        prompt (str): The user's prompt or query.
+        format_instructions (str, optional): Instructions for formatting the model's response.
+
+    Returns:
+        list: A list of dictionaries representing the prompt array.
+    """
+    prompt_array = [
+        {"role": "system", "content": context},
+        {"role": "user", "content": prompt}
+    ]
+
+    if format_instructions:
+        prompt_array.append({"role": "system", "content": format_instructions})
+
+    current_app.logger.debug("Prompt to classify: %s", prompt_array)
     return prompt_array
+
 
