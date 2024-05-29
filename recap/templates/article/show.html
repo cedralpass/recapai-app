@@ -13,8 +13,9 @@
       {%endif%}<br />
       <span class="text-sm text-red-900">Content Category: {{ article.category }}</SPAN><br /><br />
       {{ article.summary }}
-      <a class="" href="{{ article['url_path'] }}" target="_blank">Read full Article</a>
-      <br>
+      <br/>
+      <a class="" href="{{ article['url_path'] }}" target="_blank">Read more...</a>
+      <br/>
       <a href="{{ url_for('routes.index') }}">Back to articles</a>
     </div>
   </div>
