@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="bg-white shadow-lg rounded px-2 pt-4 pb-4 mb-2 w-96">
+  <h1 class="text-lg font-bold">Organize Your Taxonomy</h1>
+  <div>
+    <h2 class="font-bold"></h2class>Your current organization</h2>
+    <ul class="flex flex-row flex-wrap  text-sm text-center">
+      {% if categories is not none %}
+      <li class="flex-1 h-12 m-1 p-1 bg-gray-200 text-sm"><a
+          href="{{ url_for('routes.index' )}}">All</a></li>
+      {% for grouping in categories %}
+      <li class="flex-1 h-12 m-1 p-1 bg-gray-200 text-sm text-center"><a
+              href="{{ url_for('routes.index', category=grouping.category )}}">{{grouping.category}}({{grouping.count}})</a>
+      </li>
+      {% endfor %}
+      {% endif %}
+  </ul>
+  </div>
+  <div>
+    <h2 class="font-bold"></h2class>Your suggested organization</h2>
+    <div>{{description}}</div>
+    <ul class="flex flex-row flex-wrap  text-sm text-center">
+      {% if suggested is not none %}
+      {% for mapping in suggested %}
+      <li class="flex-1 h-12 m-1 p-1 bg-gray-200 text-sm text-center"><a
+              href="{{ url_for('routes.index', category=mapping )}}">{{mapping}}</a>
+      </li>
+      {% endfor %}
+      {% endif %}
+  </ul>
+  </div>
+  <div>
+    Whould you like to apply this change?
+  </div>
+</div>
+{% endblock %}

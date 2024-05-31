@@ -7,6 +7,7 @@ import sqlalchemy as sa
 from recap import db
 from recap.models import User
 from recap.config import Config 
+from recap.aiapi_helper import AiApiHelper
 
 bp = Blueprint('profile', __name__)
 
@@ -46,3 +47,39 @@ def edit_profile():
         form.email.data = current_user.email
     return render_template('profile/edit_profile.html', title='Edit Profile',
                            form=form)
+
+@bp.route('/organize_taxonomy', methods=['GET'])
+@login_required
+def organize_taxonomy():
+    categories = current_user.get_categories()
+
+    prompt_string = "Can you recommend a refined category list, de-duplicating similar items? However, keep Artificial Intelligence and Software Architecture."
+    format_string = """Respond in a structured JSON message, mapping old categories to new categories. Can you also explain what topics changed as a single description element in the JSON. The description should be concise and understandable to a human reader. The final structure must be formatted like:
+        {\r\n    \"description\": \"The categories have been consolidated to remove duplication. 'Business Strategy' and 'Leadership' have been merged into 'Business & Leadership'. 'Cooking' and 'Culinary Arts' are unified under 'Culinary Arts'. 'Fitness & Health' and 'Health & Wellness' are combined into 'Health & Wellness'. 'Artificial Intelligence' and 'Software Architecture' remain unchanged.\",\r\n    \"mappings\": [\r\n        {\r\n            \"new_category\": \"new_category_value\",\r\n            \"old_category\": \"old_category_value\"\r\n        },\r\n        {\r\n            \"new_category\": \"new_category_value\",\r\n            \"old_category\": \"old_category_value\"\r\n        }\r\n    ],\r\n    \"ref_key\": \"2\"\r\n}
+        """
+  
+     #loop through current_categories and build a context
+    categories_names = []
+    for category in categories:
+        categories_names.append(category[0])
+    categories_text = ", ".join(categories_names)
+
+    context_string = "I am using this taxonomy to categorize content: " + categories_text + "."
+    
+    json_response = AiApiHelper.PerformTask(context_string, prompt_string, format_string, current_user.id)
+    current_app.logger.debug('AiApiHelper: json_response: %s', json_response)
+
+    description = json_response['description']
+    mappings = json_response['mappings']
+
+    new_categories = []
+
+    extract_suggested_categories(mappings, new_categories)
+    
+    return render_template("profile/organize_taxonomy.html", title='Organize Taxonomy', categories=categories, suggested=new_categories, description=description)
+
+def extract_suggested_categories(mappings, new_categories):
+    for mapping in mappings:
+        if mapping['new_category'] not in new_categories:
+            new_categories.append(mapping['new_category'])
+        
