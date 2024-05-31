@@ -20,6 +20,7 @@ bp = Blueprint('routes', __name__)
 def index():
     form = ArticleForm()
     if form.validate_on_submit():
+        #TODO: Validate that the form.url_path is a valid url
         article = Article(url_path=form.url_path.data, user=current_user)
         db.session.add(article)
         db.session.commit()
