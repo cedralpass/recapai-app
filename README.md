@@ -40,7 +40,16 @@ python run.py
 ## Background processing worker
 Make sure a worker is running in a python terminal for background processing.
 
-```rq worker RECAP-Classify```
+```rq worker RECAP2-Classify```
+
+In production, we are using a worker pool to process. The last parameter is number of workers. To simulate production run locally:
+
+```rq worker-pool RECAP2-Classify -n 1```
+
+## Building CSS
+We are using tailwind for our CSS managment.  It requires a node process to watch for css changes and build optimal css files.
+
+```npx tailwindcss -i ./recap/static/css/input.css -o ./recap/static/css/output.css --watch```
 
 # Produciton
 
@@ -90,3 +99,10 @@ Dockerfile is Dockerfile.aws.full
 
 1. to list the docker containers running ```docker ps```
 2. to stop the container: ```docker stop <container id>``` example ```docker stop 9e498c6d5732```
+
+
+# Build and deploy to Digital Ocean
+
+We are using digital ocean for hosting the app servers. Build using the following script
+
+```sh ./devops/build_for_digital_ocean.sh```
