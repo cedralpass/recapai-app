@@ -33,7 +33,7 @@ def create_app():
     configure_loggging()
     #configure login manager
     login_manager.init_app(app)
-    login_manager.login_view = 'routes.login' #view for required login
+    login_manager.login_view = 'auth.login' #view for required login
 
     #configure redis
     app.redis = Redis.from_url(Config.RECAP_REDIS_URL)

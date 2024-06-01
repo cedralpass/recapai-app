@@ -24,9 +24,12 @@ def user(username):
         if articles_paginator.has_next else None
     prev_url = url_for('profile.user',username=user.username, page=articles_paginator.prev_num) \
         if articles_paginator.has_prev else None
+    
+    # list grouping of categories for article for the given user
+    groupings = current_user.get_categories()
 
     return render_template('profile/user.html', user=user, articles=articles,
-                           next_url=next_url, prev_url=prev_url)
+                           next_url=next_url, prev_url=prev_url,  groupings=groupings)
 
 
 @bp.route('/edit_profile', methods=['GET', 'POST'])

@@ -38,6 +38,7 @@ def index():
     next_url = None
     prev_url = None
     category = None
+    groupings = None
     if current_user.is_authenticated:
         category = request.args.get('category')
         #current_user.get_articles(page=page, per_page=Config.ARTICLES_PER_PAGE, category=category)
