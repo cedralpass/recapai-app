@@ -14,11 +14,28 @@
         </div>
     </div>
 </form>
-<div class="container w-96 p-2">
+<script>
+     function showFilter() {
+        let filter_element = document.getElementById("filter");
+        if(filter_element.classList.contains("hidden"))
+        {
+            filter_element.classList.remove("hidden");
+            filter_element.classList.add("visible");
+        }else{
+            filter_element.classList.remove("visible");
+            filter_element.classList.add("hidden");
+        }
+     }
+</script>
+<button onclick="showFilter();"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+        stroke-width="1.5" stroke="currentColor" class="size-6">
+        <path stroke-linecap="round" stroke-linejoin="round"
+            d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" />
+    </svg></button>
+<div class="container w-96 p-2 hidden" id="filter">
     <ul class="flex flex-row flex-wrap  text-xs text-center">
         {% if groupings is not none %}
-        <li class="flex-1 h-12 m-1 p-1 bg-gray-200 text-sm"><a
-            href="{{ url_for('routes.index' )}}">All</a></li>
+        <li class="flex-1 h-12 m-1 p-1 bg-gray-200 text-sm"><a href="{{ url_for('routes.index' )}}">All</a></li>
         {% for grouping in groupings %}
         <li class="flex-1 h-12 m-1 p-1 bg-gray-200 text-sm text-center"><a
                 href="{{ url_for('routes.index', category=grouping.category )}}">{{grouping.category}}({{grouping.count}})</a>
