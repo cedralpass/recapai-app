@@ -1,5 +1,5 @@
 from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for, current_app
+    Blueprint, flash, g, redirect, render_template, request, session, url_for, current_app, jsonify
 )
 from flask_login import current_user, login_user, logout_user, login_required
 import sqlalchemy as sa
@@ -26,6 +26,7 @@ def index():
         db.session.commit()
         job = launch_task(name='recap.tasks.classify_url', description='using AI to classify url', url=article.url_path, user_id=current_user.id)
         print(job.id)
+        session["latest_job_id"]=job.id
         flash('Your article is being classified!')
         return redirect(url_for('routes.index'))
     
@@ -57,6 +58,8 @@ def index():
 @bp.route('/css', methods=['GET', 'POST'])
 def css():
     flash('Invalid username or password')
+    if 'Content-Type' in request.headers.keys() and request.headers['Content-Type'] == 'application/json':
+           return jsonify("css")
     return render_template("css.html", title='CSS')
 
 
@@ -71,8 +74,10 @@ def job():
 @login_required
 def job_show(id):
     job = current_app.task_queue.fetch_job(job_id=id)
-    
-    return 'Job is Executing ' + job.id + ' its status ' + job.get_status(refresh=True)
+    status = job.get_status(refresh=True)
+    response = {"id":job.id, "status":status, "description":job.description}    
+    return response
+
 
 @bp.route('/add_article', methods=['GET', 'POST'])
 @login_required
@@ -95,6 +100,7 @@ def add_article():
 @login_required
 def show(id):
     article = None
+    
     try:
         stmt = sa.select(Article).where(Article.id == id, Article.user_id == current_user.id).order_by(Article.id.desc())  
         article= db.session.execute(stmt).scalar_one()
@@ -104,6 +110,10 @@ def show(id):
     except Exception as ex:
         flash('General Exception')
         print(ex)
+
+    if 'Content-Type' in request.headers.keys() and request.headers['Content-Type'] == 'application/json':
+           article_dict = {"id":article.id, "url_path":article.url_path, "summary":article.summary, "title":article.title, "author_name":article.author_name, "category":article.category, "key_topics":article.key_topics, "sub_categories":article.sub_categories}
+           return jsonify(article_dict) #SqlAlchemy objects are not easily serialized to JSON.. have to build our own.
     return render_template('article/show.html', article=article, sub_categories=article.get_sub_categories_json())
 
 @bp.route('/<int:id>/reclassify', methods=('GET','POST'))

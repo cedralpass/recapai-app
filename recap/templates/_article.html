@@ -1,17 +1,93 @@
+<script>
+    async function checkJobStatus(job_id, article_id) {
+        // validate article_id is an integer
+        if (!Number.isInteger(parseInt(article_id))) {
+            console.error('Invalid article_id. Expected an integer value.');
+            if (intervalID>0) {clearInterval(intervalID)};
+            return; // or throw an error, or handle the invalid input as needed
+        }
+
+        // Validate job_id is a valid GUID
+        const guidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!guidRegex.test(job_id)) {
+            console.error('Invalid job_id. Expected a valid GUID value.');
+            if (intervalID>0) {clearInterval(intervalID)};
+            return; // or throw an error, or handle the invalid input as needed
+        }
+    
+        let path_for_job_status = `/job/${job_id}/show`;
+        const response = await fetch(path_for_job_status);
+        const classificaiton_status = await response.json();
+        let element = document.getElementById("article_container");
+        let new_article_div = document.createElement("div");
+        if (classificaiton_status["status"] == "finished") {
+            if (intervalID>0) {clearInterval(intervalID)};
+            let path = `/${article_id}/show`
+            const article_response = await fetch(path, { headers: { 'Content-Type': 'application/json' } });
+            const article_json = await article_response.json();
+            new_article_div.className = "bg-green-300 shadow-lg rounded px-2 pt-4 pb-4 mb-2";
+            let article_content_div = document.createElement("div");
+            let article_title_author_span = document.createElement("span");
+            let article_title = document.createElement("b");
+            let category_br = document.createElement("br");
+            let link_br = category_br.cloneNode(true);
+            let article_link = document.createElement("a");
+            article_title.textContent = article_json['title'];
+            article_title_author_span.append(article_title);
+            article_title_author_span.append(" - " + article_json['author_name']);
+            article_title_author_span.append(category_br);
+            article_title_author_span.append(article_json['category']);
+            article_title_author_span.append(link_br);
+            article_link.setAttribute("href", path);
+            article_link.textContent = "View Summary";
+            article_title_author_span.append(article_link);
+            article_content_div.append(article_title_author_span);
+            new_article_div.append(article_content_div);
+            element.prepend(new_article_div);
+            let old = document.getElementById("article-" + job_id);
+            old.remove()
+            let flash = document.getElementById("flash")
+            let flash_message = document.createElement("span");
+            flash_message.append("Done classifying " + article_json['title']);
+            flash.replaceChildren(flash_message)
+
+        }
+
+    }
+</script>
+
 <div class="bg-white  px-1 pt-4 pb-4 mb-2 w-96">
     <h1 class="font-bold text-lg">Articles you have bookmarked:</h1>
-    <div>
+    <div id="article_container">
         {% for article in articles %}
         {% if article.classified is none %}
         <!-- TODO: check progress on job and make dynamic -->
-        <div class="bg-green-200 shadow-md rounded px-2">
-            <div>Your article is being summarized. <br />
+        <div class="bg-green-200 shadow-md rounded px-2" id="article-{{session['latest_job_id']}}">
+            <div><button type="button" class="bg-green-200 pt-1 pb-2" disabled>
+                <svg class="animate-spin ml-1 mr-1 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg"
+                    fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="#000066" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="#000066"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                </svg>
+            </button> Your article is being summarized.
+
+                <br />
+                {% if session['latest_job_id'] is not none%}
+                <script>
+                    const intervalID = setInterval(checkJobStatus, 500, "{{session['latest_job_id']}}", "{{article.id}}");
+                </script>
+                {% endif %}
                 If you want to read it directly, view here: <a class="action" target="_blank"
-                    href="{{ article.url_path }}">{{ article.url_path }}</a></div>
+                    href="{{ article.url_path }}">{{ article.url_path }}</a>
+            </div>
         </div>
+
         {% else %}
         <div class="bg-white shadow-lg rounded px-2 pt-4 pb-4 mb-2">
-            <div> <b>{{article.title}}</b> - {{article.author_name}}<br />
+            <div><b>{{article.title}}</b> - {{article.author_name}} <br />
+
                 {{article.category}}<br />
                 <a class="action" href="{{ url_for('routes.show', id=article.id) }}">View Summary</a>
             </div>
