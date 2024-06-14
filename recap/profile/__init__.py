@@ -56,9 +56,9 @@ def edit_profile():
 def organize_taxonomy():
     categories = current_user.get_categories()
 
-    prompt_string = "Can you recommend a refined category list, de-duplicating similar items? However, keep Artificial Intelligence and Software Architecture."
-    format_string = """Respond in a structured JSON message, mapping old categories to new categories. Can you also explain what topics changed as a single description element in the JSON. The description should be concise and understandable to a human reader. The final structure must be formatted like:
-        {\r\n    \"description\": \"The categories have been consolidated to remove duplication. 'Business Strategy' and 'Leadership' have been merged into 'Business & Leadership'. 'Cooking' and 'Culinary Arts' are unified under 'Culinary Arts'. 'Fitness & Health' and 'Health & Wellness' are combined into 'Health & Wellness'. 'Artificial Intelligence' and 'Software Architecture' remain unchanged.\",\r\n    \"mappings\": [\r\n        {\r\n            \"new_category\": \"new_category_value\",\r\n            \"old_category\": \"old_category_value\"\r\n        },\r\n        {\r\n            \"new_category\": \"new_category_value\",\r\n            \"old_category\": \"old_category_value\"\r\n        }\r\n    ],\r\n    \"ref_key\": \"2\"\r\n}
+    prompt_string = "Can you recommend a category list, consolidating similar categories? However, keep Artificial Intelligence and Software Architecture."
+    format_string = """Respond in a structured JSON message, mapping old categories to new categories. Can you also explain what topics changed as a single description element in the JSON. The description should be concise and understandable to a human reader. The final structure must be formatted in this structure:
+        {\r\n    \"description\": \"A summary of the changes to the topics.\",\r\n    \"mappings\": [\r\n        {\r\n            \"new_category\": \"new_category_value\",\r\n            \"old_category\": \"old_category_value\"\r\n        },\r\n        {\r\n            \"new_category\": \"new_category_value\",\r\n            \"old_category\": \"old_category_value\"\r\n        }\r\n    ],\r\n    \"ref_key\": \"2\"\r\n}
         """
   
      #loop through current_categories and build a context

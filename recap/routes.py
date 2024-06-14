@@ -24,8 +24,10 @@ def index():
         article = Article(url_path=form.url_path.data, user=current_user)
         db.session.add(article)
         db.session.commit()
+        #TODO: Theroy is DB is asleep and task is fired off before its woken up.
+        current_app.logger.debug("launching task to classify %s for article.id %s", article.url_path, article.id)
         job = launch_task(name='recap.tasks.classify_url', description='using AI to classify url', url=article.url_path, user_id=current_user.id)
-        print(job.id)
+        current_app.logger.debug("task launched to classify %s for article.url_path %s",job.id , article.url_path)
         session["latest_job_id"]=job.id
         flash('Your article is being classified!')
         return redirect(url_for('routes.index'))
