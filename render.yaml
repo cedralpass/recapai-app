@@ -19,7 +19,7 @@ services:
     creds:
       fromRegistryCreds:
         name: Render Github Token
-  plan: free
+  plan: starter
   region: oregon
   healthCheckPath: /hello
 version: "1"
