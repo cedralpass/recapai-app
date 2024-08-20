@@ -22,4 +22,10 @@ services:
   plan: starter
   region: oregon
   healthCheckPath: /css
+- type: redis
+  name: recaprai-redis-dev
+  plan: free
+  region: oregon
+  maxmemoryPolicy: noeviction
+  ipAllowList: []
 version: "1"
