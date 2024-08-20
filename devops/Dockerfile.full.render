@@ -10,7 +10,8 @@ EXPOSE 8000/tcp
 #install curl
 RUN apk --no-cache add curl
 
-RUN apk --update --no-cache add redis
+#not using redis locally with render
+#RUN apk --update --no-cache add redis
 
 # Set the working directory in the container
 WORKDIR /app
@@ -37,6 +38,6 @@ RUN chmod 66 /app/instance
 
 # Specify the command to run on container start
 #CMD ["gunicorn"  , "-w", "3", "-b", "0.0.0.0:8000", "app","--log-level debug", "--timeout 90"]
-RUN ["chmod", "+x", "/app/initialize_run.sh"]
+RUN ["chmod", "+x", "/app/initialize_render_run.sh"]
 
 CMD sh /app/initialize_run.sh
