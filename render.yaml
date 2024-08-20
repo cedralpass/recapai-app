@@ -1,10 +1,21 @@
 # Exported from Render on 2024-08-20T16:21:57Z
 services:
-- type: web
+- type: api
   name: recap-aiapi:latest
   runtime: image
   image:
     url: ghcr.io/cedralpass/recap-aiapi:latest
+    creds:
+      fromRegistryCreds:
+        name: Render Github Token
+  plan: free
+  region: oregon
+  healthCheckPath: /hello
+- type: web
+  name: recap-full:latest
+  runtime: image
+  image:
+    url: ghcr.io/cedralpass/recap-full:latest
     creds:
       fromRegistryCreds:
         name: Render Github Token

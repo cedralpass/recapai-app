@@ -1,0 +1,42 @@
+# Set base image (host OS)
+# need to build with --platform=linux/amd64 to get around /usr/local/bin/gunicorn Exec format error
+# https://stackoverflow.com/questions/75996884/usr-local-bin-gunicorn-exec-format-error-apple-m1-chip
+
+FROM --platform=linux/amd64 python:3.11-alpine 
+
+# By default, listen on port 8000
+EXPOSE 8000/tcp
+
+#install curl
+RUN apk --no-cache add curl
+
+RUN apk --update --no-cache add redis
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Copy the dependencies file to the working directory
+COPY ./requirements.txt /app
+
+# Install any dependencies
+RUN pip install -r requirements.txt
+RUN pip install gunicorn
+
+# Copy the content of the local src directory to the working directory
+COPY recap recap
+#copy .env.beta file to .env
+RUN rm -rf recap/.env
+COPY recap/.env.render.beta recap/.env
+COPY aiapi aiapi
+COPY ./app.py /app
+# initialize_run.sh
+COPY ./initialize_run.sh /app
+
+RUN mkdir -p /app/instance
+RUN chmod 66 /app/instance 
+
+# Specify the command to run on container start
+#CMD ["gunicorn"  , "-w", "3", "-b", "0.0.0.0:8000", "app","--log-level debug", "--timeout 90"]
+RUN ["chmod", "+x", "/app/initialize_run.sh"]
+
+CMD sh /app/initialize_run.sh
