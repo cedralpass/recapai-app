@@ -1,6 +1,6 @@
 # Exported from Render on 2024-08-20T16:21:57Z
 services:
-- type: api
+- type: web
   name: recap-aiapi:latest
   runtime: image
   image:
