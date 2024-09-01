@@ -26,3 +26,9 @@ docker push "$do_repository/recap-aiapi:latest"
 
 #pushes the full app with aiapi and workers
 docker push "$do_repository/recap-full:latest"
+
+#add curls to trigger deploys
+
+#manually have to trigger deploys. Can user deployhooks, but need to secure them...  
+#Need to think about this or move to github actions
+#https://docs.render.com/deploy-hooks
