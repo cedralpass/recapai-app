@@ -8,12 +8,13 @@ from flask_login import LoginManager
 from flask_mail import Mail
 from logging.handlers import RotatingFileHandler
 from logging.config import dictConfig
+from datetime import datetime
 
 
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
-mail = Mail( )
+mail = Mail()
 
 
 def create_app():
@@ -23,9 +24,9 @@ def create_app():
     #configure DB
     #set the pool timeout to 10 seconds
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_timeout': 27,  # Set your desired timeout value in seconds,
-    'pool_pre_ping':True # Set to True to enable pre-ping
-}
+        'pool_timeout': 27,  # Set your desired timeout value in seconds,
+        'pool_pre_ping':True # Set to True to enable pre-ping
+    }
     db.init_app(app)
     migrate.init_app(app, db)
     from recap.models import User, Article
@@ -41,8 +42,11 @@ def create_app():
 
     #configure mail
     mail.init_app(app)
-   
 
+    # Add context processor for current year
+    @app.context_processor
+    def inject_year():
+        return {'current_year': datetime.utcnow().year}
 
     from . import routes
     app.register_blueprint(routes.bp) #register the routes blueprint

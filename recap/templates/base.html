@@ -1,9 +1,12 @@
 <!doctype html>
-<html>
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Recap AI: Summarize articles for reading later">
+    <meta name="theme-color" content="#000000">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link href="{{url_for('static',filename='css/output.css')}}" rel="stylesheet">
     {% if title %}
     <title>{{ title }} - Recap AI</title>
@@ -13,8 +16,8 @@
 
 </head>
 
-<body class="">
-    <div class="flex flex-nowrap gap-0 text-xl font-medium bg-black text-slate-200 py-2">
+<body class="min-h-screen bg-gray-50">
+    <nav class="flex flex-nowrap gap-0 text-xl font-medium bg-black text-slate-200 py-2">
         <div class="flex-auto px-3">
             <b>Recap AI</b>: Summarize articles for reading later
         </div>
@@ -33,21 +36,26 @@
                 {% endif %}
             </div>
         </div>
-    </div>
+    </nav>
     {% with messages = get_flashed_messages() %}
     {% if messages %}
     <div class="px-2 bg-green-200 text-slate-900 rounded-xl py-2 my-2 mx-2 text-base" id="flash">
-       
-        <ul>
+        <ul class="list-none">
             {% for message in messages %}
             <li>{{ message }}</li>
             {% endfor %}
         </ul>
-        
     </div>
     {% endif %}
     {% endwith %}
-    <div class="px-3 py-2">{% block content %}{% endblock %}</div>
+    
+    <main class="container mx-auto px-3 py-2">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="mt-auto py-4 text-center text-sm text-gray-600">
+        <p>&copy; {{ current_year }} Recap AI. All rights reserved.</p>
+    </footer>
 </body>
 
 </html>
