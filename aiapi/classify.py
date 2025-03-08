@@ -14,8 +14,7 @@ def login_required(view):
     def wrapped_view(**kwargs):
         key = extract_from_request('secret')
         if key is None:
-            return jsonify("Not Authorized")
-
+            return jsonify("Not Authorized"), 401
         return view(**kwargs)
 
     return wrapped_view
@@ -68,7 +67,7 @@ def extract_from_request(key):
     value = request.form.get(key)
     if value is None:
         current_app.logger.error("error: must supply url and secret for url for classification.  Supply a ref_key for refeference to an object.")
-        current_app.logger.debug("extract_from_request: value to missing for %s with value", key, value)
+        current_app.logger.debug("extract_from_request: value to missing for %s with value", key)
     return value
 
 def build_prompt(url):

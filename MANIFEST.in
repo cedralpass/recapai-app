@@ -1,0 +1,5 @@
+include recap/templates/*.html
+include recap/templates/*/*.html
+include recap/static/css/*.css
+include requirements.txt
+include README.md 

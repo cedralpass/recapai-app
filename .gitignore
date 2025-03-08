@@ -28,3 +28,6 @@ cdk.out
 node_modules/
 
 
+.venv/
+*.log.*
+
