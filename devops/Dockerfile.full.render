@@ -38,6 +38,6 @@ RUN chmod 66 /app/instance
 
 # Specify the command to run on container start
 #CMD ["gunicorn"  , "-w", "3", "-b", "0.0.0.0:8000", "app","--log-level debug", "--timeout 90"]
-RUN ["chmod", "+x", "/app/initialize_render_run.sh"]
+RUN ["chmod", "+x", "/app/initialize_run.sh"]
 
 CMD sh /app/initialize_run.sh

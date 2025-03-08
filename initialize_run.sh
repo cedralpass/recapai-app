@@ -6,7 +6,7 @@ cd /app
 #flask --app recap init-db
 
 #start redis server as daemon
-redis-server --daemonize yes
+#redis-server --daemonize yes
 
 # launch webserver as daemon
 gunicorn -w 3 -b 0.0.0.0:8000 app --log-level debug --timeout 90 --daemon
@@ -14,4 +14,4 @@ gunicorn -w 3 -b 0.0.0.0:8000 app --log-level debug --timeout 90 --daemon
 
 
 # startup workers
-rq worker-pool RECAP2-Classify -n 3
+rq worker-pool --url $RECAP_REDIS_URL -n 3
