@@ -14,7 +14,7 @@ def login_required(view):
     def wrapped_view(**kwargs):
         key = extract_from_request('secret')
         if key is None:
-            return jsonify("Not Authorized")
+            return jsonify("Not Authorized"), 401
 
         return view(**kwargs)
 
@@ -34,16 +34,21 @@ def process_task():
     if prompt_history:
         prompt_history_json = json.loads(prompt_history)
 
+    if prompt is None:
+        current_app.logger.error("error: missing prompt")
+        return jsonify({"error": "Missing prompt"}), 400
+   
     json_return={}
     response_format =  { "type": "json_object" } 
 
     #create OpenAI request
     client = OpenAI(api_key=current_app.config["AI_API_OPENAI"])
+    prompt_array = build_prompt(context, prompt, format, prompt_history_json)
 
     #make OpenAI Call
     response = client.chat.completions.create(
         model=AIAPIConfig.AI_OPEN_AI_MODEL,
-        messages=build_prompt(context, prompt, format, prompt_history_json),
+        messages=prompt_array,
             response_format=response_format,
             temperature=0.9,
             max_tokens=512,
@@ -56,18 +61,20 @@ def process_task():
         current_app.logger.debug(response.choices[0].message.content)
         json_return = response.choices[0].message.content
         current_app.logger.info("model %s cost %s", response.model, response.usage)
+        
+        response_json = json.loads(json_return)
+        if ref_key is not None:
+            response_json['ref_key']=ref_key
+            current_app.logger.debug("classify: added ref_key to response: " + ref_key)
+        else:
+            current_app.logger.error("error: missing ref_key")
+        
+        current_app.logger.debug("classify: full response " + str(response_json))
+        return jsonify(response_json)
     else:
         current_app.logger.error("error: with openAPI call. no choices returned %s", response)
-
-    response_json = json.loads(json_return)
-    if ref_key is not None:
-        response_json['ref_key']=ref_key
-        current_app.logger.debug("classify: added ref_key to response: " + ref_key)
-    else:
-        current_app.logger.error("error: missing ref_key")
-    
-    current_app.logger.debug("classify: full response " + str(response_json))
-    return jsonify(response_json)
+        error_response = {"error": "No response from OpenAI"}
+        return jsonify(error_response)
 
 def extract_from_request(key):
     value=None
@@ -75,7 +82,7 @@ def extract_from_request(key):
     value = request.form.get(key)
     if value is None:
         current_app.logger.error("error: must supply url and secret for url for classification.  Supply a ref_key for refeference to an object.")
-        current_app.logger.debug("extract_from_request: value to missing for %s with value", key, value)
+        current_app.logger.debug("extract_from_request: value to missing for %s with value", key)
     return value
 
 def build_prompt(context, prompt, format_instructions=None, prompt_history=None):
@@ -91,17 +98,17 @@ def build_prompt(context, prompt, format_instructions=None, prompt_history=None)
     Returns:
         list: A list of dictionaries representing the prompt array.
     """
-    prompt_array = [
-        {"role": "system", "content": context}
-    ]
+    prompt_array = []
+    if context:
+        prompt_array.append({"role": "system", "content": context})
+
+    prompt_array.append({"role": "user", "content": prompt})
 
     if prompt_history:
         for pair in prompt_history:
            prompt_array.append({"role": "user", "content": pair["prompt"]})
            prompt_array.append({"role": "system", "content": pair["response"]})
 
-    
-    prompt_array.append({"role": "user", "content": prompt})
     
     if format_instructions:
         prompt_array.append({"role": "system", "content": format_instructions})
