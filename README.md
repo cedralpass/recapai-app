@@ -4,6 +4,12 @@ Currently Amazon Web Services with ECS is too expensive $5 a day as configured i
 
 Configure Recap and AIAPI via .env files.  See documentation [here](docs/environments.md)
 
+## start terminal with virtual environment
+
+```bash
+source .venv/bin/activate
+```
+
 #setup
 ## Init DB
 Run the following command to init DB
