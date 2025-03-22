@@ -14,33 +14,36 @@ from recap import db as recap_db
 from recap.config import Config as RecapConfig
 from aiapi.config import AIAPIConfig
 
-class TestConfig(RecapConfig):
+class TestConfig:
     """Test configuration that overrides the base config."""
     TESTING = True
     WTF_CSRF_ENABLED = False
     RECAP_REDIS_URL = 'redis://localhost:6379/1'  # Use a different Redis DB for testing
     
-    # Override database settings for testing
-    POSTGRES_DB = 'recap_test'  # Use a different database name
-    
-    @property
-    def SQLALCHEMY_DATABASE_URI(self):
-        """Use SQLite for tests by default, can be overridden by env vars."""
-        test_db_path = os.environ.get('TEST_DATABASE_URL')
-        if test_db_path:
-            return test_db_path
-        
-        # Use in-memory SQLite by default
-        return 'sqlite:///:memory:'
+    # Always use SQLite for tests to avoid affecting the development database
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
 
 @pytest.fixture(scope='session')
 def recap_app_session():
     """Create a recap app instance for the test session."""
-    app = create_recap_app()
-    app.config.from_object(TestConfig())
+    app = create_recap_app(env='test')
+    
+    # Apply all test configuration
+    test_config = TestConfig()
+    app.config['SQLALCHEMY_DATABASE_URI'] = test_config.SQLALCHEMY_DATABASE_URI
+    app.config['TESTING'] = True
+    app.config['WTF_CSRF_ENABLED'] = False  # Explicitly disable CSRF for tests
+    
+    print(f"\nTEST DATABASE URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
     
     # Create the database
     with app.app_context():
+        # Print SQLAlchemy engine details
+        print(f"SQLAlchemy Engine Type: {recap_db.engine}")
+        print(f"SQLAlchemy Engine URL: {recap_db.engine.url}")
+        print(f"Is SQLite Memory DB: {str(recap_db.engine.url) == 'sqlite:///:memory:'}")
+        print(f"Connection Info: {recap_db.engine.pool.status()}")
+        
         recap_db.create_all()
     
     yield app
@@ -57,6 +60,11 @@ def recap_app(recap_app_session):
     
     # Setup: create fresh tables for each test
     with app.app_context():
+        # Verify connection before each test
+        print(f"\nTest Connection Info:")
+        print(f"Current Engine: {recap_db.engine}")
+        print(f"Current Database URL: {recap_db.engine.url}")
+        
         recap_db.session.remove()
         recap_db.drop_all()
         recap_db.create_all()
@@ -128,4 +136,4 @@ def aiapi_client(aiapi_app):
 @pytest.fixture
 def auth_headers():
     """Headers with test authentication."""
-    return {'Authorization': 'Bearer test-token'} 
+    return {'Authorization': 'Bearer test-token'}

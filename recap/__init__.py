@@ -17,16 +17,25 @@ login_manager = LoginManager()
 mail = Mail()
 
 
-def create_app():
+def create_app(env='dev'):
     app = Flask(__name__)
-    configure_app(app, 'dev')
+
+    if env == 'prod':
+        print("Configuring app for production environment")
+    elif env == 'test':
+        print("Configuring app for testing environment")
+    else:
+        print("Configuring app for development environment")
+    
+    configure_app(app, env)
     
     #configure DB
     #set the pool timeout to 10 seconds
-    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-        'pool_timeout': 27,  # Set your desired timeout value in seconds,
-        'pool_pre_ping':True # Set to True to enable pre-ping
-    }
+    if env != 'test':
+        app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+            'pool_timeout': 27,  # Set your desired timeout value in seconds,
+            'pool_pre_ping':True # Set to True to enable pre-ping
+        }
     db.init_app(app)
     migrate.init_app(app, db)
     from recap.models import User, Article
@@ -64,10 +73,22 @@ def create_app():
 
     return app
 
-def configure_app(app, env):
+def configure_app(app, env='dev'):
+    if env == 'prod':
+        print("Configuring app for production environment")
+    elif env == 'test':
+        print("Configuring app for testing environment")
+    else:
+        print("Configuring app for development environment")
+
     app.config['API_KEY'] = Config.RECAP_SECRET_KEY
     app.config["SECRET_KEY"]=Config.RECAP_SECRET_KEY # set the key to secure Flask App
     app.config["SQLALCHEMY_DATABASE_URI"]=Config.SQLALCHEMY_DATABASE_URI
+
+    if env == 'test':
+        print("\nSetting up test database...")
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+        print(f"Database URI set to: {app.config['SQLALCHEMY_DATABASE_URI']}")
     
     #setup app.config for mail server variables
     app.config['MAIL_SERVER'] = Config.MAIL_SERVER
