@@ -54,35 +54,61 @@ def edit_profile():
 @bp.route('/organize_taxonomy', methods=['GET'])
 @login_required
 def organize_taxonomy():
+    """
+    Organize and suggest improvements to the user's content categories using AI.
+    
+    Returns:
+        Rendered template with current categories, suggested new categories,
+        category mappings, and a description of the changes.
+    """
+    # Get current user categories
     categories = current_user.get_categories()
-
-    prompt_string = "Can you recommend a category list, consolidating similar categories? However, keep Artificial Intelligence and Software Architecture."
-    format_string = """Respond in a structured JSON message, mapping old categories to new categories. Can you also explain what topics changed as a single description element in the JSON. The description should be concise and understandable to a human reader. The final structure must be formatted in this structure:
+    
+    # Prepare AI request context - using a single string join operation
+    categories_names = sorted(category[0] for category in categories)
+    context_string = f"I am using this taxonomy to categorize content: {', '.join(categories_names)}."
+    
+    # Define AI prompts as constants to avoid string recreation
+    PROMPT = "Can you recommend a category list, consolidating similar categories? However, keep Artificial Intelligence and Software Architecture."
+    FORMAT = """Respond in a structured JSON message, mapping old categories to new categories. Can you also explain what topics changed as a single description element in the JSON. The description should be concise and understandable to a human reader. The final structure must be formatted in this structure:
         {\r\n    \"description\": \"A summary of the changes to the topics.\",\r\n    \"mappings\": [\r\n        {\r\n            \"new_category\": \"new_category_value\",\r\n            \"old_category\": \"old_category_value\"\r\n        },\r\n        {\r\n            \"new_category\": \"new_category_value\",\r\n            \"old_category\": \"old_category_value\"\r\n        }\r\n    ],\r\n    \"ref_key\": \"2\"\r\n}
         """
-  
-     #loop through current_categories and build a context
-    categories_names = []
-    for category in categories:
-        categories_names.append(category[0])
-    categories_text = ", ".join(categories_names)
-
-    context_string = "I am using this taxonomy to categorize content: " + categories_text + "."
     
-    json_response = AiApiHelper.PerformTask(context_string, prompt_string, format_string, current_user.id)
-    current_app.logger.debug('AiApiHelper: json_response: %s', json_response)
-
+    # Get AI suggestions
+    json_response = AiApiHelper.PerformTask(
+        context_string, 
+        PROMPT, 
+        FORMAT, 
+        current_user.id
+    )
+    
+    # Process AI response
     description = json_response['description']
     mappings = json_response['mappings']
-
-    new_categories = []
-
-    extract_suggested_categories(mappings, new_categories)
     
-    return render_template("profile/organize_taxonomy.html", title='Organize Taxonomy', categories=categories, suggested=new_categories, description=description)
+    # Create category mapping and get new categories in a single pass
+    category_mapping = create_category_mapping(mappings)
+    new_categories = list(set(category_mapping.values()))
+    
+    return render_template(
+        "profile/organize_taxonomy.html",
+        title='Organize Taxonomy',
+        categories=categories,
+        suggested=new_categories,
+        description=description,
+        category_mapping=category_mapping
+    )
 
-def extract_suggested_categories(mappings, new_categories):
-    for mapping in mappings:
-        if mapping['new_category'] not in new_categories:
-            new_categories.append(mapping['new_category'])
+def create_category_mapping(mappings):
+    """
+    Convert a list of category mappings to a dictionary where keys are old categories
+    and values are new categories.
+    
+    Args:
+        mappings (list): List of dictionaries containing 'old_category' and 'new_category' pairs
+        
+    Returns:
+        dict: Dictionary mapping old categories to new categories
+    """
+    return {mapping['old_category']: mapping['new_category'] for mapping in mappings}
         
