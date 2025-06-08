@@ -5,7 +5,7 @@ from recap.profile.forms import EditProfileForm
 from flask_login import current_user, login_user, logout_user, login_required
 import sqlalchemy as sa
 from recap import db
-from recap.models import User
+from recap.models import User, Article
 from recap.config import Config 
 from recap.aiapi_helper import AiApiHelper
 
@@ -69,7 +69,7 @@ def organize_taxonomy():
     context_string = f"I am using this taxonomy to categorize content: {', '.join(categories_names)}."
     
     # Define AI prompts as constants to avoid string recreation
-    PROMPT = "Can you recommend a category list, consolidating similar categories? However, keep Artificial Intelligence and Software Architecture."
+    PROMPT = "Can you recommend a category list, consolidating similar categories? However, keep Artificial Intelligence and Software Architecture. Keep categories concise and understandable to a human reader."
     FORMAT = """Respond in a structured JSON message, mapping old categories to new categories. Can you also explain what topics changed as a single description element in the JSON. The description should be concise and understandable to a human reader. The final structure must be formatted in this structure:
         {\r\n    \"description\": \"A summary of the changes to the topics.\",\r\n    \"mappings\": [\r\n        {\r\n            \"new_category\": \"new_category_value\",\r\n            \"old_category\": \"old_category_value\"\r\n        },\r\n        {\r\n            \"new_category\": \"new_category_value\",\r\n            \"old_category\": \"old_category_value\"\r\n        }\r\n    ],\r\n    \"ref_key\": \"2\"\r\n}
         """
@@ -90,6 +90,9 @@ def organize_taxonomy():
     category_mapping = create_category_mapping(mappings)
     new_categories = list(set(category_mapping.values()))
     
+    # Store mapping in session for later use
+    session['category_mapping'] = category_mapping
+    
     return render_template(
         "profile/organize_taxonomy.html",
         title='Organize Taxonomy',
@@ -98,6 +101,41 @@ def organize_taxonomy():
         description=description,
         category_mapping=category_mapping
     )
+
+@bp.route('/apply_taxonomy', methods=['POST'])
+@login_required
+def apply_taxonomy():
+    """
+    Apply the suggested category changes to all articles.
+    Updates article categories based on the mapping stored in session.
+    """
+    # Get category mapping from session
+    category_mapping = session.get('category_mapping')
+    if not category_mapping:
+        flash('No category mapping found. Please generate suggestions first.')
+        return redirect(url_for('profile.organize_taxonomy'))
+    
+    # Update categories for all articles
+    for old_category, new_category in category_mapping.items():
+        # Find all articles with the old category
+        articles = Article.query.filter_by(
+            user_id=current_user.id,
+            category=old_category
+        ).all()
+        
+        # Update each article's category
+        for article in articles:
+            article.category = new_category
+            db.session.add(article)
+    
+    # Commit all changes
+    db.session.commit()
+    
+    # Clear the mapping from session
+    session.pop('category_mapping', None)
+    
+    flash('Categories have been updated successfully.')
+    return redirect(url_for('profile.user', username=current_user.username))
 
 def create_category_mapping(mappings):
     """
