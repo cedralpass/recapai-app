@@ -9,15 +9,12 @@ cd /app
 #redis-server --daemonize yes
 
 
-# startup workers using worker-pool (fixed in rq 1.16.2)
-#rq worker-pool RECAP2-Classify -n 3 &
-
-# startup workers - using individual workers instead of worker-pool
-# worker-pool has a bug with --job-class parameter in rq 1.x versions
-# Use RECAP_REDIS_URL environment variable for Redis connection
-rq worker --url $RECAP_REDIS_URL RECAP2-Classify &
-rq worker --url $RECAP_REDIS_URL RECAP2-Classify &
-rq worker --url $RECAP_REDIS_URL RECAP2-Classify &
+# startup workers using monitoring script (auto-restarts workers if they crash)
+# The monitoring script ensures 3 workers are always running
+export RQ_QUEUE_NAME="RECAP2-Classify"
+export NUM_WORKERS=3
+/app/worker_monitor.sh &
 
 # launch webserver in foreground (don't daemonize so container stays alive)
+# This keeps the container running - if gunicorn dies, Render will restart the container
 gunicorn -w 3 -b 0.0.0.0:8000 app --log-level debug --timeout 90

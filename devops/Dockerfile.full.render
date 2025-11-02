@@ -34,12 +34,14 @@ COPY aiapi aiapi
 COPY ./app.py /app
 # initialize_render_run.sh - render-specific startup script
 COPY ./initialize_render_run.sh /app
+# worker_monitor.sh - monitors and auto-restarts RQ workers
+COPY ./worker_monitor.sh /app
 
 RUN mkdir -p /app/instance
 RUN chmod 66 /app/instance 
 
-# Specify the command to run on container start
-#CMD ["gunicorn"  , "-w", "3", "-b", "0.0.0.0:8000", "app","--log-level debug", "--timeout 90"]
-RUN ["chmod", "+x", "/app/initialize_render_run.sh"]
+# Make scripts executable
+RUN chmod +x /app/initialize_render_run.sh
+RUN chmod +x /app/worker_monitor.sh
 
 CMD sh /app/initialize_render_run.sh
