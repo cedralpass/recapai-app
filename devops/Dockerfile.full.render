@@ -20,7 +20,9 @@ WORKDIR /app
 COPY ./requirements.txt /app
 
 # Install any dependencies
-RUN pip install -r requirements.txt
+# Use --upgrade to ensure all dependencies are resolved to compatible versions
+RUN pip install --upgrade pip
+RUN pip install --upgrade -r requirements.txt
 RUN pip install gunicorn
 
 # Copy the content of the local src directory to the working directory
@@ -30,14 +32,14 @@ RUN rm -rf recap/.env
 COPY recap/.env.render.beta recap/.env
 COPY aiapi aiapi
 COPY ./app.py /app
-# initialize_run.sh
-COPY ./initialize_run.sh /app
+# initialize_render_run.sh - render-specific startup script
+COPY ./initialize_render_run.sh /app
 
 RUN mkdir -p /app/instance
 RUN chmod 66 /app/instance 
 
 # Specify the command to run on container start
 #CMD ["gunicorn"  , "-w", "3", "-b", "0.0.0.0:8000", "app","--log-level debug", "--timeout 90"]
-RUN ["chmod", "+x", "/app/initialize_run.sh"]
+RUN ["chmod", "+x", "/app/initialize_render_run.sh"]
 
-CMD sh /app/initialize_run.sh
+CMD sh /app/initialize_render_run.sh

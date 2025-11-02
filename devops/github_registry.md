@@ -15,6 +15,31 @@ How to work with Github Container Registry taken from [Github Container Registry
 
 ## Store Token into Variables
 
+To store the token as an environment variable for use with Docker login:
+
+1. Open your `~/.zshrc` file in an editor:
+   ```bash
+   code ~/.zshrc
+   # or
+   nano ~/.zshrc
+   ```
+
+2. Add or update the `CR_PAT` variable with your token:
+   ```bash
+   CR_PAT=your_token_here
+   export CR_PAT  # optional: explicitly export if needed
+   ```
+
+3. Save the file and reload your shell configuration:
+   ```bash
+   source ~/.zshrc
+   ```
+   Or restart your terminal.
+
+4. Verify the variable is set:
+   ```bash
+   echo $CR_PAT
+   ```
 
 ## Login to Docker
 In Terminal, login to docker
