@@ -1,0 +1,347 @@
+# RecapAI Application Architecture Documentation
+
+## Overview
+RecapAI is a Flask-based web application that allows users to bookmark URLs and automatically classify/summarize their content using OpenAI's API. The application consists of two main services deployed as separate Docker containers on Render.
+
+## System Architecture
+
+### High-Level Architecture
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Render Platform                         │
+│                                                               │
+│  ┌──────────────────┐         ┌──────────────────┐         │
+│  │  recap-full      │         │  recap-aiapi      │         │
+│  │  (Web Service)   │────────▶│  (Stateless API)  │         │
+│  │  - Flask App       │  HTTP  │  - OpenAI Client  │         │
+│  │  - Gunicorn        │  POST  │  - Gunicorn       │         │
+│  │  - 3 RQ Workers    │◀────────│  - Returns JSON    │         │
+│  │  - Worker Monitor  │  JSON  │  - No DB/State    │         │
+│  └──────────────────┘         └──────────────────┘         │
+│           │                                                    │
+│           │                                                    │
+│           ▼                                                    │
+│  ┌──────────────────┐         ┌──────────────────┐         │
+│  │  Redis Queue      │         │  Neon PostgreSQL │         │
+│  │  (Job Queue)      │         │  (Database)      │         │
+│  └──────────────────┘         │  - Stores Results│         │
+│                                └──────────────────┘         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Service Components
+
+### 1. Recap Web Application (`recap/`)
+**Purpose:** Main web application for user authentication, article management, and UI
+
+**Key Components:**
+- **Flask Application** (`recap/__init__.py`): Main app factory with blueprints
+- **Models** (`recap/models.py`): SQLAlchemy models (User, Article)
+- **Routes** (`recap/routes.py`): Web routes for article management
+- **Authentication** (`recap/auth/`): User login, registration, password reset
+- **Tasks** (`recap/tasks.py`): Background job definitions (classify_url)
+- **AI Helper** (`recap/aiapi_helper.py`): HTTP client to communicate with aiapi service
+- **Templates** (`recap/templates/`): Jinja2 templates with Tailwind CSS
+
+**Dependencies:**
+- Flask 3.0.2
+- Flask-SQLAlchemy 3.1.1
+- Flask-Login 0.6.3
+- Flask-Mail 0.9.1
+- RQ 1.16.2 (for background jobs)
+- Redis 5.0.3 (for job queue)
+
+**Background Workers:**
+- 3 RQ workers managed by `worker_monitor.sh`
+- Workers process jobs from `RECAP2-Classify` queue
+- Workers call `recap.tasks.classify_url()` which calls aiapi service
+
+**Deployment:**
+- Docker image: `ghcr.io/cedralpass/recap-full:latest`
+- Dockerfile: `devops/Dockerfile.full.render`
+- Startup script: `initialize_render_run.sh`
+- Runs on Render as web service
+- Health check: `/css` endpoint
+
+### 2. AI API Service (`aiapi/`)
+**Purpose:** Stateless backend service that interfaces with OpenAI API for content classification
+
+**Key Characteristics:**
+- **Stateless**: No database connections, no persistent state
+- **Pure API Service**: Receives requests, calls OpenAI, returns JSON results
+- **No Data Storage**: All data persistence handled by recap-full service
+
+**Key Components:**
+- **Flask Application** (`aiapi/__init__.py`): Minimal Flask app for API endpoints
+- **Classify Endpoint** (`aiapi/classify.py`): `/classify_url` - Classifies URLs using OpenAI
+- **Task Processor** (`aiapi/task_processor.py`): `/process_task` - Generic task processing
+- **Config** (`aiapi/config.py`): Environment-based configuration
+
+**API Endpoints:**
+- `POST /classify_url`: Takes URL, returns classification JSON (category, summary, topics, etc.)
+- `POST /process_task`: Generic task processing endpoint
+- `GET /hello`: Health check endpoint
+
+**OpenAI Integration:**
+- Uses OpenAI Chat Completions API
+- Model: Configured via `AI_OPEN_AI_MODEL` env var
+- Response format: JSON object
+- Prompt: System message with classification instructions
+
+**Data Flow:**
+- Receives HTTP POST request from recap-full service
+- Calls OpenAI API with URL
+- Returns JSON response to recap-full service
+- recap-full service stores results in Neon PostgreSQL
+
+**Deployment:**
+- Docker image: `ghcr.io/cedralpass/recap-aiapi:latest`
+- Dockerfile: `devops/Dockerfile.aiapi`
+- Runs on Render as separate web service
+- Health check: `/hello` endpoint
+
+## Data Flow
+
+### Article Classification Flow
+```
+1. User submits URL via web form (recap/routes.py)
+   ↓
+2. Article record created in Neon PostgreSQL (recap-full service)
+   ↓
+3. RQ job enqueued: recap.tasks.classify_url(url, user_id)
+   ↓
+4. RQ Worker (recap-full) picks up job from Redis queue
+   ↓
+5. Worker calls AiApiHelper.ClassifyUrl() (recap/aiapi_helper.py)
+   ↓
+6. HTTP POST to recap-aiapi service: /classify_url
+   │  (recap-aiapi is stateless - no database)
+   ↓
+7. recap-aiapi service calls OpenAI Chat Completions API
+   ↓
+8. OpenAI returns classification JSON
+   ↓
+9. recap-aiapi returns JSON response to worker (recap-full)
+   ↓
+10. Worker (recap-full) updates Article record in Neon PostgreSQL:
+    - summary
+    - title
+    - author_name
+    - category
+    - key_topics (JSON)
+    - sub_categories (JSON)
+    - classified (timestamp)
+```
+
+## Database Schema
+
+### PostgreSQL (Neon.com)
+**Database Location:** Only connected to recap-full service (not recap-aiapi)
+
+**Models:**
+- **User**: Authentication, profile information
+- **Article**: URL bookmarks with classification results
+  - url_path
+  - summary
+  - title
+  - author_name
+  - category
+  - key_topics (JSON)
+  - sub_categories (JSON)
+  - classified (timestamp)
+  - user_id (FK)
+
+**Migrations:**
+- Managed via Flask-Migrate (Alembic)
+- Migration files in `migrations/versions/`
+
+**Note:** recap-aiapi service is stateless and does not connect to any database. All data persistence is handled by recap-full service.
+
+## Infrastructure
+
+### Build Process
+**Script:** `devops/build_for_render.sh`
+
+1. Login to GitHub Container Registry (ghcr.io)
+2. Build two Docker images:
+   - `recap-aiapi` from `Dockerfile.aiapi`
+   - `recap-full` from `Dockerfile.full.render`
+3. Tag images: `ghcr.io/cedralpass/{image}:latest`
+4. Push to GitHub Container Registry
+
+### Docker Images
+
+#### recap-aiapi
+- Base: `python:3.11-alpine`
+- Contains: `aiapi/` directory
+- Command: `gunicorn -w 3 -b 0.0.0.0:8000 aiapi:create_app()`
+- Port: 8000
+
+#### recap-full
+- Base: `python:3.11-alpine`
+- Contains: `recap/`, `aiapi/`, `app.py`
+- Startup: `initialize_render_run.sh`
+  - Starts `worker_monitor.sh` (background)
+  - Starts `gunicorn` (foreground)
+- Port: 8000
+
+### Worker Monitoring
+**Script:** `worker_monitor.sh`
+
+- Monitors 3 RQ workers
+- Checks worker health every 10 seconds
+- Automatically restarts dead workers
+- Logs all events with timestamps
+- Handles graceful shutdown
+
+### Deployment Platform: Render
+**Configuration:** `render.yaml`
+
+**Services:**
+1. **recap-aiapi:latest** (web service)
+   - Image: `ghcr.io/cedralpass/recap-aiapi:latest`
+   - Plan: free
+   - Health check: `/hello`
+
+2. **recap-full:latest** (web service)
+   - Image: `ghcr.io/cedralpass/recap-full:latest`
+   - Plan: starter
+   - Health check: `/css`
+
+3. **recaprai-redis-dev** (redis service)
+   - Plan: free
+   - Used for RQ job queue
+
+**External Services:**
+- **Neon.com**: PostgreSQL database (production)
+- **OpenAI API**: Content classification
+
+## Environment Configuration
+
+### Recap Service Environment Variables
+Located in `recap/.env` or `recap/.env.render.beta`:
+- `SECRET_KEY`: Flask secret key
+- `RECAP_LogLevel`: Logging level
+- `RECAP_REDIS_URL`: Redis connection URL
+- `RECAP_RQ_QUEUE`: Queue name (RECAP2-Classify)
+- `RECAP_AI_API_URL`: URL of aiapi service
+- `RECAP_POSTGRES_*`: PostgreSQL connection details
+- `MAIL_*`: Email server configuration
+
+### AIAPI Service Environment Variables
+Located in `aiapi/.env`:
+- `AI_API_SECRET_KEY`: Flask secret key
+- `AI_API_LogLevel`: Logging level
+- `AI_API_OPENAI`: OpenAI API key
+- `AI_OPEN_AI_MODEL`: OpenAI model name
+
+## Key Technologies
+
+- **Backend Framework**: Flask 3.0.2
+- **Database**: PostgreSQL (Neon.com)
+- **ORM**: SQLAlchemy (via Flask-SQLAlchemy)
+- **Job Queue**: RQ (Redis Queue) 1.16.2
+- **HTTP Client**: httpx 0.27.0
+- **AI Integration**: OpenAI Python SDK 1.14.2
+- **CSS Framework**: Tailwind CSS
+- **Web Server**: Gunicorn
+- **Container Registry**: GitHub Container Registry (ghcr.io)
+- **Hosting**: Render.com
+- **Database Hosting**: Neon.com
+
+## Development Setup
+
+### Local Development
+- Run recap: `flask --app recap run --debug --port 8080`
+- Run aiapi: `flask --app aiapi run --debug --port 8082`
+- Run combined: `python run.py` (uses DispatcherMiddleware)
+- Start RQ worker: `rq worker RECAP2-Classify`
+- Build CSS: `npx tailwindcss -i ./recap/static/css/input.css -o ./recap/static/css/output.css --watch`
+
+### Testing
+- Test files in `tests/` directory
+- Uses pytest 8.0.2
+- Separate unit and integration tests
+
+## Important File Locations
+
+### Application Code
+- `recap/`: Main web application
+- `aiapi/`: AI API service
+- `app.py`: Combined app dispatcher (dev only)
+
+### Configuration
+- `requirements.txt`: Python dependencies
+- `devops/`: Dockerfiles and build scripts
+- `render.yaml`: Render deployment config
+- `tailwind.config.js`: Tailwind CSS configuration
+
+### Scripts
+- `initialize_render_run.sh`: Production startup script
+- `initialize_run.sh`: Alternative startup script
+- `worker_monitor.sh`: Worker monitoring script
+- `devops/build_for_render.sh`: Build and push script
+
+### Documentation
+- `README.md`: Development guide
+- `docs/`: Additional documentation
+  - `environments.md`: Environment variable documentation
+  - `background_jobs.md`: RQ worker documentation
+  - `deploy_to_digitalocean.md`: Alternative deployment guide
+
+## Code Patterns and Conventions
+
+### Flask Application Structure
+- Uses application factory pattern (`create_app()`)
+- Blueprints for route organization
+- Environment-based configuration
+- SQLAlchemy for database operations
+
+### Background Jobs
+- Jobs defined in `recap/tasks.py`
+- Enqueued via `current_app.task_queue.enqueue()`
+- Workers process from Redis queue
+- Job metadata stored in Redis
+
+### Service Communication
+- Recap → AIAPI: HTTP POST via httpx
+- Authentication: Simple secret key in request
+- Error handling: Try/except with logging
+
+### Database Migrations
+- Managed via Flask-Migrate
+- Migration files in `migrations/versions/`
+- Run: `flask --app recap db migrate` / `flask --app recap db upgrade`
+
+## Security Considerations
+
+- Flask secret keys for session management
+- Password hashing via Flask-Login
+- Simple API authentication (secret key) between services
+- Environment variables for sensitive data
+- SQL injection protection via SQLAlchemy ORM
+
+## Performance Considerations
+
+- Gunicorn with 3 workers for both services
+- RQ workers for async job processing
+- Database connection pooling configured
+- Worker monitoring to ensure availability
+- Health check endpoints for Render
+
+## Deployment Workflow
+
+1. Make code changes
+2. Run `./devops/build_for_render.sh` to build and push images
+3. Render automatically pulls new images (or manual deploy trigger)
+4. Services restart with new images
+5. Workers automatically start via monitoring script
+
+## Troubleshooting
+
+- Check Render logs for service issues
+- Check worker_monitor.sh logs for worker issues
+- Verify Redis connection for job queue
+- Verify PostgreSQL connection for database
+- Check OpenAI API key and quota
+- Verify environment variables are set correctly
