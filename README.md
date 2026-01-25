@@ -22,9 +22,9 @@ Run the following command to run the development, builtin webserver
 
 ### For just the recap service: 
 ```bash
-flask --app recap run --debug  --port 8081
+flask --app recap run --debug  --port 8080
 ```
-[recap index page](http://127.0.0.1:8081/)
+[recap index page](http://127.0.0.1:8080/)
 
 ### For just the aiapi service: 
 ```bash

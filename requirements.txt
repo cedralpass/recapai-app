@@ -1,4 +1,4 @@
-Flask==3.0.2  #flask development framework
+Flask==3.1.2  #flask development framework
 flask-sqlalchemy==3.1.1
 flask-migrate==4.0.7
 psycopg2-binary==2.9.9 # driver to postgres
