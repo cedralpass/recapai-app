@@ -1,6 +1,6 @@
 Flask==3.1.2  #flask development framework
 flask-sqlalchemy==3.1.1
-flask-migrate==4.0.7
+flask-migrate==4.1.0
 psycopg2-binary==2.9.9 # driver to postgres
 environs==10.3.0 #utility to load and validate environment variables
 marshmallow==3.21.0 #required by environs 10.3.0 (needs >=3.13.0 for __version_info__)
@@ -9,7 +9,7 @@ rq==1.16.2  # 1.16.1 has a bug with worker-pool --job-class parameter
 httpx==0.27.0 #making async calls to services
 openai==1.14.2 #openai library to call openai
 flask-login==0.6.3
-flask-wtf==1.2.1
+flask-wtf==1.2.2
 email-validator==2.1.1
 flask-mail==0.9.1
 pyjwt==2.8.0
