@@ -10,6 +10,7 @@ httpx==0.27.0 #making async calls to services
 openai==1.14.2 #openai library to call openai
 flask-login==0.6.3
 flask-wtf==1.2.2
+wtforms<3.2  # Pin to <3.2 to avoid breaking change with flask-wtf 1.2.2 (field_flags changed from dict to tuple in WTForms 3.2.0+)
 email-validator==2.1.1
 flask-mail==0.9.1
 pyjwt==2.8.0
