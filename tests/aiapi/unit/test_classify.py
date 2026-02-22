@@ -61,4 +61,59 @@ class TestClassify:
         assert response_data['blog_title'] == 'How to Start Logging with Flask'
         assert len(response_data['key_topics']) == 3
         assert len(response_data['sub_categories']) == 3
-        assert response_data['ref_key'] == '2' 
+        assert response_data['ref_key'] == '2'
+
+    def test_build_prompt_url_only(self, aiapi_client):
+        """build_prompt with no content uses URL-only instructions."""
+        from aiapi.classify import build_prompt
+        with aiapi_client.application.app_context():
+            messages = build_prompt('https://example.com/post', content=None)
+        assert len(messages) == 2
+        assert messages[0]['role'] == 'system'
+        assert 'ONLY the URL' in messages[0]['content'] or 'only the URL' in messages[0]['content']
+        assert messages[1]['role'] == 'user'
+        assert 'https://example.com/post' in messages[1]['content']
+
+    def test_build_prompt_with_content(self, aiapi_client):
+        """build_prompt with content includes article text and instructs to use only provided text."""
+        from aiapi.classify import build_prompt
+        with aiapi_client.application.app_context():
+            messages = build_prompt('https://example.com/post', content='Full article body here.')
+        assert len(messages) == 2
+        assert messages[0]['role'] == 'system'
+        assert 'provided' in messages[0]['content'].lower()
+        assert 'only on the provided text' in messages[0]['content'].lower() or 'only on the provided' in messages[0]['content'].lower()
+        assert messages[1]['role'] == 'user'
+        assert 'Full article body here.' in messages[1]['content']
+        assert 'https://example.com/post' in messages[1]['content']
+
+    @patch('aiapi.classify.OpenAI')
+    def test_classify_endpoint_with_content(self, mock_openai, aiapi_client):
+        """Classify endpoint with content in request uses content in prompt."""
+        mock_completion = MagicMock()
+        mock_response = {
+            "author": "Blog Author",
+            "blog_title": "MCP and Render",
+            "category": "Artificial Intelligence",
+            "key_topics": ["MCP", "Render", "Agents"],
+            "sub_categories": ["AI Tools", "DevOps", "MCP"],
+            "summary": "Article about Model Context Protocol and Render.",
+            "url": "https://example.com/mcp-render"
+        }
+        mock_completion.choices = [MagicMock()]
+        mock_completion.choices[0].message = MagicMock()
+        mock_completion.choices[0].message.content = json.dumps(mock_response)
+        mock_openai.return_value.chat.completions.create.return_value = mock_completion
+
+        response = aiapi_client.post('/classify_url', data={
+            'url': 'https://example.com/mcp-render',
+            'secret': 'test-token',
+            'ref_key': '3',
+            'content': 'This article explains Model Context Protocol (MCP) and how to use it with Render.'
+        })
+        assert response.status_code == 200
+        create_call = mock_openai.return_value.chat.completions.create
+        messages = create_call.call_args[1]['messages']
+        user_msg = next((m['content'] for m in messages if m['role'] == 'user'), '')
+        assert 'Model Context Protocol' in user_msg or 'MCP' in user_msg
+        assert 'This article explains' in user_msg

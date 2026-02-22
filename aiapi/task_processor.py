@@ -45,16 +45,16 @@ def process_task():
     client = OpenAI(api_key=current_app.config["AI_API_OPENAI"])
     prompt_array = build_prompt(context, prompt, format, prompt_history_json)
 
-    #make OpenAI Call
+    #make OpenAI Call (tuned for factual tasks: lower temperature, slight frequency_penalty)
     response = client.chat.completions.create(
         model=AIAPIConfig.AI_OPEN_AI_MODEL,
         messages=prompt_array,
-            response_format=response_format,
-            temperature=0.9,
-            max_tokens=512,
-            frequency_penalty=0,
-            presence_penalty=0
-            )
+        response_format=response_format,
+        temperature=0.3,
+        max_tokens=512,
+        frequency_penalty=0.15,
+        presence_penalty=0
+    )
     
     if len(response.choices)>=1:
         current_app.logger.info("classify: recieved response with >=1 choice from OpenAI")

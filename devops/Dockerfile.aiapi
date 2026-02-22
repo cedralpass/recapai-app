@@ -7,8 +7,8 @@ FROM --platform=linux/amd64 python:3.11-alpine
 # By default, listen on port 8000
 EXPOSE 8000/tcp
 
-#install curl
-RUN apk --no-cache add curl
+# curl for health checks; libxml2/libxslt and build deps for lxml (readability-lxml)
+RUN apk --no-cache add curl libxml2-dev libxslt-dev gcc musl-dev
 
 # Set the working directory in the container
 WORKDIR /app
