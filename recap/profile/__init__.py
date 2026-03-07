@@ -141,12 +141,27 @@ def create_category_mapping(mappings):
     """
     Convert a list of category mappings to a dictionary where keys are old categories
     and values are new categories.
-    
+
     Args:
         mappings (list): List of dictionaries containing 'old_category' and 'new_category' pairs
-        
+
     Returns:
         dict: Dictionary mapping old categories to new categories
     """
     return {mapping['old_category']: mapping['new_category'] for mapping in mappings}
+
+
+@bp.route('/settings/api-token', methods=['GET', 'POST'])
+@login_required
+def api_token():
+    """Display and optionally regenerate the current user's API token."""
+    if request.method == 'POST':
+        import secrets
+        current_user.api_token = secrets.token_urlsafe(32)
+        db.session.commit()
+        flash('API token regenerated.')
+        return redirect(url_for('profile.api_token'))
+
+    token = current_user.get_or_create_api_token()
+    return render_template('profile/api_token.html', title='API Token', token=token)
         

@@ -5,6 +5,7 @@ import sqlalchemy.orm as so
 from sqlalchemy import Uuid
 from recap import db
 import uuid
+import secrets
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin #flask_login has a user mixin that implements the 4 required methods
 from recap import login_manager
@@ -24,6 +25,9 @@ class User(UserMixin, db.Model):
                                              unique=True)
     password_hash: so.Mapped[Optional[str]] = so.mapped_column(sa.String(256))
     phone: so.Mapped[str] = so.mapped_column(sa.String(15), nullable=True)
+    api_token: so.Mapped[Optional[str]] = so.mapped_column(
+        sa.String(64), nullable=True, unique=True, index=True
+    )
 
     articles: so.WriteOnlyMapped['Article'] = so.relationship(
         back_populates='user')
@@ -71,6 +75,13 @@ class User(UserMixin, db.Model):
         
         current_app.logger.debug(groupings)
         return groupings
+
+    def get_or_create_api_token(self):
+        """Return the user's API token, generating and persisting one if it doesn't exist."""
+        if not self.api_token:
+            self.api_token = secrets.token_urlsafe(32)
+            db.session.commit()
+        return self.api_token
 
     @staticmethod
     def verify_reset_password_token(token):

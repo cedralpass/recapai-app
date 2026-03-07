@@ -2,6 +2,7 @@ from flask import Flask, redirect, flash, render_template, url_for
 from recap.config import Config
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from flask_cors import CORS
 from redis import Redis
 import rq
 from flask_login import LoginManager
@@ -67,9 +68,12 @@ def create_app(env='dev'):
     from recap.auth import bp as auth_bp
     app.register_blueprint(auth_bp, url_prefix='/auth')
 
-    from recap.profile import bp as profile_bp 
+    from recap.profile import bp as profile_bp
     app.register_blueprint(profile_bp)
 
+    from recap.api_v1 import bp as api_v1_bp
+    app.register_blueprint(api_v1_bp)
+    CORS(app, resources={r'/api/v1/*': {'origins': '*'}})
 
     return app
 
