@@ -1,114 +1,129 @@
-# recap
+# RecapAI
 
-Currently Amazon Web Services with ECS is too expensive $5 a day as configured in CDK. For now, we will deploy with DigitalOcean and run App Platform. To get back to CDK, we need to add the python libraries back that are commented out in our requirements.txt.  Removing CDK also removes 180MB from our container size.
+An AI-powered article bookmarking and classification app. Paste a URL, and the app fetches the article, classifies it using OpenAI (category, summary, title, author, key topics), and organizes your reading library.
 
-Configure Recap and AIAPI via .env files.  See documentation [here](docs/environments.md)
+Configure Recap and AIAPI via `.env` files. See [environment documentation](docs/environments.md).
 
-## start terminal with virtual environment
+## Architecture
 
+Two Flask services run together:
+- **`recap/`** — User-facing web app (HTML/Tailwind CSS)
+- **`aiapi/`** — Internal AI microservice wrapping OpenAI
+
+## Development Setup
+
+### Activate virtual environment
 ```bash
 source .venv/bin/activate
 ```
 
-#setup
-## Init DB
-Run the following command to init DB
+### Initialize the database
 ```bash
-flask --app recap init-db   
+flask --app recap init-db
 ```
 
-## Init dev webserver
-Run the following command to run the development, builtin webserver
+### Run services
 
-### For just the recap service: 
+**recap only** (port 8080):
 ```bash
-flask --app recap run --debug  --port 8080
-```
-[recap index page](http://127.0.0.1:8080/)
-
-### For just the aiapi service: 
-```bash
-flask --app aiapi run --debug  --port 8082
+flask --app recap run --debug --port 8080
 ```
 
-### Two run recap and aiapi together with
-/ -> recap
-/aiapi -> aiapi
+**aiapi only** (port 8082):
+```bash
+flask --app aiapi run --debug --port 8082
+```
 
-use the following script
+**Both together** (`/` → recap, `/aiapi` → aiapi):
 ```bash
 python run.py
 ```
+- [recap index](http://127.0.0.1:8001/)
+- [aiapi hello](http://127.0.0.1:8001/aiapi/hello)
 
-[recap index page ](http://127.0.0.1:8001/)
-[aiapi hello function ](http://127.0.0.1:8001/aiapi/hello)
+### Background worker
 
-## Background processing worker
-Make sure a worker is running in a python terminal for background processing.
+A worker must be running for article classification to process:
+```bash
+rq worker RECAP2-Classify
+```
 
-```rq worker RECAP2-Classify```
+To simulate production (worker pool):
+```bash
+rq worker-pool RECAP2-Classify -n 1
+```
 
-In production, we are using a worker pool to process. The last parameter is number of workers. To simulate production run locally:
+### Build CSS
 
-```rq worker-pool RECAP2-Classify -n 1```
+Tailwind CSS requires a Node process to watch for changes:
+```bash
+npx tailwindcss -i ./recap/static/css/input.css -o ./recap/static/css/output.css --watch
+```
 
-## Building CSS
-We are using tailwind for our CSS managment.  It requires a node process to watch for css changes and build optimal css files.
+## Production
 
-```npx tailwindcss -i ./recap/static/css/input.css -o ./recap/static/css/output.css --watch```
+> Gunicorn is installed as part of the Docker build — it is **not** in `requirements.txt`.
 
-# Produciton
-
-!! Gunicorn is installed as part of the docker build scripts. It is not in requirements.txt !!
-## recap - Run the produciton gunicorn web server
-Run the following command to run in produciton
+**recap only:**
 ```bash
 gunicorn -w 4 'recap:create_app()' -b 127.0.0.1:8080 --access-logfile=gunicorn.http.log --error-logfile=gunicorn.error.log
 ```
 
-## aiapi - Run the produciton gunicorn web server
-Run the following command to run the aiapi produciton
+**aiapi only:**
 ```bash
 gunicorn -w 4 'aiapi:create_app()' -b 127.0.0.1:8080 --access-logfile=gunicorn.http.log --error-logfile=gunicorn.error.log
 ```
 
-## recap + aiapi - Run recap and aiapi together under one server
-
+**Both together (Render production):**
 ```bash
- gunicorn -w 4 'app' -b 127.0.0.1:8080 --access-logfile=gunicorn.http.log --error-logfile=gunicorn.error.log
+gunicorn -w 3 -b 0.0.0.0:8000 app --log-level debug --timeout 90
 ```
 
-## run gunicorn as daemon
-``` gunicorn -w 4 'app' -b 127.0.0.1:8080 --access-logfile=gunicorn.http.log --error-logfile=gunicorn.error.log --daemon```
+**Run as daemon:**
+```bash
+gunicorn -w 4 'app' -b 127.0.0.1:8080 --access-logfile=gunicorn.http.log --error-logfile=gunicorn.error.log --daemon
+```
 
-### kill gunicorn
-1. ``` ps -ef | grep gunicorn```
-2. ```kill -9 [prgm pid]```
+**Kill gunicorn:**
+```bash
+ps -ef | grep gunicorn
+kill -9 <pid>
+```
 
-[recap index page ](http://127.0.0.1:8080/)
-[aiapi hello function ](http://127.0.0.1:8080/aiapi/hello)
+[Gunicorn settings reference](https://docs.gunicorn.org/en/stable/settings.html)
 
-[gunicorn settings](https://docs.gunicorn.org/en/stable/settings.html)
+## Docker — Fully Contained Container
 
-## Fully Contained Docker Contaner
-We can also run Recap, API, REDIS in one container for testing / demo...
+Run Recap, AIAPI, and Redis in a single container for local testing or demos.
 
-Dockerfile is Dockerfile.aws.full
+**Build:**
+```bash
+docker build -t recap-full . -f Dockerfile.full
+```
 
-### Build with this command
+**Run:**
+```bash
+docker run --detach -p 8000:8000 -t recap-full
+```
 
-```docker build -t recap-full . -f Dockerfile.full```
+**Stop:**
+```bash
+docker ps                          # find container id
+docker stop <container_id>
+```
 
-### Run with this command
-```docker run --detach  -p 8000:8000 -t recap-full```
-### Stop the container with this command
+## Deploy to Render
 
-1. to list the docker containers running ```docker ps```
-2. to stop the container: ```docker stop <container id>``` example ```docker stop 9e498c6d5732```
+The app is hosted on [Render](https://render.com). Services are deployed as Docker images pulled from GitHub Container Registry (`ghcr.io/cedralpass/`).
 
+**Build and push image:**
+```bash
+sh ./devops/build_for_render.sh
+```
 
-# Build and deploy to Digital Ocean
+**Services defined in `render.yaml`:**
+- `recap-full` — main web app (recap + aiapi + workers)
+- `recap-aiapi` — standalone aiapi service
+- `recaprai-redis-dev` — managed Redis instance
 
-We are using digital ocean for hosting the app servers. Build using the following script
-
-```sh ./devops/build_for_digital_ocean.sh```
+See [devops/render_hosting.md](devops/render_hosting.md) for Render setup details.
