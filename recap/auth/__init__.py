@@ -7,7 +7,7 @@ import sqlalchemy as sa
 from recap import db
 from recap.models import User
 from urllib.parse import urlsplit
-
+from recap.auth.email import send_password_reset_email
 bp = Blueprint('auth', __name__)
 
 #TODO: move login to a blueprint requires, flash, render_template, redirect
@@ -57,9 +57,9 @@ def reset_password_request():
         user = db.session.scalar(
             sa.select(User).where(User.email == form.email.data))
         if user:
-            #send_password_reset_email(user)
-            job = launch_task(name='recap.tasks.send_password_reset_email_task', description='reset password email', user_id=user.id)
-            print(job)
+            send_password_reset_email(user)
+            #job = launch_task(name='recap.tasks.send_password_reset_email_task', description='reset password email', user_id=user.id)
+            #print(job)
         flash('Check your email for the instructions to reset your password')
         return redirect(url_for('auth.login'))
     return render_template('auth/reset_password_request.html',

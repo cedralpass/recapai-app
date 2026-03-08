@@ -127,3 +127,11 @@ sh ./devops/build_for_render.sh
 - `recaprai-redis-dev` — managed Redis instance
 
 See [devops/render_hosting.md](devops/render_hosting.md) for Render setup details.
+
+
+## Test API for posting article
+
+curl -X POST http://localhost:8080/api/v1/articles \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://www.sabrina.dev/p/claude-code-full-course-for-beginners"}'
