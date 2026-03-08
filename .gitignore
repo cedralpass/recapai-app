@@ -27,6 +27,9 @@ cdk.out
 #node ignore
 node_modules/
 
+# Claude Code working directories (worktrees, memory, plans)
+.claude/
+
 
 .venv/
 *.log.*
