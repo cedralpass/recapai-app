@@ -129,9 +129,54 @@ sh ./devops/build_for_render.sh
 See [devops/render_hosting.md](devops/render_hosting.md) for Render setup details.
 
 
-## Test API for posting article
+## Chrome Extension
 
+The `chrome-extension/` directory contains a Manifest V3 Chrome Extension that lets you save any page to RecapAI with a single click — no copy/paste required.
+
+### First-time setup
+
+**1. Get your API token**
+
+Log in to RecapAI and navigate to **Settings → API Token** (`/settings/api-token`). Copy the token shown on the page (or click **Regenerate** to create a fresh one).
+
+**2. Load the extension in Chrome**
+
+1. Open `chrome://extensions` in Chrome.
+2. Enable **Developer mode** (toggle in the top-right corner).
+3. Click **Load unpacked**.
+4. Select the `chrome-extension/` folder from this repository.
+
+The RecapAI icon (black "R") will appear in your Chrome toolbar.
+
+**3. Configure the extension**
+
+1. Click the RecapAI icon, then click the **⚙ gear icon** (or right-click the toolbar icon → **Options**).
+2. Enter your **RecapAI Server URL** — e.g. `https://your-app.onrender.com` (no trailing slash).
+3. Paste your **API Token** from step 1.
+4. Click **Save Settings**.
+
+### Saving an article
+
+1. Browse to any article or page you want to save.
+2. Click the RecapAI toolbar icon.
+3. Click **Save to Recap AI**.
+4. You'll see ✅ **Saved! Recap AI is classifying it.** — the article will appear in your reading list within ~20 seconds once the AI worker processes it.
+
+### API Token management
+
+| Action | Where |
+|--------|-------|
+| View your token | RecapAI → Settings → API Token |
+| Regenerate token | Same page → **Regenerate Token** button |
+| Update extension after regeneration | Extension Options → paste new token → Save |
+
+> **Note:** Regenerating your token immediately invalidates the old one. Update the extension options page with the new token to restore functionality.
+
+### Smoke-test the API directly
+
+```bash
 curl -X POST http://localhost:8080/api/v1/articles \
-  -H "Authorization: Bearer <token>" \
+  -H "Authorization: Bearer <your-token>" \
   -H "Content-Type: application/json" \
   -d '{"url": "https://www.sabrina.dev/p/claude-code-full-course-for-beginners"}'
+```
