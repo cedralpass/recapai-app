@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RecapAI Bookmarker — Settings</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f9fafb;
+      color: #111827;
+      min-height: 100vh;
+    }
+
+    nav {
+      background: #000;
+      color: #cbd5e1;
+      padding: 12px 24px;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    main {
+      max-width: 540px;
+      margin: 40px auto;
+      padding: 0 16px;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: #6b7280;
+      font-size: 0.9rem;
+      margin-bottom: 32px;
+    }
+
+    .field {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    input[type="url"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      background: #fff;
+    }
+
+    input:focus {
+      outline: 2px solid #000;
+      outline-offset: 1px;
+    }
+
+    .token-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .token-row input {
+      flex: 1;
+    }
+
+    .btn-toggle {
+      padding: 10px 14px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: #fff;
+      font-size: 0.85rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .btn-toggle:hover { background: #f3f4f6; }
+
+    .hint {
+      font-size: 0.8rem;
+      color: #6b7280;
+      margin-top: 5px;
+    }
+
+    .btn-save {
+      background: #000;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 11px 28px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    .btn-save:hover { background: #1f2937; }
+
+    #status {
+      margin-top: 14px;
+      font-size: 0.9rem;
+      min-height: 1.4em;
+    }
+
+    #status.success { color: #15803d; }
+    #status.error   { color: #dc2626; }
+
+    footer {
+      margin-top: 48px;
+      padding-top: 16px;
+      border-top: 1px solid #e5e7eb;
+      font-size: 0.8rem;
+      color: #9ca3af;
+    }
+
+    footer a { color: #6b7280; }
+  </style>
+</head>
+<body>
+  <nav>Recap AI &mdash; Extension Settings</nav>
+
+  <main>
+    <h1>Extension Settings</h1>
+    <p class="subtitle">Configure your RecapAI server URL and API token below.</p>
+
+    <div class="field">
+      <label for="apiUrl">RecapAI Server URL</label>
+      <input type="url" id="apiUrl" placeholder="https://your-app.onrender.com">
+      <p class="hint">The base URL of your RecapAI instance — no trailing slash.</p>
+    </div>
+
+    <div class="field">
+      <label for="apiToken">API Token</label>
+      <div class="token-row">
+        <input type="password" id="apiToken" placeholder="Paste your token here">
+        <button class="btn-toggle" id="toggleToken">Show</button>
+      </div>
+      <p class="hint">
+        Get your token from <strong>RecapAI → Settings → API Token</strong>.
+      </p>
+    </div>
+
+    <button class="btn-save" id="saveBtn">Save Settings</button>
+
+    <div id="status"></div>
+
+    <footer>
+      <p>Changes are saved to your Chrome profile and sync across devices.</p>
+    </footer>
+  </main>
+
+  <script src="options.js"></script>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RecapAI Bookmarker</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 320px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f9fafb;
+      color: #111827;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #000;
+      color: #cbd5e1;
+      padding: 10px 14px;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    #optionsBtn {
+      background: none;
+      border: none;
+      color: #cbd5e1;
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 0 2px;
+      line-height: 1;
+    }
+
+    #optionsBtn:hover { color: #fff; }
+
+    /* ── Main content ── */
+    main {
+      padding: 16px 14px;
+    }
+
+    /* Not-configured state */
+    #unconfigured {
+      display: none;
+      text-align: center;
+      padding: 12px 0;
+    }
+
+    #unconfigured p {
+      font-size: 0.85rem;
+      color: #6b7280;
+      margin-bottom: 12px;
+    }
+
+    /* Page info */
+    #pageInfo {
+      display: none;
+      margin-bottom: 14px;
+    }
+
+    #pageTitle {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #111827;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      margin-bottom: 4px;
+    }
+
+    #pageUrl {
+      font-size: 0.75rem;
+      color: #6b7280;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Buttons */
+    .btn-primary {
+      width: 100%;
+      background: #000;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-primary:hover:not(:disabled) { background: #1f2937; }
+
+    .btn-primary:disabled {
+      background: #6b7280;
+      cursor: default;
+    }
+
+    .btn-secondary {
+      background: #fff;
+      color: #111827;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      padding: 9px 16px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    .btn-secondary:hover { background: #f3f4f6; }
+
+    /* Status */
+    #status {
+      margin-top: 12px;
+      font-size: 0.82rem;
+      min-height: 1.2em;
+      text-align: center;
+    }
+
+    #status.saving  { color: #6b7280; }
+    #status.success { color: #15803d; font-weight: 600; }
+    #status.error   { color: #dc2626; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <span>Recap AI</span>
+    <button id="optionsBtn" title="Open Settings">&#9881;</button>
+  </header>
+
+  <main>
+    <!-- Shown when settings are not yet configured -->
+    <div id="unconfigured">
+      <p>⚠ Please set your RecapAI URL and API token before saving articles.</p>
+      <button class="btn-secondary" id="openSettingsBtn">Open Settings</button>
+    </div>
+
+    <!-- Shown when settings are configured -->
+    <div id="pageInfo">
+      <div id="pageTitle"></div>
+      <div id="pageUrl"></div>
+    </div>
+
+    <button class="btn-primary" id="saveBtn" disabled>Save to Recap AI</button>
+
+    <div id="status"></div>
+  </main>
+
+  <script src="popup.js"></script>
+</body>
+</html>
