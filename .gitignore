@@ -27,8 +27,10 @@ cdk.out
 #node ignore
 node_modules/
 
-# Claude Code working directories (worktrees, memory, plans)
-.claude/
+# Claude Code working directories (worktrees, memory, plans) — keep launch.json tracked
+.claude/worktrees/
+.claude/plans/
+.claude/memory/
 
 
 .venv/
