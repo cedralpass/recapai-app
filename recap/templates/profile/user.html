@@ -8,13 +8,13 @@
     <h1 class="text-lg font-bold">User: {{ user.username }}</h1>
     Phone: {{ user.phone }}<br />
     email: {{user.email}}<br />
-    <div>&nbsp;<br />&nbsp;<p class="float-right">
-            <a href="{{ url_for('profile.edit_profile') }}"
-                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded focus:outline-none">Edit
-                profile</a>
-                <a href="{{ url_for('profile.organize_taxonomy') }}"
-                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded focus:outline-none">Organize Taxonomy</a>
-        </p>
+    <div class="flex justify-end mt-4 space-x-1">
+        <a href="{{ url_for('profile.edit_profile') }}"
+            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 text-sm rounded focus:outline-none">Edit</a>
+        <a href="{{ url_for('profile.organize_taxonomy') }}"
+            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 text-sm rounded focus:outline-none">Reclassify</a>
+        <a href="{{ url_for('profile.api_token') }}"
+            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 text-sm rounded focus:outline-none">API Token</a>
     </div>
 </div>
 
