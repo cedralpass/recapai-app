@@ -1,0 +1,48 @@
+# Python virtual environment - deps are installed inside the image via pip
+.venv/
+
+# Node modules - only needed for Tailwind CSS watch, not in the image
+node_modules/
+
+# Python bytecode caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Egg/dist artifacts
+*.egg-info/
+dist/
+build/
+
+# Test suite and coverage reports
+tests/
+htmlcov/
+.coverage
+.pytest_cache/
+
+# Log files
+*.log
+
+# Local dev database
+instance/
+
+# Claude Code worktrees and config
+.claude/
+
+# Local dev tooling / docs not needed in image
+docs/
+digitalocean/
+agent_tasks/
+
+# Git
+.git/
+.gitignore
+
+# Environment files (baked in via Dockerfile COPY recap/.env.* as needed)
+.env
+.env.*
+
+# macOS artifacts
+.DS_Store
