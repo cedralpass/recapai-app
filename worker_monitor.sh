@@ -78,15 +78,9 @@ is_worker_alive() {
     if [ -z "$pid" ]; then
         return 1
     fi
-    
-    # Check if process exists and is actually an rq worker
-    if kill -0 "$pid" 2>/dev/null; then
-        # Verify it's still an rq worker process
-        if ps -p "$pid" -o args= | grep -q "rq worker"; then
-            return 0
-        fi
-    fi
-    return 1
+    # kill -0 checks process existence without sending a signal; works on Alpine/BusyBox
+    # (ps -p is not supported by BusyBox ps used in Alpine)
+    kill -0 "$pid" 2>/dev/null
 }
 
 # Restart a dead worker
