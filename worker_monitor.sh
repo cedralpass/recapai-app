@@ -10,6 +10,11 @@ NUM_WORKERS="${NUM_WORKERS:-3}"
 REDIS_URL="${RECAP_REDIS_URL}"
 CHECK_INTERVAL="${CHECK_INTERVAL:-10}"  # seconds between checks
 
+# Use container hostname as worker name prefix so names are unique per container
+# instance. This prevents "worker name already exists" conflicts during rolling
+# deploys when the old container's workers are still registered in Redis.
+WORKER_PREFIX="${HOSTNAME:-worker}"
+
 # Array to store worker PIDs
 declare -a WORKER_PIDS
 declare -a WORKER_NAMES
@@ -44,7 +49,7 @@ trap cleanup SIGTERM SIGINT EXIT
 # Start a single worker
 start_worker() {
     local worker_index=$1
-    local worker_name="worker-${worker_index}"
+    local worker_name="${WORKER_PREFIX}-${worker_index}"
     local pid
     
     log "Starting $worker_name..."
