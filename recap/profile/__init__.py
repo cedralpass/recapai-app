@@ -83,8 +83,8 @@ def organize_taxonomy():
     )
     
     # Process AI response
-    description = json_response['description']
-    mappings = json_response['mappings']
+    description = json_response.get('description', '')
+    mappings = json_response.get('mappings', [])
     
     # Create category mapping and get new categories in a single pass
     category_mapping = create_category_mapping(mappings)
