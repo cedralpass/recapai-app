@@ -57,7 +57,13 @@ def reset_password_request():
         user = db.session.scalar(
             sa.select(User).where(User.email == form.email.data))
         if user:
-            send_password_reset_email(user)
+            try:
+                send_password_reset_email(user)
+            except Exception:
+                current_app.logger.exception(
+                    'Failed to send password reset email for user_id=%s',
+                    user.id,
+                )
             #job = launch_task(name='recap.tasks.send_password_reset_email_task', description='reset password email', user_id=user.id)
             #print(job)
         flash('Check your email for the instructions to reset your password')

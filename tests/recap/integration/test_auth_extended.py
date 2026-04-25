@@ -103,6 +103,38 @@ class TestPasswordResetRequest:
         assert response.status_code == 302
         assert '/auth/login' in response.headers['Location']
 
+    @patch('recap.auth.send_password_reset_email')
+    def test_reset_request_with_invalid_email_does_not_send_email(
+        self, mock_send_email, recap_client
+    ):
+        """Invalid email input fails validation and does not send."""
+        response = recap_client.post(
+            '/auth/reset_password_request',
+            data={'email': 'not-an-email'},
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+        assert b'Reset Password' in response.data
+        mock_send_email.assert_not_called()
+
+    @patch('recap.auth.send_password_reset_email')
+    def test_reset_request_mail_failure_is_graceful(
+        self, mock_send_email, recap_client, recap_app, test_user
+    ):
+        """Mail send failures still preserve generic UX and redirect target."""
+        with recap_app.app_context():
+            email = test_user.email
+
+        mock_send_email.side_effect = Exception('mail backend unavailable')
+        response = recap_client.post(
+            '/auth/reset_password_request',
+            data={'email': email},
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+        assert b'Check your email' in response.data
+        mock_send_email.assert_called_once()
+
 
 @pytest.mark.integration
 @pytest.mark.recap
