@@ -30,11 +30,11 @@ The `.claude/launch.json` file is committed and ready. Use `preview_start` with 
 
 | Name | Port | What it does |
 |------|------|--------------|
-| `recap` | 8080 | Main Flask web app |
-| `aiapi` | 8082 | AI/classification Flask API |
+| `recap` | 8080 | Main Flask web app (hot-reloads on code/template changes) |
+| `aiapi` | 8082 | AI/classification Flask API (hot-reloads on code changes) |
 | `rq-worker` | — | Background job worker (Redis must be running) |
-| `tailwind` | — | CSS watch/rebuild |
-| `combined` | 8001 | Combined app entry point |
+| `tailwind` | — | CSS watch/rebuild (recompiles on template changes) |
+| `combined` | 8001 | Both apps via DispatcherMiddleware — aiapi at `/aiapi/` prefix |
 
 **Important:** The launch configs use `bash -c "cd /Users/geoffreysmalling/development/recapai-app && ..."` wrappers. This is required because `preview_start` does not run from the project root and the `recap` Flask module must be importable from the project root.
 
@@ -42,6 +42,31 @@ The `.claude/launch.json` file is committed and ready. Use `preview_start` with 
 ```bash
 brew services start redis
 # or: /opt/homebrew/opt/redis/bin/redis-server
+```
+
+### Recommended harness for active Claude Code development
+
+For UI/logic changes, run all four services natively — changes are visible instantly with no rebuild:
+1. `preview_start("recap")` — main app at localhost:8080
+2. `preview_start("aiapi")` — AI API at localhost:8082
+3. `preview_start("tailwind")` — CSS auto-recompiles on template changes
+4. `preview_start("rq-worker")` — background worker (after Redis is running)
+
+The preview browser connects to `recap` at port 8080. Template edits, Python changes, and CSS changes all take effect without restarting.
+
+**Use Docker only for:**
+- Pre-deploy smoke testing (`devops/Dockerfile.full`)
+- Testing `initialize_run.sh` startup behavior
+- Simulating the Render container environment
+
+**Local Docker run command** (for integration testing):
+```bash
+docker build -t recap-full . -f ./devops/Dockerfile.full
+docker run --detach -p 8000:8000 \
+  --add-host host.docker.internal:host-gateway \
+  -e RECAP_POSTGRES_HOST=host.docker.internal \
+  -e RECAP_AI_API_URL=http://localhost:8000/aiapi/ \
+  recap-full
 ```
 
 ---

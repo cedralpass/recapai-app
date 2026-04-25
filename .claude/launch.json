@@ -2,6 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "docker",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "docker run --rm -p 8000:8000 --add-host host.docker.internal:host-gateway -e RECAP_POSTGRES_HOST=host.docker.internal recap-full"],
+      "port": 8000
+    },
+    {
       "name": "recap",
       "runtimeExecutable": "bash",
       "runtimeArgs": ["-c", "cd /Users/geoffreysmalling/development/recapai-app && .venv/bin/flask --app recap run --debug --port 8080"],
@@ -16,7 +22,7 @@
     {
       "name": "combined",
       "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "cd /Users/geoffreysmalling/development/recapai-app && .venv/bin/python app.py"],
+      "runtimeArgs": ["-c", "cd /Users/geoffreysmalling/development/recapai-app && RECAP_AI_API_URL=http://localhost:8001/aiapi/ .venv/bin/python app.py"],
       "port": 8001
     },
     {
