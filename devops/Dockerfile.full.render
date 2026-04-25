@@ -7,8 +7,8 @@ FROM --platform=linux/amd64 python:3.11-alpine
 # By default, listen on port 8000
 EXPOSE 8000/tcp
 
-# curl for health checks; libxml2/libxslt and build deps for lxml (readability-lxml)
-RUN apk --no-cache add curl libxml2-dev libxslt-dev gcc musl-dev
+# curl for health checks; bash/procps for worker_monitor.sh; libxml2/libxslt and build deps for lxml (readability-lxml)
+RUN apk --no-cache add bash curl procps libxml2-dev libxslt-dev gcc musl-dev
 
 #not using redis locally with render
 #RUN apk --update --no-cache add redis
