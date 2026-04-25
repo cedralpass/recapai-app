@@ -25,6 +25,8 @@ RUN pip install gunicorn
 COPY recap recap
 COPY aiapi aiapi
 COPY ./app.py /app
+# migrations - required for flask db upgrade on deploy
+COPY ./migrations /app/migrations
 # initialize_run.sh
 COPY ./initialize_run.sh /app
 # worker monitor for managing local RQ workers

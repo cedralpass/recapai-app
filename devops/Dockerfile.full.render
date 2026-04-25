@@ -32,6 +32,8 @@ RUN rm -rf recap/.env
 COPY recap/.env.render.beta recap/.env
 COPY aiapi aiapi
 COPY ./app.py /app
+# migrations - required for flask db upgrade on deploy
+COPY ./migrations /app/migrations
 # initialize_render_run.sh - render-specific startup script
 COPY ./initialize_render_run.sh /app
 # worker_monitor.sh - monitors and auto-restarts RQ workers

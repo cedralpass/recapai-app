@@ -1,9 +1,15 @@
 #!/bin/bash
 cd /app
 
-# initialize db for this server
-#TODO: initialize DB needs to be a task  will do manually for now
-#flask --app recap init-db
+# Run any pending Alembic migrations before starting the server.
+# If alembic_version is empty the DB was created outside Alembic (e.g. init-db).
+# Stamp at the last known-good revision so upgrade only applies new migrations.
+CURRENT=$(flask --app recap db current 2>/dev/null)
+if [ -z "$CURRENT" ]; then
+    echo "No Alembic revision found - stamping at baseline before upgrading"
+    flask --app recap db stamp 66e1c054e7e8
+fi
+flask --app recap db upgrade
 
 #start redis server as daemon
 #redis-server --daemonize yes
