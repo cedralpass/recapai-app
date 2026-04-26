@@ -57,22 +57,32 @@
     </div>
 
     <!-- Proposed column -->
-    <div>
+    <div id="proposed-col">
       <div class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
-        Proposed ({{ proposed_annotated|length }} categories)
+        Proposed (<span id="proposed-count">{{ proposed_annotated|length }}</span> categories)
       </div>
       {% for cat in proposed_annotated %}
-      <div class="flex items-center justify-between rounded-lg px-3 py-2.5 mb-1.5 border-[1.5px]
-        {% if cat.type == 'merged' %}bg-green-50 border-green-300{% else %}bg-gray-50 border-gray-200{% endif %}">
-        <span class="text-sm font-semibold
-          {% if cat.type == 'merged' %}text-green-800{% else %}text-gray-700{% endif %}">
-          {{ cat.name }}
-        </span>
-        <span class="text-xs font-bold rounded-full px-2 py-0.5 shrink-0
-          {% if cat.type == 'merged' %}bg-green-100 text-green-800{% else %}bg-gray-200 text-gray-500{% endif %}">
-          {{ cat.count }}
-        </span>
-      </div>
+        {% if cat.type == 'merged' %}
+        <!-- Merged chip (visible when suggestion accepted) -->
+        <div class="flex items-center justify-between rounded-lg px-3 py-2.5 mb-1.5 border-[1.5px] bg-green-50 border-green-300"
+             data-merge-id="{{ cat.merge_id }}" data-chip-type="merged">
+          <span class="text-sm font-semibold text-green-800">{{ cat.name }}</span>
+          <span class="text-xs font-bold rounded-full px-2 py-0.5 shrink-0 bg-green-100 text-green-800">{{ cat.count }}</span>
+        </div>
+        <!-- From-chips (hidden; shown when suggestion is rejected) -->
+        {% for fc in cat.from_categories %}
+        <div class="hidden flex items-center justify-between rounded-lg px-3 py-2.5 mb-1.5 border-[1.5px] bg-gray-50 border-gray-200"
+             data-merge-id="{{ cat.merge_id }}" data-chip-type="from">
+          <span class="text-sm font-semibold text-gray-700">{{ fc }}</span>
+          <span class="text-xs font-bold rounded-full px-2 py-0.5 shrink-0 bg-gray-200 text-gray-500">{{ cat.from_counts[fc] }}</span>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="flex items-center justify-between rounded-lg px-3 py-2.5 mb-1.5 border-[1.5px] bg-gray-50 border-gray-200">
+          <span class="text-sm font-semibold text-gray-700">{{ cat.name }}</span>
+          <span class="text-xs font-bold rounded-full px-2 py-0.5 shrink-0 bg-gray-200 text-gray-500">{{ cat.count }}</span>
+        </div>
+        {% endif %}
       {% endfor %}
     </div>
 
@@ -141,7 +151,10 @@
 
 <script>
 function setSuggestion(id, accepted) {
+  // Update hidden form input
   document.getElementById('input_' + id).value = accepted ? '1' : '0';
+
+  // Update Accept/Reject button styles
   const card = document.getElementById('suggestion-' + id);
   const acceptBtn = card.querySelector('.accept-btn');
   const rejectBtn = card.querySelector('.reject-btn');
@@ -151,6 +164,33 @@ function setSuggestion(id, accepted) {
   } else {
     rejectBtn.className = 'reject-btn px-3 py-1.5 text-xs font-semibold bg-red-500 text-white';
     acceptBtn.className = 'accept-btn px-3 py-1.5 text-xs font-semibold bg-white text-gray-400';
+  }
+
+  // Update proposed column: toggle merged chip vs from-chips
+  const col = document.getElementById('proposed-col');
+  const mergedChips = col.querySelectorAll('[data-merge-id="' + id + '"][data-chip-type="merged"]');
+  const fromChips   = col.querySelectorAll('[data-merge-id="' + id + '"][data-chip-type="from"]');
+  mergedChips.forEach(el => el.classList.toggle('hidden', !accepted));
+  fromChips.forEach(el   => el.classList.toggle('hidden',  accepted));
+
+  // Recount visible chips (exclude hidden ones) and update header
+  const visible = col.querySelectorAll('[data-chip-type], .flex.items-center:not([data-chip-type])');
+  let count = 0;
+  col.querySelectorAll('div[class*="rounded-lg"]').forEach(el => {
+    if (!el.classList.contains('hidden')) count++;
+  });
+  document.getElementById('proposed-count').textContent = count;
+
+  // Grey out / re-enable the apply button based on whether any are accepted
+  const anyAccepted = Array.from(document.querySelectorAll('[id^="input_"]'))
+    .some(inp => inp.value === '1');
+  const applyBtn = document.getElementById('apply-btn');
+  if (anyAccepted) {
+    applyBtn.className = 'w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors';
+    applyBtn.disabled = false;
+  } else {
+    applyBtn.className = 'w-full bg-gray-200 text-gray-400 font-bold py-3 rounded-lg cursor-default';
+    applyBtn.disabled = true;
   }
 }
 </script>

@@ -81,6 +81,7 @@ def organize_taxonomy():
             'id': sid,
             'type': 'merge',
             'from_categories': old_cats,
+            'from_counts': {old: current_counts.get(old, 0) for old in old_cats},
             'to_category': new_cat,
             'to_count': to_count,
             'reason': description,
@@ -106,7 +107,10 @@ def organize_taxonomy():
     # Proposed taxonomy: unchanged categories + merge results
     unchanged_cats = [c for c in current_annotated if c['type'] == 'unchanged']
     merged_results = [
-        {'name': s['to_category'], 'count': s['to_count'], 'type': 'merged', 'merge_id': s['id']}
+        {
+            'name': s['to_category'], 'count': s['to_count'], 'type': 'merged', 'merge_id': s['id'],
+            'from_categories': s['from_categories'], 'from_counts': s['from_counts'],
+        }
         for s in suggestions
     ]
     proposed_annotated = unchanged_cats + merged_results
