@@ -223,6 +223,17 @@ Tailwind's default 4px-base scale is used throughout. Commonly used values:
 
 **Primary layout primitive: Flexbox.** The app uses CSS Grid nowhere — everything is composed from `flex`, `flex-row`, `flex-col`, `flex-wrap`, and alignment utilities.
 
+**Two-column pattern (index page — article list + filter sidebar):**
+```html
+<div class="md:flex md:gap-6 md:items-start">
+  <div class="flex-1 min-w-0 max-w-2xl"><!-- article list column --></div>
+  <aside class="hidden md:block w-60 shrink-0 sticky top-4 self-start"><!-- filter sidebar --></aside>
+</div>
+```
+- Article column is `max-w-2xl` (~672px) to keep the reading line comfortable on wide screens
+- Sidebar is `w-60` (240px), `sticky top-4 self-start` so it stays in view while scrolling
+- Sidebar is `hidden md:block` — invisible on mobile, always visible on desktop
+
 **Two-column pattern (article detail):**
 ```html
 <div class="flex flex-col md:flex-row gap-6">
@@ -272,10 +283,19 @@ Large (`lg:`) and extra-large (`xl:`) breakpoints are not used — the layout pl
 Templates default to vertical/single-column and apply horizontal/multi-column at `md:`:
 
 ```html
+<!-- Index page: single-column on mobile, two-column on desktop -->
+<div class="md:flex md:gap-6 md:items-start">
+
+<!-- Index filter sidebar: hidden on mobile, persistent on desktop -->
+<aside class="hidden md:block w-60 shrink-0 sticky top-4 self-start">
+
+<!-- Index filter toggle button: visible on mobile only -->
+<button class="md:hidden" onclick="showFilter();">
+
 <!-- Article detail: stacks vertically on mobile, side-by-side on desktop -->
 <div class="flex flex-col md:flex-row gap-6">
 
-<!-- Sidebar: full width on mobile, fixed 200px on desktop -->
+<!-- Article detail sidebar: full width on mobile, fixed 200px on desktop -->
 <div class="w-full md:w-[200px] md:min-w-[200px]">
 
 <!-- Action buttons: stacked on mobile, inline on small+ -->
@@ -528,20 +548,22 @@ Used for article category labels.
 
 ### 7.7 Category Filter
 
-The filter panel is shown/hidden by a vanilla JS toggle. It appears below the nav on the article list page.
+The filter panel has two distinct presentations depending on viewport width.
 
-**Filter toggle button:**
+**Mobile (below `md:` / 768px) — toggle behavior:**
+
+The funnel button and label are visible; tapping either toggles the filter panel open/closed via JS.
+
 ```html
-<button onclick="showFilter();">
+<!-- Both elements are md:hidden — invisible on desktop -->
+<button onclick="showFilter();" class="md:hidden">
   <svg class="size-6" .../><!-- funnel icon -->
 </button>
-<span onclick="showFilter();" class="text-sm align-text-top">
+<span onclick="showFilter();" class="text-sm align-text-top md:hidden">
   {% if request.args.get('category') %} Filtered by: {{ category }} {% else %} Filter your Articles. {% endif %}
 </span>
-```
 
-**Filter panel:**
-```html
+<!-- Mobile toggle panel — starts hidden, JS toggles it -->
 <div class="container w-full max-w-sm p-2 hidden" id="filter">
   <ul class="flex flex-row flex-wrap text-sm text-center">
     <li class="flex-1 h-12 m-1 p-1 bg-gray-200 text-sm"><a href="...">All</a></li>
@@ -550,12 +572,26 @@ The filter panel is shown/hidden by a vanilla JS toggle. It appears below the na
 </div>
 ```
 
-- Panel starts `hidden` and toggles `hidden`/`visible` classes via JS
-- `w-full max-w-sm` — responsive width (previously fixed `w-96`)
-- Filter items are `flex-1` — they share the row width equally
-- `text-sm` (14px) throughout — previously `text-xs` (12px)
+**Desktop (`md:` and above) — persistent sidebar:**
+
+The toggle button and `#filter` panel are both invisible. The same category list is always visible in a sticky right sidebar defined in `index.html` (outside `_article.html`):
+
+```html
+<aside class="hidden md:block w-60 shrink-0 sticky top-4 self-start">
+  <div class="text-sm font-semibold text-gray-700 mb-2 px-1">Filter Articles</div>
+  <ul class="flex flex-row flex-wrap text-sm text-center">
+    <li class="flex-1 h-12 m-1 p-1 bg-gray-200 text-sm"><a href="...">All</a></li>
+    <li class="flex-1 h-12 m-1 p-1 bg-gray-200 text-sm text-center"><a href="...">Category (N)</a></li>
+  </ul>
+</aside>
+```
+
+**Filter tile characteristics (both contexts):**
+- Items are `flex-1` — share the row width equally
+- `text-sm` (14px) throughout
 - Fixed `h-12` height ensures consistent tile sizing regardless of label length
 - `m-1 p-1` creates a tight grid of filter tiles
+- `bg-gray-200` background on each tile
 
 ### 7.8 Flash Messages / Alerts
 
@@ -778,7 +814,7 @@ The most complex interaction in the app. When an article is in the processing st
 
 ### 9.2 Category Filter Toggle
 
-A simple show/hide toggle with no animation:
+A simple show/hide toggle with no animation, **active on mobile only**.
 
 ```js
 function showFilter() {
@@ -793,7 +829,9 @@ function showFilter() {
 }
 ```
 
-The filter panel starts hidden (`class="... hidden"`). Clicking either the funnel icon or the label text calls `showFilter()`. No animation or transition.
+The `#filter` panel starts `hidden`. Clicking the funnel icon or the label text calls `showFilter()`. No animation or transition.
+
+On desktop (`md:` and above), the funnel button and label are `md:hidden` so `showFilter()` is never reachable — the `#filter` panel stays hidden and the persistent sidebar in `index.html` serves as the filter UI instead.
 
 ### 9.3 Danger Confirmation
 
@@ -904,4 +942,4 @@ Since Tailwind's default scale is used without extensions, these are aliases int
 
 ---
 
-*Document generated: 2026-04-25. Updated: 2026-04-25 to reflect UX improvements from `ux-reading-improvements` branch (responsive widths, nav wrapping, card redesign, flash message categories, prose max-width, touch targets, filter bar font size).*
+*Document generated: 2026-04-25. Updated: 2026-04-25 to reflect UX improvements from `ux-reading-improvements` branch (responsive widths, nav wrapping, card redesign, flash message categories, prose max-width, touch targets, filter bar font size, two-column desktop layout with persistent filter sidebar).*
