@@ -1,0 +1,1316 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    
+  <script type="text/javascript">
+    function getPreferredTheme() {
+      const storedTheme = localStorage.getItem('theme')
+      if (storedTheme) {
+        return storedTheme
+      }
+      return 'auto';
+    }
+
+    function setTheme(theme) {
+      if (theme === 'auto') {
+        theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+      }
+      document.documentElement.setAttribute('data-bs-theme', theme);
+    };
+
+    setTheme(getPreferredTheme());
+  </script>
+  
+    <title>
+  
+    The Flask Mega-Tutorial, Part I: Hello, World! - miguelgrinberg.com
+  
+</title>
+  
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="description" content="miguelgrinberg.com">
+  <meta name="copyright" content="Copyright (c) 2012-2024 Miguel Grinberg">
+  <meta name="author" content="Miguel Grinberg">
+  
+  <meta name="keywords" content="flask, python, programming, mega-tutorial, kickstarter">
+  
+  
+  <link rel="canonical" href="https://blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-i-hello-world">
+  
+
+  
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@700&display=swap" rel="stylesheet">
+
+  <link href="/static/tomorrow.min.css" type="text/css" rel="stylesheet" />
+  <link href="/static/tomorrow-night.min.css" type="text/css" rel="stylesheet" />
+  <link href="/static/social.css" rel="stylesheet" type="text/css" />
+  <link href="/static/style_20260305.css" rel="stylesheet" type="text/css" />
+
+  <link rel="shortcut icon" href="/static/favicon.ico">
+  <link rel="alternate" type="application/rss+xml" href="/feed" title="miguelgrinberg.com RSS feed">
+
+    <meta property="og:title" content="The Flask Mega-Tutorial, Part I: Hello, World!">
+    <meta property="og:description" content="You are reading the 2024 edition of the Flask Mega-Tutorial. The complete course is also available to order in e-book and paperback formats from Amazon. Thank you for your support!If you are looking…">
+    <meta property="og:image" content="https://blog.miguelgrinberg.com/static/cards/the-flask-mega-tutorial-part-i-hello-world.jpg">
+    <meta property="og:url" content="https://blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-i-hello-world">
+    <meta name="twitter:title" content="The Flask Mega-Tutorial, Part I: Hello, World!">
+    <meta name="twitter:description" content="You are reading the 2024 edition of the Flask Mega-Tutorial. The complete course is also available to order in e-book and paperback formats from Amazon. Thank you for your support!If you are looking…">
+    <meta name="twitter:image" content="https://blog.miguelgrinberg.com/static/cards/the-flask-mega-tutorial-part-i-hello-world.jpg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@miguelgrinberg">
+
+  </head>
+  <body>
+    <svg style="display: none" version="2.0">
+      <defs>
+        <symbol id="icon-theme-auto" xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-circle-half" viewBox="0 0 16 16">
+          <path d="M8 15A7 7 0 1 0 8 1zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16"/>
+        </symbol>
+        <symbol id="icon-theme-light" xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-brightness-high-fill" viewBox="0 0 16 16">
+          <path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6m0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z"/>
+        </symbol>
+        <symbol id="icon-theme-dark" xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-moon-stars-fill" viewBox="0 0 16 16">
+          <path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278"/>
+          <path d="M10.794 3.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387a1.734 1.734 0 0 0-1.097 1.097l-.387 1.162a.217.217 0 0 1-.412 0l-.387-1.162A1.734 1.734 0 0 0 9.31 6.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387a1.734 1.734 0 0 0 1.097-1.097l.387-1.162zM13.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.156 1.156 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.156 1.156 0 0 0-.732-.732l-.774-.258a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732L13.863.1z"/>
+        </symbol>
+      </defs>
+    </svg>
+<nav class="navbar navbar-expand-lg">
+  <div class="container">
+    <a class="navbar-brand" href="/index">miguelgrinberg.com</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarCollapse">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link" aria-current="page" href="/index">Home</a></li>
+        <li class="nav-item"><a class="nav-link" aria-current="page" href="/post/my-courses-and-books">My Courses and Books</a></li>
+        <li class="nav-item"><a class="nav-link" aria-current="page" href="/post/hire-me">Consulting</a></li>
+        <li class="nav-item"><a class="nav-link" aria-current="page" href="/post/about-me">About Me</a></li>
+        
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <svg width="20" height="20" version="2.0"><use id="current-theme" href="#icon-theme-light"></svg>
+          </a>
+          <ul class="dropdown-menu">
+            <li>
+              <a id="select-theme-light" class="dropdown-item" href="javascript:updateTheme('light'); setThemeUI();">
+                <svg width="16" height="16" version="2.0"><use href="#icon-theme-light"></svg>&nbsp; Light Mode
+              </a>
+            </li>
+            <li>
+              <a id="select-theme-dark" class="dropdown-item" href="javascript:updateTheme('dark'); setThemeUI();">
+                <svg width="16" height="16" version="2.0"><use href="#icon-theme-dark"></svg>&nbsp; Dark Mode
+              </a>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <a id="select-theme-auto" class="dropdown-item" href="javascript:updateTheme('auto'); setThemeUI();">
+                <svg width="16" height="16" version="2.0"><use href="#icon-theme-auto"></svg>&nbsp; System Default
+              </a>
+            </li>
+          </ul>
+        </li>
+        
+      </ul>
+      <ul class="navbar-nav">
+        <li class="nav-item social-icons">
+          <a href="http://github.com/miguelgrinberg"><img src="/static/social/github.png" alt="GitHub" title="GitHub" /></a>
+          <a href="http://www.linkedin.com/in/miguelgrinberg"><img src="/static/social/linkedin.png" alt="LinkedIn" title="LinkedIn" /></a>
+          <a href="https://bsky.app/profile/miguelgrinberg.com"><img src="/static/social/bluesky.png" alt="Bluesky" title="Bluesky" /></a>
+          <a rel="me" href="https://mstdn.social/@miguelgrinberg"><img src="/static/social/mastodon.png" alt="Mastodon" title="Mastodon" /></a>
+          <a href="https://twitter.com/miguelgrinberg"><img src="/static/social/twitter.png" alt="Twitter" title="Twitter" /></a>
+          <a href="https://youtube.com/miguelgrinberg"><img src="/static/social/youtube.png" alt="YouTube" title="YouTube" /></a>
+          <a href="https://www.buymeacoffee.com/miguelgrinberg"><img src="/static/social/buymeacoffee.png" alt="Buy Me a Coffee" title="Buy Me a Coffee" /></a>
+          <a href="https://patreon.com/miguelgrinberg"><img src="/static/social/patreon.png" alt="Patreon" title="Patreon" /></a>
+          <a type="application/rss+xml" href="/feed"><img src="/static/social/rss.png" alt="RSS Feed" title="RSS Feed" /></a>
+          <!--<a href="https://www.facebook.com/miguelgrinbergblog"><img src="/static/social/facebook.png" alt="Facebook" title="Facebook" /></a>-->
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="row">
+    <div class="col-md-8">
+      <div id="main">
+        
+        
+        
+        
+        
+
+<div class="post">
+
+<div class="post-header">
+  <h1><a href="/post/the-flask-mega-tutorial-part-i-hello-world">The Flask Mega-Tutorial, Part I: Hello, World!</a></h1>
+  <h2>
+    Posted by
+    <form action="/author/Miguel%20Grinberg" method="POST">
+      <input type="submit" class="btn btn-danger btn-sm" value="Miguel Grinberg" />
+    </form>
+    on
+    <button class="btn btn-secondary btn-sm" disabled><span class="flask-moment" data-timestamp="2023-12-03T10:40:19Z" data-function="format" data-format="LL" data-refresh="0" style="display: none">2023-12-03T10:40:19Z</span></button>
+    under
+    
+      <form action="/category/Python" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Python" />
+      </form>
+    
+      <form action="/category/Flask" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Flask" />
+      </form>
+    
+      <form action="/category/Programming" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Programming" />
+      </form>
+    
+    
+  </h2>
+</div>
+<div class="post-body"><div style="margin: auto; margin-bottom: 15px;"><div class="video-container"><iframe width="425" height="315" src="https://www.youtube.com/embed/9FBDda0NCwo" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe></div></div>
+
+<p>You are reading the 2024 edition of the Flask Mega-Tutorial. The complete course is also available to order in e-book and paperback formats from <a href="https://amzn.to/3ahVnPN">Amazon</a>. Thank you for your support!</p>
+<p>If you are looking for the 2018 edition of this course, you can find it <a href="/post/the-flask-mega-tutorial-part-i-hello-world-2018">here</a>.</p>
+<p>For your reference, here is the complete list of articles in this series:</p>
+<ul>
+<li><a href="/post/the-flask-mega-tutorial-part-i-hello-world">Chapter 1:  Hello, World!</a> (this article)</li>
+<li><a href="/post/the-flask-mega-tutorial-part-ii-templates">Chapter 2:  Templates</a></li>
+<li><a href="/post/the-flask-mega-tutorial-part-iii-web-forms">Chapter 3:  Web Forms</a></li>
+<li><a href="/post/the-flask-mega-tutorial-part-iv-database">Chapter 4:  Database</a></li>
+<li><a href="/post/the-flask-mega-tutorial-part-v-user-logins">Chapter 5:  User Logins</a></li>
+<li><a href="/post/the-flask-mega-tutorial-part-vi-profile-page-and-avatars">Chapter 6:  Profile Page and Avatars</a></li>
+<li><a href="/post/the-flask-mega-tutorial-part-vii-error-handling">Chapter 7:  Error Handling</a></li>
+<li><a href="/post/the-flask-mega-tutorial-part-viii-followers">Chapter 8:  Followers</a></li>
+<li><a href="/post/the-flask-mega-tutorial-part-ix-pagination">Chapter 9:  Pagination</a></li>
+<li><a href="/post/the-flask-mega-tutorial-part-x-email-support">Chapter 10:  Email Support</a></li>
+<li><a href="/post/the-flask-mega-tutorial-part-xi-facelift">Chapter 11:  Facelift</a></li>
+<li><a href="/post/the-flask-mega-tutorial-part-xii-dates-and-times">Chapter 12:  Dates and Times</a></li>
+<li><a href="/post/the-flask-mega-tutorial-part-xiii-i18n-and-l10n">Chapter 13:  I18n and L10n</a></li>
+<li><a href="/post/the-flask-mega-tutorial-part-xiv-ajax">Chapter 14:  Ajax</a></li>
+<li><a href="/post/the-flask-mega-tutorial-part-xv-a-better-application-structure">Chapter 15:  A Better Application Structure</a></li>
+<li><a href="/post/the-flask-mega-tutorial-part-xvi-full-text-search">Chapter 16:  Full-Text Search</a></li>
+<li><a href="/post/the-flask-mega-tutorial-part-xvii-deployment-on-linux">Chapter 17:  Deployment on Linux</a></li>
+<li><a href="/post/the-flask-mega-tutorial-part-xviii-deployment-on-heroku">Chapter 18:  Deployment on Heroku</a></li>
+<li><a href="/post/the-flask-mega-tutorial-part-xix-deployment-on-docker-containers">Chapter 19:  Deployment on Docker Containers</a></li>
+<li><a href="/post/the-flask-mega-tutorial-part-xx-some-javascript-magic">Chapter 20:  Some JavaScript Magic</a></li>
+<li><a href="/post/the-flask-mega-tutorial-part-xxi-user-notifications">Chapter 21:  User Notifications</a></li>
+<li><a href="/post/the-flask-mega-tutorial-part-xxii-background-jobs">Chapter 22:  Background Jobs</a></li>
+<li><a href="/post/the-flask-mega-tutorial-part-xxiii-application-programming-interfaces-apis">Chapter 23:  Application Programming Interfaces (APIs)</a></li>
+</ul>
+<p>Welcome! You are about to start on a journey to learn how to create web applications with <a href="https://python.org">Python</a> and the <a href="http://flask.pocoo.org">Flask</a> framework. In this first chapter, you are going to learn how to set up a Flask project. By the end of this chapter you are going to have a simple Flask web application running on your computer!</p>
+<p>All the code examples presented in this book are hosted on a GitHub repository. Downloading the code from GitHub can save you a lot of typing, but I strongly recommend that you type the code yourself, at least for the first few chapters. Once you become more familiar with Flask and the example application you can access the code directly from GitHub if the typing becomes too tedious.</p>
+<p>At the beginning of each chapter, I'm going to give you three GitHub links that can be useful while you work through the chapter. The <strong>Browse</strong> link will open the GitHub repository for Microblog at the place where the changes for the chapter you are reading were added, without including any changes introduced in future chapters. The <strong>Zip</strong> link is a download link for a zip file including the entire application up to and including the changes in the chapter. The <strong>Diff</strong> link will open a graphical view of all the changes that were made in the chapter you are about to read.</p>
+<p><em>The GitHub links for this chapter are: <a href="https://github.com/miguelgrinberg/microblog/tree/v0.1">Browse</a>, <a href="https://github.com/miguelgrinberg/microblog/archive/v0.1.zip">Zip</a>, <a href="https://github.com/miguelgrinberg/microblog/compare/v0.0...v0.1">Diff</a>.</em></p>
+<h2>Installing Python</h2>
+<p>If you don't have Python installed on your computer, go ahead and install it now. If your operating system does not provide you with a Python package, you can download an installer from the <a href="http://python.org/download/">Python official website</a>. If you are using Microsoft Windows along with WSL or Cygwin, note that you will not be using the Windows native version of Python, but a UNIX-friendly version that you need to obtain from Ubuntu (if you are using WSL) or from Cygwin.</p>
+<p>To make sure your Python installation is functional, you can open a terminal window and type <code>python3</code>, or if that does not work, just <code>python</code>. Here is what you should expect to see:</p>
+<pre><code>$ python3
+Python 3.12.0 (main, Oct  5 2023, 10:46:39) [GCC 11.4.0] on linux
+Type &quot;help&quot;, &quot;copyright&quot;, &quot;credits&quot; or &quot;license&quot; for more information.
+&gt;&gt;&gt; _
+</code></pre>
+<p>The Python interpreter is now waiting at an interactive prompt, where you can enter Python statements. In future chapters you will learn what kinds of things this interactive prompt is useful for. But for now, you have confirmed that Python is installed on your system. To exit the interactive prompt, you can type <code>exit()</code> and press Enter. On the Linux and Mac OS X versions of Python you can also exit the interpreter by pressing Ctrl-D. On Windows, the exit shortcut is Ctrl-Z followed by Enter.</p>
+<h2>Installing Flask</h2>
+<p>The next step is to install Flask, but before I go into that I want to tell you about the best practices associated with installing Python <em>packages</em>.</p>
+<p>In Python, packages such as Flask are available in a public repository, from where anybody can download them and install them. The official Python package repository is called <a href="https://pypi.python.org/pypi">PyPI</a>, which stands for Python Package Index (some people also refer to this repository as the "cheese shop"). Installing a package from PyPI is very simple, because Python comes with a tool called <code>pip</code> that does this work.</p>
+<p>To install a package on your machine, you use <code>pip</code> as follows:</p>
+<pre><code>$ pip install &lt;package-name&gt;
+</code></pre>
+<p>Interestingly, this method of installing packages will not work in most cases. If your Python interpreter was installed globally for all the users of your computer, chances are your regular user account is not going to have permission to make modifications to it, so the only way to make the command above work is to run it from an administrator account. But even without that complication, consider what happens when you install a package in this way. The <code>pip</code> tool is going to download the package from PyPI, and then add it to your Python installation. From that point on, every Python script that you have on your system will have access to this package. Imagine a situation where you have completed a web application using version 2 of Flask, which was the most current version of Flask when you started, but now it has been superseded by version 3. You now want to start a second application, for which you'd like to use version 3, but if you upgrade the version 1 that you have installed you risk breaking your older application. Do you see the problem? It would be ideal if it was possible to have Flask version 2 installed and accessible to your old application, while also install Flask version 3 for your new one.</p>
+<p>To address the issue of maintaining different versions of packages for different applications, Python uses the concept of <em>virtual environments</em>. A virtual environment is a complete copy of the Python interpreter. When you install packages in a virtual environment, the system-wide Python interpreter is not affected, only the copy is. So the solution to have complete freedom to install any versions of your packages for each application is to use a different virtual environment for each application. Virtual environments have the added benefit that they are owned by the user who creates them, so they do not require an administrator account.</p>
+<p>Let's start by creating a directory where the project will live. I'm going to call this directory <em>microblog</em>, since that is the name of the application:</p>
+<pre><code>$ mkdir microblog
+$ cd microblog
+</code></pre>
+<p>Support for virtual environments is included in all recent versions of Python, so all you need to do to create one is this:</p>
+<pre><code>$ python3 -m venv venv
+</code></pre>
+<p>With this command, I'm asking Python to run the <code>venv</code> package, which creates a virtual environment named <code>venv</code>. The first <code>venv</code> in the command is an argument to the <code>-m</code> option which is the name of the Python virtual environment package, and the second is the virtual environment name that I'm going to use for this particular environment. If you find this confusing, you can replace the second <code>venv</code> with a different name that you want to assign to your virtual environment. In general, I create my virtual environments with the name <code>venv</code> in the project directory, so whenever I <code>cd</code> into a project I find its corresponding virtual environment.</p>
+<p>Note that in some operating systems you may need to use <code>python</code> instead of <code>python3</code> in the command above. Some installations use <code>python</code> for Python 2.x releases and <code>python3</code> for the 3.x releases, while others map <code>python</code> to the 3.x releases and do not have a <code>python3</code> command at all.</p>
+<p>After the command completes, you are going to have a directory named <em>venv</em> where the virtual environment files are stored.</p>
+<p>Now you have to tell the system that you want to use this virtual environment, and you do that by <em>activating</em> it. To activate your brand new virtual environment you use the following command:</p>
+<pre><code>$ source venv/bin/activate
+(venv) $ _
+</code></pre>
+<p>If you are using a Microsoft Windows command prompt window, the activation command is slightly different:</p>
+<pre><code>$ venv\Scripts\activate
+(venv) $ _
+</code></pre>
+<p>If you are on Windows but are using PowerShell instead of the command prompt, then there is yet another activation command you should use:</p>
+<pre><code>$ venv\Scripts\Activate.ps1
+(venv) $ _
+</code></pre>
+<p>When you activate a virtual environment, the configuration of your terminal session is modified so that the Python interpreter stored inside it is the one that is invoked when you type <code>python</code>. Also, the terminal prompt is modified to include the name of the activated virtual environment. The changes made to your terminal session are all temporary and private to that session, so they will not persist when you close the terminal window. If you work with multiple terminal windows open at the same time, it is perfectly fine to have different virtual environments activated on each one.</p>
+<p>Now that you have a virtual environment created and activated, you can finally install Flask in it:</p>
+<pre><code>(venv) $ pip install flask
+</code></pre>
+<p>If you want to confirm that your virtual environment now has Flask installed, you can start the Python interpreter and <em>import</em> Flask into it:</p>
+<pre><code class="language-python">&gt;&gt;&gt; import flask
+&gt;&gt;&gt; _
+</code></pre>
+<p>If this statement does not give you any errors you can congratulate yourself, as Flask is installed and ready to be used.</p>
+<p>Note that the above installation commands do not specify which version of Flask you want to install. The default when no version is specified is to install the latest version available in the package repository. This tutorial is designed for version 3 of Flask, but should also work with version 2. The above command will install the latest 3.x version, which should be appropriate for most users. If for any reason you prefer to follow this tutorial on a 2.x release of Flask, you can use the following command to install the latest 1.x version:</p>
+<pre><code>(venv) $ pip install &quot;flask&lt;3&quot; &quot;werkzeug&lt;3&quot;
+</code></pre>
+<h2>A "Hello, World" Flask Application</h2>
+<p>If you go to the <a href="https://flask.palletsprojects.com/en/3.0.x/quickstart/">Flask's quick start page</a>, you are welcomed with a very simple example application that has just five lines of code. Instead of repeating that trivial example, I'm going to show you a slightly more elaborate one that will give you a good base structure for writing larger applications.</p>
+<p>The application will exist in a <em>package</em>. In Python, a subdirectory that includes a <em>__init__.py</em> file is considered a package, and can be imported. When you import a package, the <em>__init__.py</em> executes and defines what symbols the package exposes to the outside world.</p>
+<p>Let's create a package called <code>app</code>, that will host the application. Make sure you are in the <em>microblog</em> directory and then run the following command:</p>
+<pre><code>(venv) $ mkdir app
+</code></pre>
+<p>The <em>__init__.py</em> for the <code>app</code> package is going to contain the following code:</p>
+<p class="code_title"><em>app/__init__.py</em>: Flask application instance</p>
+
+<pre><code class="language-python">from flask import Flask
+
+app = Flask(__name__)
+
+from app import routes
+</code></pre>
+<p>The script above creates the application object as an instance of class <code>Flask</code> imported from the flask package. The <code>__name__</code> variable passed to the <code>Flask</code> class is a Python predefined variable, which is set to the name of the module in which it is used. Flask uses the location of the module passed here as a starting point when it needs to load associated resources such as template files, which I will cover in <a href="/post/the-flask-mega-tutorial-part-ii-templates">Chapter 2</a>. For all practical purposes, passing <code>__name__</code> is almost always going to configure Flask in the correct way. The application then imports the <code>routes</code> module, which doesn't exist yet.</p>
+<p>One aspect that may seem confusing at first is that there are two entities named <code>app</code>. The <code>app</code> package is defined by the <em>app</em> directory and the <em>__init__.py</em> script, and is referenced in the <code>from app import routes</code> statement. The <code>app</code> variable is defined as an instance of class <code>Flask</code> in the <em>__init__.py</em> script, which makes it a member of the <code>app</code> package.</p>
+<p>Another peculiarity is that the <code>routes</code> module is imported at the bottom and not at the top of the script as it is always done. The bottom import is a well known workaround that avoids <em>circular imports</em>, a common problem with Flask applications. You are going to see that the <code>routes</code> module needs to import the <code>app</code> variable defined in this script, so putting one of the reciprocal imports at the bottom avoids the error that results from the mutual references between these two files.</p>
+<p>So what goes in the <code>routes</code> module? The routes handle the different URLs that the application supports. In Flask, handlers for the application routes are written as Python functions, called <em>view functions</em>. View functions are mapped to one or more route URLs so that Flask knows what logic to execute when a client requests a given URL.</p>
+<p>Here is the first view function for this application, which you need to write in a new module named <em>app/routes.py</em>:</p>
+<p class="code_title"><em>app/routes.py</em>: Home page route</p>
+
+<pre><code class="language-python">from app import app
+
+@app.route('/')
+@app.route('/index')
+def index():
+    return &quot;Hello, World!&quot;
+</code></pre>
+<p>This view function is actually pretty short, it just returns a greeting as a string. The two strange <code>@app.route</code> lines above the function are <em>decorators</em>, a unique feature of the Python language. A decorator modifies the function that follows it. A common pattern with decorators is to use them to register functions as callbacks for certain events. In this case, the <code>@app.route</code> decorator creates an association between the URL given as an argument and the function. In this example there are two decorators, which associate the URLs <code>/</code> and <code>/index</code> to this function. This means that when a web browser requests either of these two URLs, Flask is going to invoke this function and pass its return value back to the browser as a response. If this does not make complete sense yet, it will shortly, when you run this application.</p>
+<p>To complete the application, you need to have a Python script at the top-level that defines the Flask application instance. Let's call this script <em>microblog.py</em>, and define it as a single line that imports the application instance:</p>
+<p class="code_title"><em>microblog.py</em>: Main application module</p>
+
+<pre><code class="language-python">from app import app
+</code></pre>
+<p>Remember the two <code>app</code> entities? Here you can see both together in the same sentence. The Flask application instance is called <code>app</code> and is a member of the <code>app</code> package. The <code>from app import app</code> statement imports the <code>app</code> variable that is a member of the <code>app</code> package. If you find this confusing, you can rename either the package or the variable to something else.</p>
+<p>Just to make sure that you are doing everything correctly, below you can see a diagram of the project structure so far:</p>
+<pre><code>microblog/
+  venv/
+  app/
+    __init__.py
+    routes.py
+  microblog.py
+</code></pre>
+<p>Believe it or not, this first version of the application is now complete! Before running it, though, Flask needs to be told how to import it, by setting the <code>FLASK_APP</code> environment variable:</p>
+<pre><code>(venv) $ export FLASK_APP=microblog.py
+</code></pre>
+<p>If you are using the Microsoft Windows command prompt, use <code>set</code> instead of <code>export</code> in the command above.</p>
+<p>Are you ready to be blown away? You can run your first web application by typing the command <code>flask run</code>, as shown below:</p>
+<pre><code>(venv) $ flask run
+ * Serving Flask app 'microblog.py' (lazy loading)
+ * Environment: production
+   WARNING: This is a development server. Do not use it in a production deployment.
+   Use a production WSGI server instead.
+ * Debug mode: off
+ * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
+</code></pre>
+<p>What happened here? The <code>flask run</code> command will look for a Flask application instance in the module referenced by the <code>FLASK_APP</code> environment variable, which in this case is <em>microblog.py</em>. The command sets up a web server that is configured to forward requests to this application.</p>
+<p>After the server initializes it will wait for client connections. The output from <code>flask run</code> indicates that the server is running on IP address 127.0.0.1, which is always the address of your own computer. This address is so common that is also has a simpler name that you may have seen before: <em>localhost</em>. Network servers listen for connections on a specific port number. Applications deployed on production web servers typically listen on port 443, or sometimes 80 if they do not implement encryption, but access to these ports requires administration rights. Since this application is running in a development environment, Flask uses port 5000. Now open up your web browser and enter the following URL in the address field:</p>
+<pre><code>http://localhost:5000/
+</code></pre>
+<p>Alternatively you can use this other URL:</p>
+<pre><code>http://localhost:5000/index
+</code></pre>
+<p>Do you see the application route mappings in action? The first URL maps to <code>/</code>, while the second maps to <code>/index</code>. Both routes are associated with the only view function in the application, so they produce the same output, which is the string that the function returns. If you enter any other URL you will get an error, since only these two URLs are recognized by the application.</p>
+<p><img alt="Hello, World!" src="/static/images/mega-tutorial/ch01-hello-world.png" /></p>
+<p>When you are done playing with the server you can just press Ctrl-C to stop it.</p>
+<p>Congratulations, you have completed the first big step to become a web developer!</p>
+<p>Did you have trouble running the Flask application? In most computers port 5000 is available, but there is a possibility that your computer is already running an application that uses this port, in which case the <code>flask run</code> command will fail with an "address already in use" or similar error. If you use a Macintosh computer, some versions of macOS run a service called "Airplay Receiver" on this port. If you are unable to figure out how to remove the software that uses port 5000, you can try running Flask on a different port. For example, here is how to start the server on port 5001:</p>
+<pre><code>(venv) $ flask run --port 5001
+</code></pre>
+<p>Before I end this chapter, I will show you one more thing. Since environment variables aren't remembered across terminal sessions, you may find it tedious to always have to set the <code>FLASK_APP</code> environment variable when you open a new terminal window to work on your Flask application. But luckily, Flask allows you to register environment variables that you want to be automatically used when you run the <code>flask</code> command. To use this option you have to install the <em>python-dotenv</em> package:</p>
+<pre><code>(venv) $ pip install python-dotenv
+</code></pre>
+<p>Now you can just write the environment variable name and value in a file named <em>.flaskenv</em> located in the top-level directory of the project:</p>
+<p class="code_title"><em>.flaskenv</em>: Environment variables for flask command</p>
+
+<pre><code>FLASK_APP=microblog.py
+</code></pre>
+<p>The <code>flask</code> command will look for the <em>.flaskenv</em> file and import all the variables defined in it exactly as if they were defined in the environment.</p>
+<p>Continue on to the <a href="/post/the-flask-mega-tutorial-part-ii-templates">next chapter</a>.</p></div>
+
+<h2>Buy me a coffee?</h2>
+<p class="card-text">Thank you for visiting my blog! If you enjoyed this article, please consider supporting my work and keeping me caffeinated with a small one-time donation through <a href="https://www.buymeacoffee.com/miguelgrinberg">Buy me a coffee</a>. Thanks!</p>
+<a href="https://www.buymeacoffee.com/miguelgrinberg" target="_blank"><img src="/static/buymeacoffee-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
+
+
+<h2>Share this post</h2>
+<!-- Sharingbutton Hacker News -->
+<a class="resp-sharing-button__link" href="https://news.ycombinator.com/submitlink?u=https%3A//blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-i-hello-world&amp;t=The%20Flask%20Mega-Tutorial%2C%20Part%20I%3A%20Hello%2C%20World%21" target="_blank" rel="noopener" aria-label="Hacker News">
+  <div class="resp-sharing-button resp-sharing-button--hackernews resp-sharing-button--medium"><div aria-hidden="true" class="resp-sharing-button__icon resp-sharing-button__icon--solid">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 140"><path fill-rule="evenodd" d="M60.94 82.314L17 0h20.08l25.85 52.093c.397.927.86 1.888 1.39 2.883.53.994.995 2.02 1.393 3.08.265.4.463.764.596 1.095.13.334.262.63.395.898.662 1.325 1.26 2.618 1.79 3.877.53 1.26.993 2.42 1.39 3.48 1.06-2.254 2.22-4.673 3.48-7.258 1.26-2.585 2.552-5.27 3.877-8.052L103.49 0h18.69L77.84 83.308v53.087h-16.9v-54.08z"></path></svg></div>Hacker News</div>
+</a>
+
+<!-- Sharingbutton Reddit -->
+<a class="resp-sharing-button__link" href="https://reddit.com/submit/?url=https%3A//blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-i-hello-world&amp;resubmit=true&amp;title=The Flask Mega-Tutorial, Part I: Hello, World!" target="_blank" rel="noopener" aria-label="Reddit">
+  <div class="resp-sharing-button resp-sharing-button--reddit resp-sharing-button--medium"><div aria-hidden="true" class="resp-sharing-button__icon resp-sharing-button__icon--solid">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M24 11.5c0-1.65-1.35-3-3-3-.96 0-1.86.48-2.42 1.24-1.64-1-3.75-1.64-6.07-1.72.08-1.1.4-3.05 1.52-3.7.72-.4 1.73-.24 3 .5C17.2 6.3 18.46 7.5 20 7.5c1.65 0 3-1.35 3-3s-1.35-3-3-3c-1.38 0-2.54.94-2.88 2.22-1.43-.72-2.64-.8-3.6-.25-1.64.94-1.95 3.47-2 4.55-2.33.08-4.45.7-6.1 1.72C4.86 8.98 3.96 8.5 3 8.5c-1.65 0-3 1.35-3 3 0 1.32.84 2.44 2.05 2.84-.03.22-.05.44-.05.66 0 3.86 4.5 7 10 7s10-3.14 10-7c0-.22-.02-.44-.05-.66 1.2-.4 2.05-1.54 2.05-2.84zM2.3 13.37C1.5 13.07 1 12.35 1 11.5c0-1.1.9-2 2-2 .64 0 1.22.32 1.6.82-1.1.85-1.92 1.9-2.3 3.05zm3.7.13c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm9.8 4.8c-1.08.63-2.42.96-3.8.96-1.4 0-2.74-.34-3.8-.95-.24-.13-.32-.44-.2-.68.15-.24.46-.32.7-.18 1.83 1.06 4.76 1.06 6.6 0 .23-.13.53-.05.67.2.14.23.06.54-.18.67zm.2-2.8c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm5.7-2.13c-.38-1.16-1.2-2.2-2.3-3.05.38-.5.97-.82 1.6-.82 1.1 0 2 .9 2 2 0 .84-.53 1.57-1.3 1.87z"/></svg></div>Reddit</div>
+</a>
+
+<!-- Sharingbutton Twitter -->
+<a class="resp-sharing-button__link" href="https://twitter.com/intent/tweet/?text=The%20Flask%20Mega-Tutorial%2C%20Part%20I%3A%20Hello%2C%20World%21&amp;url=https%3A//blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-i-hello-world" target="_blank" rel="noopener" aria-label="Twitter">
+  <div class="resp-sharing-button resp-sharing-button--twitter resp-sharing-button--medium"><div aria-hidden="true" class="resp-sharing-button__icon resp-sharing-button__icon--solid">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M23.44 4.83c-.8.37-1.5.38-2.22.02.93-.56.98-.96 1.32-2.02-.88.52-1.86.9-2.9 1.1-.82-.88-2-1.43-3.3-1.43-2.5 0-4.55 2.04-4.55 4.54 0 .36.03.7.1 1.04-3.77-.2-7.12-2-9.36-4.75-.4.67-.6 1.45-.6 2.3 0 1.56.8 2.95 2 3.77-.74-.03-1.44-.23-2.05-.57v.06c0 2.2 1.56 4.03 3.64 4.44-.67.2-1.37.2-2.06.08.58 1.8 2.26 3.12 4.25 3.16C5.78 18.1 3.37 18.74 1 18.46c2 1.3 4.4 2.04 6.97 2.04 8.35 0 12.92-6.92 12.92-12.93 0-.2 0-.4-.02-.6.9-.63 1.96-1.22 2.56-2.14z"/></svg></div>Twitter</div>
+</a>
+
+<!-- Sharingbutton LinkedIn -->
+<a class="resp-sharing-button__link" href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3A//blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-i-hello-world&amp;title=The%20Flask%20Mega-Tutorial%2C%20Part%20I%3A%20Hello%2C%20World%21&amp;summary=The%20Flask%20Mega-Tutorial%2C%20Part%20I%3A%20Hello%2C%20World%21&amp;source=https%3A//blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-i-hello-world" target="_blank" rel="noopener" aria-label="LinkedIn">
+  <div class="resp-sharing-button resp-sharing-button--linkedin resp-sharing-button--medium"><div aria-hidden="true" class="resp-sharing-button__icon resp-sharing-button__icon--solid">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6.5 21.5h-5v-13h5v13zM4 6.5C2.5 6.5 1.5 5.3 1.5 4s1-2.4 2.5-2.4c1.6 0 2.5 1 2.6 2.5 0 1.4-1 2.5-2.6 2.5zm11.5 6c-1 0-2 1-2 2v7h-5v-13h5V10s1.6-1.5 4-1.5c3 0 5 2.2 5 6.3v6.7h-5v-7c0-1-1-2-2-2z"/></svg></div>LinkedIn</div>
+</a>
+
+<!-- Sharingbutton Facebook -->
+<a class="resp-sharing-button__link" href="https://facebook.com/sharer/sharer.php?u=https%3A//blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-i-hello-world" target="_blank" rel="noopener" aria-label="Facebook">
+  <div class="resp-sharing-button resp-sharing-button--facebook resp-sharing-button--medium"><div aria-hidden="true" class="resp-sharing-button__icon resp-sharing-button__icon--solid">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18.77 7.46H14.5v-1.9c0-.9.6-1.1 1-1.1h3V.5h-4.33C10.24.5 9.5 3.44 9.5 5.32v2.15h-3v4h3v12h5v-12h3.85l.42-4z"/></svg></div>Facebook</div>
+</a>
+
+<!-- Sharingbutton E-Mail -->
+<a class="resp-sharing-button__link" href="mailto:?subject=The%20Flask%20Mega-Tutorial%2C%20Part%20I%3A%20Hello%2C%20World%21&amp;body=https%3A//blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-i-hello-world" target="_self" rel="noopener" aria-label="E-Mail">
+  <div class="resp-sharing-button resp-sharing-button--email resp-sharing-button--medium"><div aria-hidden="true" class="resp-sharing-button__icon resp-sharing-button__icon--solid">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M22 4H2C.9 4 0 4.9 0 6v12c0 1.1.9 2 2 2h20c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM7.25 14.43l-3.5 2c-.08.05-.17.07-.25.07-.17 0-.34-.1-.43-.25-.14-.24-.06-.55.18-.68l3.5-2c.24-.14.55-.06.68.18.14.24.06.55-.18.68zm4.75.07c-.1 0-.2-.03-.27-.08l-8.5-5.5c-.23-.15-.3-.46-.15-.7.15-.22.46-.3.7-.14L12 13.4l8.23-5.32c.23-.15.54-.08.7.15.14.23.07.54-.16.7l-8.5 5.5c-.08.04-.17.07-.27.07zm8.93 1.75c-.1.16-.26.25-.43.25-.08 0-.17-.02-.25-.07l-3.5-2c-.24-.13-.32-.44-.18-.68s.44-.32.68-.18l3.5 2c.24.13.32.44.18.68z"/></svg></div>E-Mail</div>
+</a>
+
+<div id="comments" class="post-comment-count">
+  
+  <a class="btn btn-outline-secondary" href="/post/the-flask-mega-tutorial-part-i-hello-world#comments">65 comments</a>
+  
+</div>
+
+
+<div class="comments">
+  <ul>
+    
+    
+    <li>
+      <div class="comment-thumbnail"><img class="rounded" src="https://gravatar.com/avatar/0286c6a87475f8dae95c0bc9bc493893?s=60&d=identicon"></div>
+<div class="comment-body">
+  
+  <p>
+    
+    <span class="badge bg-secondary">#1</span> <span class="badge text-bg-warning">Vladimir Kuzmenkov</span> said
+    
+    <span class="flask-moment" data-timestamp="2023-12-05T22:50:40Z" data-function="fromNow" data-refresh="0" style="display: none">2023-12-05T22:50:40Z</span>
+  </p>
+  <div>
+    <p>Looks great, starting my learning journey.</p>
+  </div>
+</div>
+    </li>
+    
+    <li>
+      <div class="comment-thumbnail"><img class="rounded" src="https://gravatar.com/avatar/c3f7ad62d0f7ae888afdc2dcde691c38?s=60&d=identicon"></div>
+<div class="comment-body">
+  
+  <p>
+    
+    <span class="badge bg-secondary">#2</span> <span class="badge text-bg-warning">Radouane</span> said
+    
+    <span class="flask-moment" data-timestamp="2023-12-06T04:33:55Z" data-function="fromNow" data-refresh="0" style="display: none">2023-12-06T04:33:55Z</span>
+  </p>
+  <div>
+    <p>I just bought 2022 edition book a month ago.  Today, Dec 5th, 2023, I got the 2024 edition :)<br>
+I will keep both books.  I think this is the least we can do to support your work.  You have helped a lot of people to learn flask with your work :)  Are you going to update the Udemy course too?<br>
+Thanks</p>
+  </div>
+</div>
+    </li>
+    
+    <li>
+      <div class="comment-thumbnail"><img class="rounded" src="https://gravatar.com/avatar/729e26a2a2c7ff24a71958d4aa4e5f35?s=60&d=identicon"></div>
+<div class="comment-body">
+  
+  <p>
+    
+    <span class="badge bg-secondary">#3</span> <span class="badge text-bg-danger">Miguel Grinberg</span> said
+    
+    <span class="flask-moment" data-timestamp="2023-12-06T09:59:51Z" data-function="fromNow" data-refresh="0" style="display: none">2023-12-06T09:59:51Z</span>
+  </p>
+  <div>
+    <p>@Radouane: Thanks! I'm currently not planning to update the video course.</p>
+  </div>
+</div>
+    </li>
+    
+    <li>
+      <div class="comment-thumbnail"><img class="rounded" src="https://gravatar.com/avatar/f4678578369846d3ae716aee2334f6f6?s=60&d=identicon"></div>
+<div class="comment-body">
+  
+  <p>
+    
+    <span class="badge bg-secondary">#4</span> <span class="badge text-bg-warning">Ismet</span> said
+    
+    <span class="flask-moment" data-timestamp="2023-12-08T10:58:37Z" data-function="fromNow" data-refresh="0" style="display: none">2023-12-08T10:58:37Z</span>
+  </p>
+  <div>
+    <p>Keep up the good work, Miguel!</p>
+  </div>
+</div>
+    </li>
+    
+    <li>
+      <div class="comment-thumbnail"><img class="rounded" src="https://gravatar.com/avatar/de42e46858be5aabc04ee85d2027b256?s=60&d=identicon"></div>
+<div class="comment-body">
+  
+  <p>
+    
+    <span class="badge bg-secondary">#5</span> <span class="badge text-bg-warning">Varoon</span> said
+    
+    <span class="flask-moment" data-timestamp="2023-12-09T21:35:19Z" data-function="fromNow" data-refresh="0" style="display: none">2023-12-09T21:35:19Z</span>
+  </p>
+  <div>
+    <p>How do you deactivate python venv?</p>
+  </div>
+</div>
+    </li>
+    
+    <li>
+      <div class="comment-thumbnail"><img class="rounded" src="https://gravatar.com/avatar/729e26a2a2c7ff24a71958d4aa4e5f35?s=60&d=identicon"></div>
+<div class="comment-body">
+  
+  <p>
+    
+    <span class="badge bg-secondary">#6</span> <span class="badge text-bg-danger">Miguel Grinberg</span> said
+    
+    <span class="flask-moment" data-timestamp="2023-12-10T14:37:24Z" data-function="fromNow" data-refresh="0" style="display: none">2023-12-10T14:37:24Z</span>
+  </p>
+  <div>
+    <p>@Varoon: type <code>deactivate</code> at the prompt, or activate a different virtual environment to switch to another one.</p>
+  </div>
+</div>
+    </li>
+    
+    <li>
+      <div class="comment-thumbnail"><img class="rounded" src="https://gravatar.com/avatar/8f7c8a69aded8f3ad05b14b321a1ee27?s=60&d=identicon"></div>
+<div class="comment-body">
+  
+  <p>
+    
+    <span class="badge bg-secondary">#7</span> <span class="badge text-bg-warning">Dan</span> said
+    
+    <span class="flask-moment" data-timestamp="2024-01-10T12:16:33Z" data-function="fromNow" data-refresh="0" style="display: none">2024-01-10T12:16:33Z</span>
+  </p>
+  <div>
+    <p>Thank you Miguel, I hope to finish this book by end of Jan<br>
+I kept getting this error<br>
+Try 'flask run --help' for help.</p>
+<p>Error: Could not import 'microblog'.</p>
+<p>This worked for me<br>
+export FLASK_APP=app/<a href="http://microblog.py" rel="nofollow">microblog.py</a></p>
+  </div>
+</div>
+    </li>
+    
+    <li>
+      <div class="comment-thumbnail"><img class="rounded" src="https://gravatar.com/avatar/729e26a2a2c7ff24a71958d4aa4e5f35?s=60&d=identicon"></div>
+<div class="comment-body">
+  
+  <p>
+    
+    <span class="badge bg-secondary">#8</span> <span class="badge text-bg-danger">Miguel Grinberg</span> said
+    
+    <span class="flask-moment" data-timestamp="2024-01-10T17:08:20Z" data-function="fromNow" data-refresh="0" style="display: none">2024-01-10T17:08:20Z</span>
+  </p>
+  <div>
+    <p>@Dan: I recommend that you use the links to GitHub in the introduction in each chapter to see what the correct file structure for the project is. In this case, the <a href="http://microblog.py" rel="nofollow">microblog.py</a> file should be in the top-level folder, not inside app like you have it.</p>
+  </div>
+</div>
+    </li>
+    
+    <li>
+      <div class="comment-thumbnail"><img class="rounded" src="https://gravatar.com/avatar/2838d107dbf6ffc2a3ca41be44c07e1a?s=60&d=identicon"></div>
+<div class="comment-body">
+  
+  <p>
+    
+    <span class="badge bg-secondary">#9</span> <span class="badge text-bg-warning">Marco Renedo</span> said
+    
+    <span class="flask-moment" data-timestamp="2024-01-24T15:30:07Z" data-function="fromNow" data-refresh="0" style="display: none">2024-01-24T15:30:07Z</span>
+  </p>
+  <div>
+    <p>Amazing resource!. I think it would be nice to point out that .flaskenv  should be added to .gitignore.</p>
+  </div>
+</div>
+    </li>
+    
+    <li>
+      <div class="comment-thumbnail"><img class="rounded" src="https://gravatar.com/avatar/729e26a2a2c7ff24a71958d4aa4e5f35?s=60&d=identicon"></div>
+<div class="comment-body">
+  
+  <p>
+    
+    <span class="badge bg-secondary">#10</span> <span class="badge text-bg-danger">Miguel Grinberg</span> said
+    
+    <span class="flask-moment" data-timestamp="2024-01-24T17:25:49Z" data-function="fromNow" data-refresh="0" style="display: none">2024-01-24T17:25:49Z</span>
+  </p>
+  <div>
+    <p>@Marco: you are incorrect. The <code>.flaskenv</code> file should NOT be added to <code>.gitignore</code> and should be committed with the code. There shouldn't be any sensitive data stored in this file, so it is safe to be kept under source control. You are thinking of the <code>.env</code> file, which is normally used to store secrets. That's a different story, that one is covered much later in the tutorial.</p>
+  </div>
+</div>
+    </li>
+    
+    <li>
+      <div class="comment-thumbnail"><img class="rounded" src="https://gravatar.com/avatar/a9fdb4078db5e54619ba012cd4f5d6db?s=60&d=identicon"></div>
+<div class="comment-body">
+  
+  <p>
+    
+    <span class="badge bg-secondary">#11</span> <span class="badge text-bg-warning">Ssali Jonathan</span> said
+    
+    <span class="flask-moment" data-timestamp="2024-01-25T08:55:37Z" data-function="fromNow" data-refresh="0" style="display: none">2024-01-25T08:55:37Z</span>
+  </p>
+  <div>
+    <p>Greetings Miguel, I would like to thank you for having taught me the Flask framework. A lot of speak against Flask saying it is a bit old-fashioned and useless to learn. I was surprised to get my first full-time position where we were using it for developing a microservice, </p>
+<p>Thanks for the great work</p>
+  </div>
+</div>
+    </li>
+    
+    <li>
+      <div class="comment-thumbnail"><img class="rounded" src="https://gravatar.com/avatar/ad3e0a548eb163d6ddb1d4183e78ef9c?s=60&d=identicon"></div>
+<div class="comment-body">
+  
+  <p>
+    
+    <span class="badge bg-secondary">#12</span> <span class="badge text-bg-warning">mahima</span> said
+    
+    <span class="flask-moment" data-timestamp="2024-02-12T18:53:19Z" data-function="fromNow" data-refresh="0" style="display: none">2024-02-12T18:53:19Z</span>
+  </p>
+  <div>
+    <p>I tried following the official tutorial but couldnt quite figure it out and now i came across this!! thanks !! now i can actually follow a flask tutorial :)</p>
+  </div>
+</div>
+    </li>
+    
+    <li>
+      <div class="comment-thumbnail"><img class="rounded" src="https://gravatar.com/avatar/86b78aac05f76de577195e629ef8461c?s=60&d=identicon"></div>
+<div class="comment-body">
+  
+  <p>
+    
+    <span class="badge bg-secondary">#13</span> <span class="badge text-bg-warning">Erik Javier Baaken</span> said
+    
+    <span class="flask-moment" data-timestamp="2024-03-03T17:16:45Z" data-function="fromNow" data-refresh="0" style="display: none">2024-03-03T17:16:45Z</span>
+  </p>
+  <div>
+    <p>So I went through every single step. I just cannot put my head around the very last part and do not understand what is meant with:<br>
+'Now you can just write the environment variable name and value in a file named .flaskenv located in the top-level directory of the project:<br>
+.flaskenv: Environment variables for flask command<br>
+FLASK_APP=<a href="http://microblog.py" rel="nofollow">microblog.py</a><br>
+The flask command will look for the .flaskenv file and import all the variables defined in it exactly as if they were defined in the environment.'</p>
+<p>What am I supposed to do here?</p>
+  </div>
+</div>
+    </li>
+    
+    <li>
+      <div class="comment-thumbnail"><img class="rounded" src="https://gravatar.com/avatar/729e26a2a2c7ff24a71958d4aa4e5f35?s=60&d=identicon"></div>
+<div class="comment-body">
+  
+  <p>
+    
+    <span class="badge bg-secondary">#14</span> <span class="badge text-bg-danger">Miguel Grinberg</span> said
+    
+    <span class="flask-moment" data-timestamp="2024-03-03T17:44:52Z" data-function="fromNow" data-refresh="0" style="display: none">2024-03-03T17:44:52Z</span>
+  </p>
+  <div>
+    <p>@Erik: when in doubt, you can always look at the working code for the chapter you are on using the link at the top of the article. In this case, you have to write a file with the name <code>.flaskenv</code> and add the contents as indicated in the article.</p>
+  </div>
+</div>
+    </li>
+    
+    <li>
+      <div class="comment-thumbnail"><img class="rounded" src="https://gravatar.com/avatar/1591f78b49dd39b5b7fce345b3119ac9?s=60&d=identicon"></div>
+<div class="comment-body">
+  
+  <p>
+    
+    <span class="badge bg-secondary">#15</span> <span class="badge text-bg-warning">Andrew May</span> said
+    
+    <span class="flask-moment" data-timestamp="2024-03-09T22:08:33Z" data-function="fromNow" data-refresh="0" style="display: none">2024-03-09T22:08:33Z</span>
+  </p>
+  <div>
+    <p>Hi, ive been following this using the ebook, really clear all the way through, thanks :) I'm trying to host it on App Engine on GCP, and have to change the SQLite db to mySQL as GAE doesnt support SQLite. </p>
+<p>Ive set up the new mySQL db on Google App Engine, connected the flask GAE project to the mySQL db, and created a .env file with the DATABASE_URL to point to the mySQL db on google cloud platform, and put the env_variables into the app.yaml file needed.<br>
+I'm a bit stuck now, because when I try to run the db migrations using my local code, it still just updates the local sqlite db, not the mySQL db on App Engine. I can access the app on GAE, and get to the home page, but any interaction with the db results in the 'Unexpected Error has Occured' message. Is there something Ive missed ? The db migrations should update the mySQL databases, shouldnt they? <br>
+Hope you can help!</p>
+  </div>
+</div>
+    </li>
+    
+    <li>
+      <div class="comment-thumbnail"><img class="rounded" src="https://gravatar.com/avatar/729e26a2a2c7ff24a71958d4aa4e5f35?s=60&d=identicon"></div>
+<div class="comment-body">
+  
+  <p>
+    
+    <span class="badge bg-secondary">#16</span> <span class="badge text-bg-danger">Miguel Grinberg</span> said
+    
+    <span class="flask-moment" data-timestamp="2024-03-10T00:17:54Z" data-function="fromNow" data-refresh="0" style="display: none">2024-03-10T00:17:54Z</span>
+  </p>
+  <div>
+    <p>@Andrew: It is really not possible for me to diagnose the problem with the little information you provided. I suggest you continue with this tutorial, which eventually shows how to switch to both Postgres and MySQL for different deployment options.</p>
+  </div>
+</div>
+    </li>
+    
+    <li>
+      <div class="comment-thumbnail"><img class="rounded" src="https://gravatar.com/avatar/19c244867251ab918ed2186dca7b4c81?s=60&d=identicon"></div>
+<div class="comment-body">
+  
+  <p>
+    
+    <span class="badge bg-secondary">#17</span> <span class="badge text-bg-warning">Dhiraj Kapse</span> said
+    
+    <span class="flask-moment" data-timestamp="2024-03-20T12:25:22Z" data-function="fromNow" data-refresh="0" style="display: none">2024-03-20T12:25:22Z</span>
+  </p>
+  <div>
+    <p>Starting my Web Development Journey with Flask! Thanks Miguel for providing this valuable resources for free. Also I request you to provide a tutorial on configuration of flask back-end with react front-end. &lt;3 from India.</p>
+  </div>
+</div>
+    </li>
+    
+    <li>
+      <div class="comment-thumbnail"><img class="rounded" src="https://gravatar.com/avatar/91e085a2231d524f19c165a291330b61?s=60&d=identicon"></div>
+<div class="comment-body">
+  
+  <p>
+    
+    <span class="badge bg-secondary">#18</span> <span class="badge text-bg-warning">Vishwajeet Prasad</span> said
+    
+    <span class="flask-moment" data-timestamp="2024-03-23T05:58:22Z" data-function="fromNow" data-refresh="0" style="display: none">2024-03-23T05:58:22Z</span>
+  </p>
+  <div>
+    <p>Hi Miguel!</p>
+<p>Just started out with this course, and it is good. Thanks for your effort.</p>
+<p>I have one small question, what's the purpose of top-level python script that defines Flask application instance and also setting up FLASK_APP environment variable to point it to this script?</p>
+<p>As I read the quick start tutorial from the flask's website, they have mentioned, that if your flask app file name is "<a href="http://app.py" rel="nofollow">app.py</a>" or "<a href="http://wsgi.py" rel="nofollow">wsgi.py</a>", you can ignore --app option (which I think is analogous to FLASK_APP env var) and we actually used <a href="http://app.py" rel="nofollow">app.py</a> for flask application. Then what's the further need of having additional top level script and setting up env var?</p>
+  </div>
+</div>
+    </li>
+    
+    <li>
+      <div class="comment-thumbnail"><img class="rounded" src="https://gravatar.com/avatar/729e26a2a2c7ff24a71958d4aa4e5f35?s=60&d=identicon"></div>
+<div class="comment-body">
+  
+  <p>
+    
+    <span class="badge bg-secondary">#19</span> <span class="badge text-bg-danger">Miguel Grinberg</span> said
+    
+    <span class="flask-moment" data-timestamp="2024-03-23T10:49:11Z" data-function="fromNow" data-refresh="0" style="display: none">2024-03-23T10:49:11Z</span>
+  </p>
+  <div>
+    <p>@Vishwajeet: the main application script in this tutorial is called <em><a href="http://microblog.py" rel="nofollow">microblog.py</a></em>, so it needs to be configured. You could move the functionality in this module somewhere inside the application package, and then it would be okay to not define <code>FLASK_APP</code>, since the <code>app</code> package would be found as a default.</p>
+  </div>
+</div>
+    </li>
+    
+    <li>
+      <div class="comment-thumbnail"><img class="rounded" src="https://gravatar.com/avatar/03c46aabc7297fab7131c2fa172f2147?s=60&d=identicon"></div>
+<div class="comment-body">
+  
+  <p>
+    
+    <span class="badge bg-secondary">#20</span> <span class="badge text-bg-warning">Rickey</span> said
+    
+    <span class="flask-moment" data-timestamp="2024-03-26T17:48:33Z" data-function="fromNow" data-refresh="0" style="display: none">2024-03-26T17:48:33Z</span>
+  </p>
+  <div>
+    <p>I’m not that much of a internet reader to be honest but your blogs really nice, keep it up!<br>
+I'll go ahead and bookmark your website to come back down the road.<br>
+Cheers</p>
+  </div>
+</div>
+    </li>
+    
+    <li>
+      <div class="comment-thumbnail"><img class="rounded" src="https://gravatar.com/avatar/3f87b5c77f0fa660da80c159c23d3e7b?s=60&d=identicon"></div>
+<div class="comment-body">
+  
+  <p>
+    
+    <span class="badge bg-secondary">#21</span> <span class="badge text-bg-warning">William Smith</span> said
+    
+    <span class="flask-moment" data-timestamp="2024-04-10T23:00:16Z" data-function="fromNow" data-refresh="0" style="display: none">2024-04-10T23:00:16Z</span>
+  </p>
+  <div>
+    <p>I am planning to go through this series step by step and document my work on GitHub. GNU General Public License v3.0. I would prominently display credit directly to you and this series. Would this be OK with you?</p>
+  </div>
+</div>
+    </li>
+    
+    <li>
+      <div class="comment-thumbnail"><img class="rounded" src="https://gravatar.com/avatar/729e26a2a2c7ff24a71958d4aa4e5f35?s=60&d=identicon"></div>
+<div class="comment-body">
+  
+  <p>
+    
+    <span class="badge bg-secondary">#22</span> <span class="badge text-bg-danger">Miguel Grinberg</span> said
+    
+    <span class="flask-moment" data-timestamp="2024-04-12T09:16:33Z" data-function="fromNow" data-refresh="0" style="display: none">2024-04-12T09:16:33Z</span>
+  </p>
+  <div>
+    <p>@William: Yes. The code is licensed with the MIT license. See the GitHub repository for details.</p>
+  </div>
+</div>
+    </li>
+    
+    <li>
+      <div class="comment-thumbnail"><img class="rounded" src="https://gravatar.com/avatar/00152343b527cf3ffc51e77a4480e3b2?s=60&d=identicon"></div>
+<div class="comment-body">
+  
+  <p>
+    
+    <span class="badge bg-secondary">#23</span> <span class="badge text-bg-warning">Gareth Thompson</span> said
+    
+    <span class="flask-moment" data-timestamp="2024-04-13T06:40:00Z" data-function="fromNow" data-refresh="0" style="display: none">2024-04-13T06:40:00Z</span>
+  </p>
+  <div>
+    <p>Hi Miguel,</p>
+<p>For some reason I'm getting the following error when I try to run flask -- <br>
+(venv) gareththompson@Gareths-MacBook-Pro microblog % flask run<br>
+Usage: flask run [OPTIONS]<br>
+Try 'flask run --help' for help.</p>
+<p>Error: Failed to find Flask application or factory in module 'microblog'. Use 'microblog:name' to specify one.<br>
+(venv) gareththompson@Gareths-MacBook-Pro microblog % </p>
+<p>Any help would be greatly appreciated, it's driving me insane 😂</p>
+  </div>
+</div>
+    </li>
+    
+    <li>
+      <div class="comment-thumbnail"><img class="rounded" src="https://gravatar.com/avatar/729e26a2a2c7ff24a71958d4aa4e5f35?s=60&d=identicon"></div>
+<div class="comment-body">
+  
+  <p>
+    
+    <span class="badge bg-secondary">#24</span> <span class="badge text-bg-danger">Miguel Grinberg</span> said
+    
+    <span class="flask-moment" data-timestamp="2024-04-13T11:32:43Z" data-function="fromNow" data-refresh="0" style="display: none">2024-04-13T11:32:43Z</span>
+  </p>
+  <div>
+    <p>@Gareth: you did not create a <a href="http://microblog.py" rel="nofollow">microblog.py</a> file, or you put it in the wrong place and Flask cannot find it. See the GitHub link near the top of the article to review the correct project structure for this chapter.</p>
+  </div>
+</div>
+    </li>
+    
+    <li>
+      <div class="comment-thumbnail"><img class="rounded" src="https://gravatar.com/avatar/97983b5517c36baae6d22aaf903e20a8?s=60&d=identicon"></div>
+<div class="comment-body">
+  
+  <p>
+    
+    <span class="badge bg-secondary">#25</span> <span class="badge text-bg-warning">Petr</span> said
+    
+    <span class="flask-moment" data-timestamp="2024-04-21T05:26:14Z" data-function="fromNow" data-refresh="0" style="display: none">2024-04-21T05:26:14Z</span>
+  </p>
+  <div>
+    <p>Thank you so much for this resource!</p>
+  </div>
+</div>
+    </li>
+    
+  </ul>
+</div>
+
+<nav aria-label="Page navigation">
+  <ul class="pagination justify-content-center">
+    <li class="page-item disabled"><a class="page-link" href="/post/the-flask-mega-tutorial-part-i-hello-world/page/1#comments">&laquo;&laquo;</a></li>
+    <li class="page-item disabled"><a class="page-link" href="/post/the-flask-mega-tutorial-part-i-hello-world/page/0#comments">&laquo;</a></li>
+    <li class="page-item"><a class="page-link" href="/post/the-flask-mega-tutorial-part-i-hello-world/page/2#comments">&raquo;</a></li>
+    <li class="page-item"><a class="page-link" href="/post/the-flask-mega-tutorial-part-i-hello-world/page/0#comments">&raquo;&raquo;</a></li>
+  </ul>
+</nav>
+
+
+
+<div id="comment-form">
+  <h3>Leave a Comment</h3>
+
+  
+  
+  
+
+  
+<form action="#comment-form" method="post">
+  <input id="url" name="url" type="hidden" value="">
+<input id="csrf_token" name="csrf_token" type="hidden" value="IjNlZjAxNTk2YjA0NjhmMDAyZWUzZWJiYmQ2MWYyMmVkY2MxMGUyYzgi.ae1aFA.2dVmtHCC0Rs_VyYHg1rYta3oHr0">
+    
+  <div class="mb-3">
+    <label class="form-label" for="name">Name</label>
+    <div class="input-group has-validation">
+      <input class="form-control" id="name" name="name" required type="text" value="">
+    </div>
+  </div>
+
+    
+    
+  <div class="mb-3">
+    <label class="form-label" for="email">Email</label>
+    <div class="input-group has-validation">
+      <input class="form-control" id="email" name="email" required type="text" value="">
+    </div>
+  </div>
+
+    
+  <div class="mb-3">
+    <label class="form-label" for="comment">Comment</label>
+    <div class="input-group has-validation">
+      <textarea class="form-control" id="comment" name="comment" required>
+</textarea>
+    </div>
+  </div>
+
+    
+  <div class="mb-3">
+    <label class="form-label" for="captcha">Captcha</label>
+    <div class="input-group has-validation">
+      
+<script src='https://www.google.com/recaptcha/api.js' async defer></script>
+<div class="g-recaptcha" data-sitekey="6Ld5Zs4SAAAAAOY0DOi4r18bgHlEaz41qAoRf__S"></div>
+
+    </div>
+  </div>
+
+    
+  <input class="btn btn-primary mb-3" id="submit" name="submit" type="submit" value="Submit">
+
+      
+</form>
+
+</div>
+
+
+</div>
+
+      </div>
+    </div>
+    
+    <div class="col-md-4">
+      <div id="sidebar">
+        
+          
+  
+
+
+
+<div class="card">
+  
+  
+  
+  
+  <div class="card-header">
+    <div class="row">
+      <div class="col">The Flask Mega-Tutorial</div>
+      <div class="col text-end">
+        <a href="/post/announcing-the-flask-mega-tutorial-2024-edition">
+          <h5 style="margin-bottom: 0px"><span class="badge text-bg-warning">2024 Edition!</span></h5>
+        </a>
+      </div>
+    </div>
+  </div>
+  <a class="card-book-cover" href="https://learn.miguelgrinberg.com/product/flask-mega-tutorial">
+    <img src="/static/mega-tutorial-2024-small.png" alt="The New Flask Mega-Tutorial">
+  </a>
+  <div class="card-body">
+    <p class="card-text">If you would you like to support my work on my <a href="https://blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-i-hello-world">Flask Mega-Tutorial series</a> on this blog and as a reward have access to the complete tutorial in book format, you can now order it directly from my <a href="https://learn.miguelgrinberg.com/product/flask-mega-tutorial">Courses</a> site or from <a href="https://amzn.to/3MQffrm">Amazon</a>.</p>
+  </div>
+  <div class="card-body">
+    <a class="card-link" href="https://learn.miguelgrinberg.com/product/flask-mega-tutorial">Click here to get this Book!</a><br />
+  </div>
+
+  
+</div>
+        
+        <div class="card">
+  <div class="card-header">About Miguel</div>
+  <div class="card-body">
+    <img style="float: right; margin: 0px 8px 8px 0px; padding: 4px; border: 1px solid #ccc;" src="/static/miguel.jpg" />
+    <p class="card-text">Welcome to my blog!</p>
+    <p class="card-text">I'm a software engineer and technical writer, currently living in Drogheda, Ireland.</p>
+    <p class="card-text">You can also find me on
+      <a href="https://github.com/miguelgrinberg">Github</a>,
+      <a href="http://www.linkedin.com/in/miguelgrinberg">LinkedIn</a>,
+      <a href="https://bsky.app/profile/miguelgrinberg.com">Bluesky</a>,
+      <a href="https://mstdn.social/@miguelgrinberg">Mastodon</a>,
+      <a href="https://twitter.com/miguelgrinberg">Twitter</a>,
+      <a href="https://youtube.com/miguelgrinberg">YouTube</a>,
+      <!--<a href="https://www.facebook.com/miguelgrinbergblog">Facebook</a>,-->
+      <a href="https://www.buymeacoffee.com/miguelgrinberg">Buy Me a Coffee</a>,
+      and <a href="https://patreon.com/miguelgrinberg">Patreon</a>.</p>
+    <p class="card-text">Thank you for visiting!</p>
+  </div>
+</div>
+        
+        <div class="card" id="categories">
+  <div class="card-header">Categories</div>
+  <div class="card-body">
+    
+    <div class="category">
+      <a href="/category/AI/feed"><img src="/static/rss-small.png" title="AI RSS Feed" label="AI RSS Feed" alt="AI RSS Feed" /></a>
+      <form action="/category/AI" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="AI" /> <small><em>4</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Arduino/feed"><img src="/static/rss-small.png" title="Arduino RSS Feed" label="Arduino RSS Feed" alt="Arduino RSS Feed" /></a>
+      <form action="/category/Arduino" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Arduino" /> <small><em>7</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Authentication/feed"><img src="/static/rss-small.png" title="Authentication RSS Feed" label="Authentication RSS Feed" alt="Authentication RSS Feed" /></a>
+      <form action="/category/Authentication" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Authentication" /> <small><em>10</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Blog/feed"><img src="/static/rss-small.png" title="Blog RSS Feed" label="Blog RSS Feed" alt="Blog RSS Feed" /></a>
+      <form action="/category/Blog" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Blog" /> <small><em>1</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/C++/feed"><img src="/static/rss-small.png" title="C++ RSS Feed" label="C++ RSS Feed" alt="C++ RSS Feed" /></a>
+      <form action="/category/C++" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="C++" /> <small><em>5</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/CSS/feed"><img src="/static/rss-small.png" title="CSS RSS Feed" label="CSS RSS Feed" alt="CSS RSS Feed" /></a>
+      <form action="/category/CSS" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="CSS" /> <small><em>1</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Cloud/feed"><img src="/static/rss-small.png" title="Cloud RSS Feed" label="Cloud RSS Feed" alt="Cloud RSS Feed" /></a>
+      <form action="/category/Cloud" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Cloud" /> <small><em>12</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Database/feed"><img src="/static/rss-small.png" title="Database RSS Feed" label="Database RSS Feed" alt="Database RSS Feed" /></a>
+      <form action="/category/Database" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Database" /> <small><em>30</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Docker/feed"><img src="/static/rss-small.png" title="Docker RSS Feed" label="Docker RSS Feed" alt="Docker RSS Feed" /></a>
+      <form action="/category/Docker" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Docker" /> <small><em>6</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Filmmaking/feed"><img src="/static/rss-small.png" title="Filmmaking RSS Feed" label="Filmmaking RSS Feed" alt="Filmmaking RSS Feed" /></a>
+      <form action="/category/Filmmaking" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Filmmaking" /> <small><em>6</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Flask/feed"><img src="/static/rss-small.png" title="Flask RSS Feed" label="Flask RSS Feed" alt="Flask RSS Feed" /></a>
+      <form action="/category/Flask" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Flask" /> <small><em>130</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Games/feed"><img src="/static/rss-small.png" title="Games RSS Feed" label="Games RSS Feed" alt="Games RSS Feed" /></a>
+      <form action="/category/Games" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Games" /> <small><em>1</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Infra/feed"><img src="/static/rss-small.png" title="Infra RSS Feed" label="Infra RSS Feed" alt="Infra RSS Feed" /></a>
+      <form action="/category/Infra" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Infra" /> <small><em>1</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/IoT/feed"><img src="/static/rss-small.png" title="IoT RSS Feed" label="IoT RSS Feed" alt="IoT RSS Feed" /></a>
+      <form action="/category/IoT" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="IoT" /> <small><em>8</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/JavaScript/feed"><img src="/static/rss-small.png" title="JavaScript RSS Feed" label="JavaScript RSS Feed" alt="JavaScript RSS Feed" /></a>
+      <form action="/category/JavaScript" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="JavaScript" /> <small><em>37</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/MicroPython/feed"><img src="/static/rss-small.png" title="MicroPython RSS Feed" label="MicroPython RSS Feed" alt="MicroPython RSS Feed" /></a>
+      <form action="/category/MicroPython" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="MicroPython" /> <small><em>10</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Microdot/feed"><img src="/static/rss-small.png" title="Microdot RSS Feed" label="Microdot RSS Feed" alt="Microdot RSS Feed" /></a>
+      <form action="/category/Microdot" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Microdot" /> <small><em>1</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Microservices/feed"><img src="/static/rss-small.png" title="Microservices RSS Feed" label="Microservices RSS Feed" alt="Microservices RSS Feed" /></a>
+      <form action="/category/Microservices" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Microservices" /> <small><em>2</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Movie Reviews/feed"><img src="/static/rss-small.png" title="Movie Reviews RSS Feed" label="Movie Reviews RSS Feed" alt="Movie Reviews RSS Feed" /></a>
+      <form action="/category/Movie%20Reviews" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Movie Reviews" /> <small><em>5</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Personal/feed"><img src="/static/rss-small.png" title="Personal RSS Feed" label="Personal RSS Feed" alt="Personal RSS Feed" /></a>
+      <form action="/category/Personal" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Personal" /> <small><em>4</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Photography/feed"><img src="/static/rss-small.png" title="Photography RSS Feed" label="Photography RSS Feed" alt="Photography RSS Feed" /></a>
+      <form action="/category/Photography" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Photography" /> <small><em>7</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Product Reviews/feed"><img src="/static/rss-small.png" title="Product Reviews RSS Feed" label="Product Reviews RSS Feed" alt="Product Reviews RSS Feed" /></a>
+      <form action="/category/Product%20Reviews" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Product Reviews" /> <small><em>2</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Programming/feed"><img src="/static/rss-small.png" title="Programming RSS Feed" label="Programming RSS Feed" alt="Programming RSS Feed" /></a>
+      <form action="/category/Programming" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Programming" /> <small><em>197</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Project Management/feed"><img src="/static/rss-small.png" title="Project Management RSS Feed" label="Project Management RSS Feed" alt="Project Management RSS Feed" /></a>
+      <form action="/category/Project%20Management" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Project Management" /> <small><em>1</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Python/feed"><img src="/static/rss-small.png" title="Python RSS Feed" label="Python RSS Feed" alt="Python RSS Feed" /></a>
+      <form action="/category/Python" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Python" /> <small><em>183</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/REST/feed"><img src="/static/rss-small.png" title="REST RSS Feed" label="REST RSS Feed" alt="REST RSS Feed" /></a>
+      <form action="/category/REST" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="REST" /> <small><em>7</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Raspberry Pi/feed"><img src="/static/rss-small.png" title="Raspberry Pi RSS Feed" label="Raspberry Pi RSS Feed" alt="Raspberry Pi RSS Feed" /></a>
+      <form action="/category/Raspberry%20Pi" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Raspberry Pi" /> <small><em>8</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/React/feed"><img src="/static/rss-small.png" title="React RSS Feed" label="React RSS Feed" alt="React RSS Feed" /></a>
+      <form action="/category/React" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="React" /> <small><em>19</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Reviews/feed"><img src="/static/rss-small.png" title="Reviews RSS Feed" label="Reviews RSS Feed" alt="Reviews RSS Feed" /></a>
+      <form action="/category/Reviews" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Reviews" /> <small><em>1</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Robotics/feed"><img src="/static/rss-small.png" title="Robotics RSS Feed" label="Robotics RSS Feed" alt="Robotics RSS Feed" /></a>
+      <form action="/category/Robotics" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Robotics" /> <small><em>6</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Security/feed"><img src="/static/rss-small.png" title="Security RSS Feed" label="Security RSS Feed" alt="Security RSS Feed" /></a>
+      <form action="/category/Security" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Security" /> <small><em>13</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Video/feed"><img src="/static/rss-small.png" title="Video RSS Feed" label="Video RSS Feed" alt="Video RSS Feed" /></a>
+      <form action="/category/Video" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Video" /> <small><em>22</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/WebSocket/feed"><img src="/static/rss-small.png" title="WebSocket RSS Feed" label="WebSocket RSS Feed" alt="WebSocket RSS Feed" /></a>
+      <form action="/category/WebSocket" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="WebSocket" /> <small><em>2</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Webcast/feed"><img src="/static/rss-small.png" title="Webcast RSS Feed" label="Webcast RSS Feed" alt="Webcast RSS Feed" /></a>
+      <form action="/category/Webcast" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Webcast" /> <small><em>3</em></small>
+      </form>
+    </div>
+    
+    <div class="category">
+      <a href="/category/Windows/feed"><img src="/static/rss-small.png" title="Windows RSS Feed" label="Windows RSS Feed" alt="Windows RSS Feed" /></a>
+      <form action="/category/Windows" method="POST">
+        <input type="submit" class="btn btn-primary btn-sm" value="Windows" /> <small><em>1</em></small>
+      </form>
+    </div>
+    
+  </div>
+</div>
+        
+      </div>
+    </div>
+    
+  </div>
+  <div id="footer">
+    
+    <p>&copy; 2012-<script type="text/javascript">document.write(new Date().getFullYear());</script> by Miguel Grinberg. All rights reserved. <a href="mailto:webmaster _at_ miguelgrinberg _dot_ com">Questions?</a></p>
+  </div>
+</div>
+
+  
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+  <script type="text/javascript" src="/static/prettify.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment-with-locales.min.js" integrity="sha512-42PE0rd+wZ2hNXftlM78BSehIGzezNeQuzihiBCvUEB3CVxHvsShF86wBWwQORNxNINlBPuq7rG4WWhNiTVHFg==" crossorigin="anonymous"></script>
+
+<script>
+moment.locale("en");
+function flask_moment_render(elem) {{
+    const timestamp = moment(elem.dataset.timestamp);
+    const func = elem.dataset.function;
+    const format = elem.dataset.format;
+    const timestamp2 = elem.dataset.timestamp2;
+    const no_suffix = elem.dataset.nosuffix;
+    const units = elem.dataset.units;
+    let args = [];
+    if (format)
+        args.push(format);
+    if (timestamp2)
+        args.push(moment(timestamp2));
+    if (no_suffix)
+        args.push(no_suffix);
+    if (units)
+        args.push(units);
+    elem.textContent = timestamp[func].apply(timestamp, args);
+    elem.classList.remove('flask-moment');
+    elem.style.display = "";
+}}
+function flask_moment_render_all() {{
+    const moments = document.querySelectorAll('.flask-moment');
+    moments.forEach(function(moment) {{
+        flask_moment_render(moment);
+        const refresh = moment.dataset.refresh;
+        if (refresh && refresh > 0) {{
+            (function(elem, interval) {{
+                setInterval(function() {{
+                    flask_moment_render(elem);
+                }}, interval);
+            }})(moment, refresh);
+        }}
+    }})
+}}
+document.addEventListener("DOMContentLoaded", flask_moment_render_all);
+</script>
+
+  
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-20EHZP9GRZ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-20EHZP9GRZ');
+  </script>
+  
+  <script type="text/javascript">
+    function setThemeUI() {
+      document.getElementById('select-theme-auto').classList.remove('active');
+      document.getElementById('select-theme-light').classList.remove('active');
+      document.getElementById('select-theme-dark').classList.remove('active');
+      const theme = getPreferredTheme();
+      const actualTheme = document.documentElement.getAttribute('data-bs-theme', 'light');
+      document.getElementById('select-theme-' + theme).classList.add('active');
+      document.getElementById('current-theme').href.baseVal = `#icon-theme-${actualTheme}`;
+    };
+
+    function updateTheme(theme) {
+      if (theme === 'auto') {
+        localStorage.removeItem('theme')
+      }
+      else {
+        localStorage.setItem('theme', theme)
+      }
+      setTheme(getPreferredTheme());
+    }
+
+    setThemeUI();
+
+    const darkModePreference = window.matchMedia("(prefers-color-scheme: dark)");
+    darkModePreference.addEventListener("change", e => {
+      if (getPreferredTheme() === 'auto') {
+        setTheme('auto');
+      }
+    });
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // add prettyprint class to all <pre><code></code></pre> blocks
+      let prettify = false;
+      document.querySelectorAll('div.post-body pre code').forEach((code) => {
+        code.parentNode.classList.add('prettyprint');
+        prettify = true;
+      });
+      prettyPrint();
+    });
+  </script>
+
+  </body>
+</html>

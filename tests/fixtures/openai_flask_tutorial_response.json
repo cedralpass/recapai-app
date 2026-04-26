@@ -1,0 +1,17 @@
+{
+  "author": "Miguel Grinberg",
+  "blog_title": "The Flask Mega-Tutorial Part I: Hello, World!",
+  "category": "Software Architecture",
+  "key_topics": [
+    "Setting up a Flask project",
+    "Installing Python and Flask",
+    "Creating and using virtual environments"
+  ],
+  "sub_categories": [
+    "Web Development",
+    "Python Programming",
+    "Flask Framework"
+  ],
+  "summary": "This article is the first part of a comprehensive tutorial series on building web applications using Python and the Flask framework. It covers the initial setup of a Flask project, including installing Python and Flask, creating virtual environments, and setting up a basic Flask application structure. The tutorial aims to guide beginners through the process of creating a simple 'Hello, World!' application with Flask.",
+  "url": "https://blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-i-hello-world"
+}
