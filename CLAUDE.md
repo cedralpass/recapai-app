@@ -137,6 +137,56 @@ open('tests/fixtures/your_article.html', 'w').write(r.text)
 ```
 Then run a live classification and copy the JSON from the rq-worker logs into a matching fixture file.
 
+### Seed data fixtures
+
+`tests/seed_data.py` contains **53 real classified articles across 10 categories**, sourced from a live testuser run. Use these fixtures instead of creating ad-hoc toy data:
+
+| Fixture | What it provides |
+|---------|-----------------|
+| `seeded_user` | User `seeduser` pre-loaded with all 53 articles; yields the User object |
+| `seeded_articles` | All Article objects for `seeded_user`, ordered by category then created |
+
+```python
+def test_something(seeded_user, recap_app):
+    ...
+
+def test_something_else(seeded_articles):
+    ai_articles = [a for a in seeded_articles if a.category == "Artificial Intelligence"]
+    assert len(ai_articles) == 27
+```
+
+`tests/seed_data.py` also exports `SEED_CATEGORIES` (sorted list) and `SEED_CATEGORY_COUNTS` (dict) for assertion baselines.
+
+---
+
+## Dev Scripts
+
+`scripts/load_test_articles.py` — seeds a running local instance with the same 50 URLs used to generate the seed data:
+
+```bash
+# Creates testuser if needed, submits all URLs, classification happens via RQ
+.venv/bin/python scripts/load_test_articles.py
+
+# Wait and print results as articles are classified
+.venv/bin/python scripts/load_test_articles.py --status
+```
+
+Run `--help` for all options (username, email, password, api-url, delay, dry-run).
+
+---
+
+## UI Development
+
+Before making any template or style changes, read **[docs/design-system.md](docs/design-system.md)**.
+
+It documents the complete visual language of the app: color tokens, typography scale, every component pattern (cards, buttons, forms, badges, sidebar, flash messages, pagination), responsive breakpoints, and interaction patterns. It's the fastest way to understand what classes to use and why before touching a template.
+
+Key things to know without reading the whole doc:
+- **All styling is Tailwind utility classes** — no custom component CSS except a few global `@apply` rules in `recap/static/css/input.css`
+- **Two-column desktop layout on index** — article list (`flex-1 max-w-2xl`) + sticky filter sidebar (`w-60`), collapses to single-column on mobile
+- **Mobile filter is a toggle panel** (`#filter`, `hidden` by default, `showFilter()` JS); desktop filter is the persistent `<aside>` in `index.html` — they are separate elements
+- **Tailwind must be rebuilt** after any template class changes: the `tailwind` preview server watches templates and recompiles `recap/static/css/output.css` automatically during development
+
 ---
 
 ## Key Architecture
