@@ -42,89 +42,140 @@ def edit_profile():
 def organize_taxonomy():
     """
     Organize and suggest improvements to the user's content categories using AI.
-    
+
     Returns:
-        Rendered template with current categories, suggested new categories,
-        category mappings, and a description of the changes.
+        Rendered template with structured diff data for the new review UI.
     """
-    # Get current user categories
     categories = current_user.get_categories()
-    
-    # Prepare AI request context - using a single string join operation
     categories_names = sorted(category[0] for category in categories)
     context_string = f"I am using this taxonomy to categorize content: {', '.join(categories_names)}."
-    
-    # Define AI prompts as constants to avoid string recreation
+
     PROMPT = "Can you recommend a category list, consolidating similar categories? However, keep Artificial Intelligence and Software Architecture. Keep categories concise and understandable to a human reader."
     FORMAT = """Respond in a structured JSON message, mapping old categories to new categories. Can you also explain what topics changed as a single description element in the JSON. The description should be concise and understandable to a human reader. The final structure must be formatted in this structure:
         {\r\n    \"description\": \"A summary of the changes to the topics.\",\r\n    \"mappings\": [\r\n        {\r\n            \"new_category\": \"new_category_value\",\r\n            \"old_category\": \"old_category_value\"\r\n        },\r\n        {\r\n            \"new_category\": \"new_category_value\",\r\n            \"old_category\": \"old_category_value\"\r\n        }\r\n    ],\r\n    \"ref_key\": \"2\"\r\n}
         """
-    
-    # Get AI suggestions
-    json_response = AiApiHelper.PerformTask(
-        context_string, 
-        PROMPT, 
-        FORMAT, 
-        current_user.id
-    )
-    
-    # Process AI response
+
+    json_response = AiApiHelper.PerformTask(context_string, PROMPT, FORMAT, current_user.id)
+
     description = json_response.get('description', '')
     mappings = json_response.get('mappings', [])
-    
-    # Create category mapping and compute projected article counts for each new category
+
+    # Full flat mapping (kept for backward-compat and session storage)
     category_mapping = create_category_mapping(mappings)
     current_counts = {cat.category: cat.count for cat in categories}
+
+    # Build structured suggestions by grouping mappings by new_category.
+    # A group of one where old == new is "unchanged" — skip it.
+    from_groups = {}
+    for m in mappings:
+        from_groups.setdefault(m['new_category'], []).append(m['old_category'])
+
+    suggestions = []
+    suggestion_mappings = {}  # sid -> {old_cat: new_cat} used by apply_taxonomy
+    for i, (new_cat, old_cats) in enumerate(from_groups.items()):
+        if len(old_cats) == 1 and old_cats[0] == new_cat:
+            continue  # truly unchanged — not a suggestion
+        sid = f'merge_{i}'
+        to_count = sum(current_counts.get(old, 0) for old in old_cats)
+        suggestions.append({
+            'id': sid,
+            'type': 'merge',
+            'from_categories': old_cats,
+            'to_category': new_cat,
+            'to_count': to_count,
+            'reason': description,
+        })
+        suggestion_mappings[sid] = {old: new_cat for old in old_cats}
+
+    # Annotate current categories with their change status
+    merging_from = {cat for s in suggestions for cat in s['from_categories']}
+    current_annotated = []
+    for g in categories:
+        cat_type = 'merging' if g.category in merging_from else 'unchanged'
+        merge_id = next(
+            (s['id'] for s in suggestions if g.category in s['from_categories']), None
+        )
+        current_annotated.append({
+            'name': g.category,
+            'count': g.count,
+            'type': cat_type,
+            'merge_id': merge_id,
+            'is_new': g.category.startswith('New Category:'),
+        })
+
+    # Proposed taxonomy: unchanged categories + merge results
+    unchanged_cats = [c for c in current_annotated if c['type'] == 'unchanged']
+    merged_results = [
+        {'name': s['to_category'], 'count': s['to_count'], 'type': 'merged', 'merge_id': s['id']}
+        for s in suggestions
+    ]
+    proposed_annotated = unchanged_cats + merged_results
+
+    # Backward-compat flat suggested list
     suggested_counts = {}
     for old, new in category_mapping.items():
         suggested_counts[new] = suggested_counts.get(new, 0) + current_counts.get(old, 0)
-    # Sort descending by count, same order as current categories
     new_categories = sorted(suggested_counts.items(), key=lambda x: x[1], reverse=True)
-    
-    # Store mapping in session for later use
+
     session['category_mapping'] = category_mapping
-    
+    session['suggestion_mappings'] = suggestion_mappings
+
     return render_template(
         "profile/organize_taxonomy.html",
-        title='Organize Taxonomy',
+        title='Organise Taxonomy',
         categories=categories,
         suggested=new_categories,
         description=description,
-        category_mapping=category_mapping
+        category_mapping=category_mapping,
+        current_annotated=current_annotated,
+        proposed_annotated=proposed_annotated,
+        suggestions=suggestions,
     )
 
 @bp.route('/apply_taxonomy', methods=['POST'])
 @login_required
 def apply_taxonomy():
     """
-    Apply the suggested category changes to all articles.
-    Updates article categories based on the mapping stored in session.
+    Apply accepted taxonomy suggestions to all articles.
+
+    The new UI submits accepted_<id>=1 for each accepted suggestion and
+    accepted_<id>=0 for rejected ones.  When those fields are present we only
+    apply the accepted subset.  When they are absent (e.g. older form or tests
+    that POST without form data) we fall back to the full category_mapping
+    stored in session.
     """
-    # Get category mapping from session
     category_mapping = session.get('category_mapping')
     if not category_mapping:
         flash('No category mapping found. Please generate suggestions first.')
         return redirect(url_for('profile.organize_taxonomy'))
-    
-    # Update categories for all articles
-    for old_category, new_category in category_mapping.items():
-        # Find all articles with the old category
+
+    accepted_ids = [
+        key.replace('accepted_', '')
+        for key, val in request.form.items()
+        if key.startswith('accepted_') and val == '1'
+    ]
+
+    if accepted_ids:
+        suggestion_mappings = session.get('suggestion_mappings', {})
+        mapping_to_apply = {}
+        for sid in accepted_ids:
+            mapping_to_apply.update(suggestion_mappings.get(sid, {}))
+    else:
+        mapping_to_apply = category_mapping
+
+    for old_category, new_category in mapping_to_apply.items():
         articles = Article.query.filter_by(
             user_id=current_user.id,
             category=old_category
         ).all()
-        
-        # Update each article's category
         for article in articles:
             article.category = new_category
             db.session.add(article)
-    
-    # Commit all changes
+
     db.session.commit()
-    
-    # Clear the mapping from session
     session.pop('category_mapping', None)
-    
+    session.pop('suggestion_mappings', None)
+
     flash('Categories have been updated successfully.')
     return redirect(url_for('profile.user', username=current_user.username))
 
