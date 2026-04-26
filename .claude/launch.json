@@ -29,13 +29,15 @@
       "name": "rq-worker",
       "runtimeExecutable": "bash",
       "runtimeArgs": ["-c", "cd /Users/geoffreysmalling/development/recapai-app && OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES .venv/bin/rq worker RECAP2-Classify"],
-      "port": 0
+      "port": 0,
+      "autoPort": true
     },
     {
       "name": "tailwind",
       "runtimeExecutable": "bash",
       "runtimeArgs": ["-c", "cd /Users/geoffreysmalling/development/recapai-app && npx tailwindcss -i ./recap/static/css/input.css -o ./recap/static/css/output.css --watch"],
-      "port": 0
+      "port": 0,
+      "autoPort": true
     }
   ]
 }
