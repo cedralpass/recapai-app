@@ -13,6 +13,8 @@
   <script type="text/babel" src="recap-pages/app-home.jsx"></script>
   <script type="text/babel" src="recap-pages/article-detail.jsx"></script>
   <script type="text/babel" src="recap-pages/other-pages.jsx"></script>
+  <script type="text/babel" src="recap-pages/before.jsx"></script>
+  <script type="text/babel" src="recap-pages/taxonomy.jsx"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body, #root { height: 100%; }
@@ -66,6 +68,36 @@ function App() {
       <DCSection id="s5" title="05 · Profile">
         <DCArtboard id="profile-mobile" label="Mobile  390px" width={390} height={620}>
           <ProfilePage width={390} />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="s6" title="06 · Organise Taxonomy">
+        <DCArtboard id="taxonomy-mobile" label="Mobile  390px" width={390} height={760}>
+          <TaxonomyPage width={390} />
+        </DCArtboard>
+        <DCArtboard id="taxonomy-desktop" label="Desktop  900px" width={900} height={700}>
+          <TaxonomyPage width={900} />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="s7" title="── BEFORE ── Original designs">
+        <DCArtboard id="before-home-unauth" label="Homepage (unauth) — before" width={390} height={240}>
+          <BeforeHomeUnauth />
+        </DCArtboard>
+        <DCArtboard id="before-login" label="Login — before" width={390} height={420}>
+          <BeforeLogin />
+        </DCArtboard>
+        <DCArtboard id="before-app-mobile" label="App Home Mobile — before" width={390} height={720}>
+          <BeforeAppHome width={390} />
+        </DCArtboard>
+        <DCArtboard id="before-app-desktop" label="App Home Desktop — before" width={1280} height={680}>
+          <BeforeAppHome width={1280} />
+        </DCArtboard>
+        <DCArtboard id="before-article" label="Article Detail Mobile — before" width={390} height={700}>
+          <BeforeArticleDetail width={390} />
+        </DCArtboard>
+        <DCArtboard id="before-profile" label="Profile — before" width={390} height={620}>
+          <BeforeProfile />
         </DCArtboard>
       </DCSection>
 

@@ -405,3 +405,279 @@ All body copy for the homepage is in `vision.md`. Key phrases:
 - Sub: *"Save any article from the web. Recap summarises it, organises it, and delivers a weekend digest for your morning coffee — all automatically."*
 - Privacy: *"Your reading history is private by default."*
 - How it works sub: *"Three steps. Zero effort after setup."*
+
+
+---
+
+## 7. Organise Taxonomy (`profile/organize_taxonomy.html`)
+
+**Design reference:** Section 06 in `Recap Redesign.html` — interactive, with working accept/reject toggles.
+
+### Overview
+
+Replace the current tile-grid layout with a structured **diff view** that clearly shows:
+- What's changing and what's staying the same
+- Which categories are being merged and into what
+- Per-suggestion accept/reject controls
+- A live preview of the proposed taxonomy
+- A contextual Apply button
+
+### Current template variables (from route)
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `categories` | list of objects with `.category`, `.count` | Current user taxonomy |
+| `description` | string | AI-generated prose description of suggested changes |
+| `suggested` | list of `(name, count)` tuples | Proposed category list |
+
+### Required route changes (`profile/routes.py` or equivalent)
+
+The current route passes a flat `suggested` list and a prose `description`. To power the new UI, the route needs to pass structured suggestion data so the template can render per-suggestion accept/reject controls.
+
+**New data structure to pass from route:**
+
+```python
+# Build structured suggestions from AI response
+# Each suggestion has: id, type, from_categories, to_category, reason
+
+suggestions = [
+    {
+        'id': 'merge_0',
+        'type': 'merge',                          # currently only 'merge' supported
+        'from_categories': ['Business Strategy', 'Contract Management'],
+        'to_category': 'Business Operations',
+        'to_count': 2,
+        'reason': 'These categories share strong thematic overlap around running and managing a business.',
+    },
+    # more suggestions…
+]
+
+# Annotate each current category with its change type
+current_annotated = []
+merging_from = {cat for s in suggestions for cat in s['from_categories']}
+for g in categories:
+    cat_type = 'merging' if g.category in merging_from else 'unchanged'
+    merge_id = next((s['id'] for s in suggestions if g.category in s['from_categories']), None)
+    current_annotated.append({
+        'name': g.category,
+        'count': g.count,
+        'type': cat_type,
+        'merge_id': merge_id,
+        'is_new': g.category.startswith('New Category:'),  # or use a DB flag
+    })
+
+# Build proposed list (unchanged + merge results)
+unchanged = [c for c in current_annotated if c['type'] == 'unchanged']
+merged_results = [{'name': s['to_category'], 'count': s['to_count'], 'type': 'merged', 'merge_id': s['id']} for s in suggestions]
+proposed_annotated = unchanged + merged_results
+
+return render_template('profile/organize_taxonomy.html',
+    categories=categories,                    # keep for backward compat
+    current_annotated=current_annotated,
+    proposed_annotated=proposed_annotated,
+    suggestions=suggestions,
+    description=description)
+```
+
+### Apply endpoint change
+
+The current form POSTs all suggestions at once. For per-suggestion accept/reject, the form needs to POST which suggestion IDs were accepted:
+
+```html
+<form action="{{ url_for('profile.apply_taxonomy') }}" method="post">
+  {% for suggestion in suggestions %}
+  <input type="hidden" name="accepted_{{ suggestion.id }}" value="0" id="hidden_{{ suggestion.id }}">
+  {% endfor %}
+  <!-- JS updates hidden inputs when user toggles accept/reject -->
+  <button type="submit" ...>Apply changes</button>
+</form>
+```
+
+In `apply_taxonomy` route:
+```python
+accepted_ids = [key.replace('accepted_', '') for key, val in request.form.items() 
+                if key.startswith('accepted_') and val == '1']
+# Only apply suggestions whose id is in accepted_ids
+```
+
+### Template layout
+
+**Outer container:** `bg-white shadow-lg rounded px-4 pt-6 pb-6 mb-4 w-full max-w-2xl`
+
+**Page heading:** `text-2xl font-extrabold text-gray-900 mb-1` — "Organise Your Taxonomy"  
+**Sub:** `text-sm text-gray-500 mb-5` — "AI has reviewed your categories and suggested improvements. Review and apply the changes below."
+
+---
+
+#### Legend row
+
+```html
+<div class="flex flex-wrap gap-4 mb-5 text-xs text-gray-500">
+  <span class="flex items-center gap-1.5">
+    <span class="w-2 h-2 rounded-full bg-gray-400 inline-block"></span> Unchanged
+  </span>
+  <span class="flex items-center gap-1.5">
+    <span class="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span> Being merged
+  </span>
+  <span class="flex items-center gap-1.5">
+    <span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span> New category
+  </span>
+</div>
+```
+
+---
+
+#### Diff grid (desktop: 2 columns, mobile: stacked)
+
+```html
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+
+  <!-- Current column -->
+  <div>
+    <div class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
+      Current ({{ current_annotated|length }} categories)
+    </div>
+    {% for cat in current_annotated %}
+    <div class="flex items-center justify-between rounded-lg px-3 py-2.5 mb-1.5 border-[1.5px]
+      {% if cat.type == 'merging' %}bg-amber-50 border-yellow-300{% else %}bg-gray-50 border-gray-200{% endif %}">
+      <div class="flex items-center gap-2 min-w-0">
+        {% if cat.is_new %}
+        <span class="text-[10px] font-bold bg-blue-100 text-blue-700 rounded px-1 shrink-0">NEW</span>
+        {% endif %}
+        <span class="text-sm font-semibold truncate
+          {% if cat.type == 'merging' %}text-amber-800{% else %}text-gray-700{% endif %}">
+          {{ cat.name }}
+        </span>
+      </div>
+      <span class="text-xs font-bold rounded-full px-2 py-0.5 shrink-0
+        {% if cat.type == 'merging' %}bg-amber-100 text-amber-800{% else %}bg-gray-200 text-gray-500{% endif %}">
+        {{ cat.count }}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Proposed column -->
+  <div>
+    <div class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
+      Proposed ({{ proposed_annotated|length }} categories)
+    </div>
+    {% for cat in proposed_annotated %}
+    <div class="flex items-center justify-between rounded-lg px-3 py-2.5 mb-1.5 border-[1.5px]
+      {% if cat.type == 'merged' %}bg-green-50 border-green-300{% else %}bg-gray-50 border-gray-200{% endif %}">
+      <span class="text-sm font-semibold
+        {% if cat.type == 'merged' %}text-green-800{% else %}text-gray-700{% endif %}">
+        {{ cat.name }}
+      </span>
+      <span class="text-xs font-bold rounded-full px-2 py-0.5 shrink-0
+        {% if cat.type == 'merged' %}bg-green-100 text-green-800{% else %}bg-gray-200 text-gray-500{% endif %}">
+        {{ cat.count }}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+```
+
+---
+
+#### Suggestion cards
+
+```html
+<div class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
+  AI suggestions — {{ suggestions|length }} change{{ 's' if suggestions|length != 1 else '' }}
+</div>
+
+{% for suggestion in suggestions %}
+<div class="bg-white rounded-xl border border-gray-200 p-4 mb-3" id="suggestion-{{ suggestion.id }}">
+  <div class="flex items-start justify-between gap-3 mb-3">
+    <div class="font-bold text-sm text-gray-900">Merge categories</div>
+    <!-- Accept / Reject toggle -->
+    <div class="flex rounded-md overflow-hidden border border-gray-200 shrink-0">
+      <button type="button"
+              onclick="setSuggestion('{{ suggestion.id }}', true)"
+              class="accept-btn px-3 py-1.5 text-xs font-semibold bg-green-500 text-white">
+        ✓ Accept
+      </button>
+      <button type="button"
+              onclick="setSuggestion('{{ suggestion.id }}', false)"
+              class="reject-btn px-3 py-1.5 text-xs font-semibold bg-white text-gray-400">
+        ✕ Reject
+      </button>
+    </div>
+  </div>
+  <!-- Merge flow: From tags + arrow + To tag -->
+  <div class="flex flex-wrap items-center gap-2 mb-2">
+    {% for from_cat in suggestion.from_categories %}
+    <span class="inline-flex items-center bg-amber-50 border border-yellow-300 text-amber-800 rounded-full px-3 py-1 text-xs font-semibold">
+      {{ from_cat }}
+    </span>
+    {% if not loop.last %}<span class="text-gray-400 font-bold">+</span>{% endif %}
+    {% endfor %}
+    <span class="text-gray-400">→</span>
+    <span class="inline-flex items-center bg-green-50 border border-green-300 text-green-800 rounded-full px-3 py-1 text-xs font-semibold">
+      {{ suggestion.to_category }}
+    </span>
+  </div>
+  <p class="text-xs text-gray-500 leading-relaxed">{{ suggestion.reason }}</p>
+</div>
+{% endfor %}
+```
+
+---
+
+#### Apply button + JS
+
+```html
+<div class="mt-5">
+  <form action="{{ url_for('profile.apply_taxonomy') }}" method="post" id="taxonomy-form">
+    {{ form.hidden_tag() if form else '' }}
+    {% for suggestion in suggestions %}
+    <input type="hidden" name="accepted_{{ suggestion.id }}" value="1" id="input_{{ suggestion.id }}">
+    {% endfor %}
+    <button type="submit" id="apply-btn"
+            class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors">
+      Apply changes
+    </button>
+  </form>
+</div>
+
+<script>
+function setSuggestion(id, accepted) {
+  document.getElementById('input_' + id).value = accepted ? '1' : '0';
+  const card = document.getElementById('suggestion-' + id);
+  const acceptBtn = card.querySelector('.accept-btn');
+  const rejectBtn = card.querySelector('.reject-btn');
+  if (accepted) {
+    acceptBtn.className = acceptBtn.className.replace('bg-white text-gray-400', 'bg-green-500 text-white');
+    rejectBtn.className = rejectBtn.className.replace('bg-red-500 text-white', 'bg-white text-gray-400');
+  } else {
+    rejectBtn.className = rejectBtn.className.replace('bg-white text-gray-400', 'bg-red-500 text-white');
+    acceptBtn.className = acceptBtn.className.replace('bg-green-500 text-white', 'bg-white text-gray-400');
+  }
+}
+</script>
+```
+
+---
+
+### Color tokens for taxonomy page
+
+| State | Background | Border | Text | Badge bg | Badge text |
+|-------|-----------|--------|------|----------|------------|
+| Unchanged | `gray-50` | `gray-200` | `gray-700` | `gray-200` | `gray-500` |
+| Merging (from) | `amber-50` | `yellow-300` | `amber-800` | `amber-100` | `amber-800` |
+| Merged (result) | `green-50` | `green-300` | `green-800` | `green-100` | `green-800` |
+| Accept button (active) | `green-500` | — | `white` | — | — |
+| Reject button (active) | `red-500` | — | `white` | — | — |
+
+---
+
+### Implementation notes
+
+- The accept/reject state is **client-side only** — it updates hidden form inputs via vanilla JS. No AJAX needed.
+- On mobile (`< md:`), the two-column diff grid stacks vertically — ensure `grid-cols-1 md:grid-cols-2`.
+- The "NEW" badge (for categories prefixed with "New Category:") is `bg-blue-100 text-blue-700 text-[10px] font-bold rounded px-1`.
+- The suggestion cards should default to **accepted** (pre-fill hidden inputs with `value="1"`) so the user can opt out rather than opt in — reduces friction.
+- If no suggestions exist (taxonomy is already clean), show an empty state: `text-center py-10 text-gray-400` — "Your taxonomy looks great! No changes suggested."
