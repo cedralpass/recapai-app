@@ -86,9 +86,14 @@ def organize_taxonomy():
     description = json_response.get('description', '')
     mappings = json_response.get('mappings', [])
     
-    # Create category mapping and get new categories in a single pass
+    # Create category mapping and compute projected article counts for each new category
     category_mapping = create_category_mapping(mappings)
-    new_categories = list(set(category_mapping.values()))
+    current_counts = {cat.category: cat.count for cat in categories}
+    suggested_counts = {}
+    for old, new in category_mapping.items():
+        suggested_counts[new] = suggested_counts.get(new, 0) + current_counts.get(old, 0)
+    # Sort descending by count, same order as current categories
+    new_categories = sorted(suggested_counts.items(), key=lambda x: x[1], reverse=True)
     
     # Store mapping in session for later use
     session['category_mapping'] = category_mapping

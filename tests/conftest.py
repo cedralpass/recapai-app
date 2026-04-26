@@ -113,7 +113,7 @@ def authenticated_client(recap_client, test_user):
 @pytest.fixture
 def seeded_user(recap_app):
     """
-    A test user pre-loaded with 53 classified articles across 10 categories.
+    A test user pre-loaded with 52 classified articles across 10 categories.
 
     Use this (instead of test_user) whenever a test needs realistic multi-category
     article data — category filtering, taxonomy work, pagination, UX assertions, etc.
@@ -153,7 +153,7 @@ def seeded_user(recap_app):
 @pytest.fixture
 def seeded_articles(seeded_user, recap_app):
     """
-    All Article objects belonging to seeded_user, ordered by category then created.
+    All 52 Article objects belonging to seeded_user, ordered by category then created.
 
     Convenience wrapper — most tests need the articles themselves, not the user.
     """
@@ -167,6 +167,22 @@ def seeded_articles(seeded_user, recap_app):
             .order_by(Article.category, Article.created)
         ).all()
         yield articles
+
+
+@pytest.fixture
+def seeded_authenticated_client(recap_app, seeded_user):
+    """
+    A test client pre-logged-in as the seeded user (seeduser / seedpass123).
+
+    Use alongside seeded_user when a test needs both realistic article data
+    and an authenticated HTTP session (e.g. taxonomy, profile routes).
+    """
+    client = recap_app.test_client()
+    client.post('/auth/login', data={
+        'username': 'seeduser',
+        'password': 'seedpass123',
+    })
+    return client
 
 
 @pytest.fixture

@@ -88,7 +88,7 @@ class AiApiHelper:
         results_json={}
         ai_url = env("RECAP_AI_API_URL")+"/process_task"
         current_app.logger.debug('AiApiHelper: calling post to %s', ai_url)
-        request_data = {'context': context, 'prompt': format, 'format': format , 'secret':"abc123", 'ref_key':ref_key}
+        request_data = {'context': context, 'prompt': prompt, 'format': format, 'secret': "abc123", 'ref_key': ref_key}
         try:
             r = httpx.post(ai_url, data=request_data, timeout=60)
             results_json = r.json()

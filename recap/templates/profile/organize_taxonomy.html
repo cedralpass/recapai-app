@@ -21,9 +21,9 @@
     <div>{{description}}</div>
     <ul class="flex flex-row flex-wrap  text-sm text-center">
       {% if suggested is not none %}
-      {% for mapping in suggested %}
+      {% for name, count in suggested %}
       <li class="flex-1 h-12 m-1 p-1 bg-gray-200 text-sm text-center"><a
-              href="{{ url_for('routes.index', category=mapping )}}">{{mapping}}</a>
+              href="{{ url_for('routes.index', category=name )}}">{{name}}({{count}})</a>
       </li>
       {% endfor %}
       {% endif %}
