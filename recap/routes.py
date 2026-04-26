@@ -9,6 +9,7 @@ from recap.models import User, Article
 from urllib.parse import urlsplit
 from recap.config import  Config
 from recap.auth.email import send_password_reset_email
+from recap.auth.forms import RegistrationForm
 
 
 
@@ -55,8 +56,10 @@ def index():
         # list grouping of categories for article for the given user
         groupings = current_user.get_categories()
         
+    cta_form = RegistrationForm() if current_user.is_anonymous else None
     return render_template("index.html", title='Home Page', form=form,
-                           articles=articles, next_url=next_url, prev_url=prev_url, groupings=groupings)
+                           articles=articles, next_url=next_url, prev_url=prev_url, groupings=groupings,
+                           cta_form=cta_form)
 
 @bp.route('/css', methods=['GET', 'POST'])
 def css():

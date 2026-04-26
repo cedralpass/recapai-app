@@ -38,7 +38,145 @@
 </div>
 
 {% else %}
-<h1>Hello and Welcome!</h1>
-<div>We are building fast! comeback soon!</div>
+
+<!-- HERO SECTION -->
+<section class="bg-black px-5 py-10 md:px-16 md:py-20">
+  <div class="flex flex-col md:flex-row gap-8 md:gap-12 items-center max-w-6xl mx-auto">
+
+    <!-- Left column -->
+    <div class="flex-1">
+      <div class="text-blue-400 text-xs font-semibold uppercase tracking-widest mb-3">Your personal reading memory</div>
+      <h1 class="text-4xl md:text-5xl font-extrabold text-white leading-tight tracking-tight">Bookmark it. Recap will remember it.</h1>
+      <p class="text-slate-400 text-base md:text-lg leading-relaxed mt-4 mb-7 max-w-lg">Save any article from the web. Recap summarises it, organises it, and delivers a weekend digest for your morning coffee — all automatically.</p>
+      <div class="flex flex-wrap gap-3 items-center">
+        <a href="{{ url_for('auth.register') }}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">Create free account &rarr;</a>
+        <a href="{{ url_for('auth.login') }}" class="text-slate-400 text-sm underline hover:no-underline">Already have an account? Sign in</a>
+      </div>
+    </div>
+
+    <!-- Right column: mock article cards (desktop only) -->
+    <div class="hidden md:flex flex-col gap-3 w-80 shrink-0">
+      <div class="bg-gray-900 rounded-xl p-3 border border-gray-800 opacity-100">
+        <div class="text-gray-100 font-semibold text-sm mb-1">The Future of AI in Healthcare</div>
+        <div class="text-gray-400 text-xs leading-relaxed">Researchers are exploring how LLMs can assist in early diagnosis…</div>
+        <span class="inline-block bg-gray-800 text-blue-400 rounded-full px-2 py-0.5 text-xs font-semibold mt-2">Technology</span>
+      </div>
+      <div class="bg-gray-900 rounded-xl p-3 border border-gray-800 opacity-80">
+        <div class="text-gray-100 font-semibold text-sm mb-1">Why Deep Work Matters More Than Ever</div>
+        <div class="text-gray-400 text-xs leading-relaxed">Cal Newport argues that focused work is the competitive advantage…</div>
+        <span class="inline-block bg-gray-800 text-blue-400 rounded-full px-2 py-0.5 text-xs font-semibold mt-2">Productivity</span>
+      </div>
+      <div class="bg-gray-900 rounded-xl p-3 border border-gray-800 opacity-60">
+        <div class="text-gray-100 font-semibold text-sm mb-1">Mediterranean Diet: New Findings</div>
+        <div class="text-gray-400 text-xs leading-relaxed">A 10-year study confirms significant reduction in cardiovascular…</div>
+        <span class="inline-block bg-gray-800 text-blue-400 rounded-full px-2 py-0.5 text-xs font-semibold mt-2">Health</span>
+      </div>
+      <div class="text-center text-gray-600 text-xs mt-2">Your personalised reading library</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- VALUE PILLARS SECTION -->
+<section class="bg-gray-50 px-5 py-10 md:px-16 md:py-14">
+  <div class="max-w-6xl mx-auto">
+    <h2 class="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Everything you want to read. Actually remembered.</h2>
+    <p class="text-gray-500 text-sm mb-8">Stop losing links in browser tabs and bookmarks folders.</p>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+
+      <!-- Pillar 1: Save -->
+      <div class="bg-white rounded-xl p-5 shadow-sm">
+        <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center mb-3">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-blue-500">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" />
+          </svg>
+        </div>
+        <div class="font-bold text-sm text-gray-900 mb-2">Save from anywhere</div>
+        <p class="text-gray-500 text-sm leading-relaxed">Paste a URL, use our Chrome extension, or share from your iPhone. Recap captures it instantly.</p>
+      </div>
+
+      <!-- Pillar 2: Summarise -->
+      <div class="bg-white rounded-xl p-5 shadow-sm">
+        <div class="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center mb-3">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-green-500">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+          </svg>
+        </div>
+        <div class="font-bold text-sm text-gray-900 mb-2">AI summaries in seconds</div>
+        <p class="text-gray-500 text-sm leading-relaxed">Every article is summarised and categorised automatically. Scan the key ideas without reading the full piece.</p>
+      </div>
+
+      <!-- Pillar 3: Discover -->
+      <div class="bg-white rounded-xl p-5 shadow-sm">
+        <div class="w-10 h-10 rounded-lg bg-yellow-50 flex items-center justify-center mb-3">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-yellow-500">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+          </svg>
+        </div>
+        <div class="font-bold text-sm text-gray-900 mb-2">Find it when you need it</div>
+        <p class="text-gray-500 text-sm leading-relaxed">Filter by your personal knowledge taxonomy. Get a weekly digest every weekend morning.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS SECTION -->
+<section class="bg-white px-5 py-10 md:px-16 md:py-14">
+  <div class="max-w-6xl mx-auto">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2">How it works</h2>
+    <p class="text-gray-500 text-sm mb-8">Three steps. Zero effort after setup.</p>
+    <div class="flex flex-col md:flex-row gap-6">
+
+      <div class="flex gap-4 items-start flex-1">
+        <div class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-sm shrink-0">1</div>
+        <div>
+          <div class="font-bold text-sm text-gray-900 mb-1">Bookmark</div>
+          <p class="text-gray-500 text-sm leading-relaxed">Paste a URL or click "Save to Recap" in Chrome. Takes 2 seconds.</p>
+        </div>
+      </div>
+
+      <div class="flex gap-4 items-start flex-1">
+        <div class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-sm shrink-0">2</div>
+        <div>
+          <div class="font-bold text-sm text-gray-900 mb-1">Recap reads it</div>
+          <p class="text-gray-500 text-sm leading-relaxed">Our AI reads the full article and writes a clear summary, adding it to your knowledge library.</p>
+        </div>
+      </div>
+
+      <div class="flex gap-4 items-start flex-1">
+        <div class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-sm shrink-0">3</div>
+        <div>
+          <div class="font-bold text-sm text-gray-900 mb-1">Review &amp; discover</div>
+          <p class="text-gray-500 text-sm leading-relaxed">Browse summaries, filter by category, and get your weekend reading digest automatically.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- SIGN-UP CTA SECTION -->
+<section style="background: linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 100%);" class="px-5 py-14 md:py-20 text-center">
+  <h2 class="text-white text-2xl md:text-3xl font-extrabold mb-2">Start building your reading memory</h2>
+  <p class="text-blue-200 text-sm mb-7">Free to use. Your data is private by default.</p>
+
+  <div class="bg-white rounded-xl p-6 max-w-md mx-auto shadow-2xl text-left">
+    <div class="font-bold text-lg text-gray-900 mb-1">Create your account</div>
+    <div class="text-sm text-gray-500 mb-5">Already have one? <a href="{{ url_for('auth.login') }}" class="text-blue-600 underline">Sign in</a></div>
+    <form action="{{ url_for('auth.register') }}" method="post">
+      {{ cta_form.hidden_tag() }}
+      <div class="mb-3">{{ cta_form.username(placeholder="Username", class_="w-full") }}</div>
+      <div class="mb-3">{{ cta_form.email(placeholder="Email address", class_="w-full") }}</div>
+      <div class="mb-3">{{ cta_form.password(placeholder="Password", class_="w-full") }}</div>
+      <div class="mb-5">{{ cta_form.password2(placeholder="Confirm password", class_="w-full") }}</div>
+      <button type="submit" class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors">Create free account &rarr;</button>
+    </form>
+    <div class="text-xs text-gray-400 text-center mt-3">&#128274; Your reading history is private by default.</div>
+  </div>
+</section>
+
 {% endif %}
 {% endblock %}
+
+{% block main_class %}{% endblock %}
