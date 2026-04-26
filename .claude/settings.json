@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "MAIN=\"/Users/geoffreysmalling/development/recapai-app\"; CWD=$(pwd); if [ \"$CWD\" = \"$MAIN\" ]; then exit 0; fi; [ -f \"$CWD/recap/.env\" ] || cp \"$MAIN/recap/.env\" \"$CWD/recap/.env\" 2>/dev/null; [ -f \"$CWD/aiapi/.env\" ] || cp \"$MAIN/aiapi/.env\" \"$CWD/aiapi/.env\" 2>/dev/null; exit 0",
+            "statusMessage": "Syncing .env files to worktree..."
+          }
+        ]
+      }
+    ]
+  }
+}

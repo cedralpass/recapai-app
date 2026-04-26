@@ -97,6 +97,14 @@ The preview browser cannot reach port 8000 (sandboxed to 8080). Use your regular
 
 See [docs/development.md](docs/development.md) for the full development strategy.
 
+### Worktree dev servers — how they find the right code
+
+`preview_start` sets the server's CWD to the current worktree directory automatically. The launch configs use absolute paths for `.venv` and no hardcoded `cd`, so every server (`recap`, `tailwind`, `rq-worker`) runs from whichever worktree the session is in and picks up that worktree's code.
+
+The `recap` server auto-copies `recap/.env` from the main repo on first start if it isn't already present in the worktree (the file is gitignored and won't be checked out). You don't need to do this manually.
+
+**If a server is running from the wrong worktree** (check `preview_list` — look at the `cwd` field): stop it with `preview_stop` and restart with `preview_start`. The new instance will use the correct CWD.
+
 ### Worktree hygiene — end of session checklist
 
 Claude Code sessions run in a git worktree (`claude/magical-banach` etc). Changes made to files

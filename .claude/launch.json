@@ -10,32 +10,32 @@
     {
       "name": "recap",
       "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "cd /Users/geoffreysmalling/development/recapai-app && .venv/bin/flask --app recap run --debug --port 8080"],
+      "runtimeArgs": ["-c", "[ -f recap/.env ] || cp /Users/geoffreysmalling/development/recapai-app/recap/.env recap/.env; /Users/geoffreysmalling/development/recapai-app/.venv/bin/flask --app recap run --debug --port 8080"],
       "port": 8080
     },
     {
       "name": "aiapi",
       "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "cd /Users/geoffreysmalling/development/recapai-app && .venv/bin/flask --app aiapi run --debug --port 8082"],
+      "runtimeArgs": ["-c", "/Users/geoffreysmalling/development/recapai-app/.venv/bin/flask --app aiapi run --debug --port 8082"],
       "port": 8082
     },
     {
       "name": "combined",
       "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "cd /Users/geoffreysmalling/development/recapai-app && RECAP_AI_API_URL=http://localhost:8001/aiapi/ .venv/bin/python app.py"],
+      "runtimeArgs": ["-c", "RECAP_AI_API_URL=http://localhost:8001/aiapi/ /Users/geoffreysmalling/development/recapai-app/.venv/bin/python app.py"],
       "port": 8001
     },
     {
       "name": "rq-worker",
       "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "cd /Users/geoffreysmalling/development/recapai-app && OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES .venv/bin/rq worker RECAP2-Classify"],
+      "runtimeArgs": ["-c", "OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES /Users/geoffreysmalling/development/recapai-app/.venv/bin/rq worker RECAP2-Classify"],
       "port": 0,
       "autoPort": true
     },
     {
       "name": "tailwind",
       "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "cd /Users/geoffreysmalling/development/recapai-app && npx tailwindcss -i ./recap/static/css/input.css -o ./recap/static/css/output.css --watch"],
+      "runtimeArgs": ["-c", "npx tailwindcss -i ./recap/static/css/input.css -o ./recap/static/css/output.css --watch"],
       "port": 0,
       "autoPort": true
     }
