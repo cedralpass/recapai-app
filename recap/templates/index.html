@@ -4,14 +4,15 @@
 {% if current_user.is_authenticated %}
 <form action="" method="post" class="bg-white shadow-lg rounded px-2 pt-4 pb-4 mb-2">
     {{ form.hidden_tag() }}
-    <div class="flex flex-nowrap">
-        <div class="flex-grow">
-            <h1 class="font-bold text-lg">{{ form.url_path.label }}</h1>
-            {{ form.url_path(class_="flex-auto w-80") }} {{ form.submit(class_="align-middle") }}<br>
-            {% for error in form.url_path.errors %}
-            <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
+    <div class="w-full">
+        <h1 class="font-bold text-lg">{{ form.url_path.label }}</h1>
+        <div class="flex gap-2">
+            {{ form.url_path(class_="flex-1 min-w-0 w-full") }}
+            {{ form.submit(class_="shrink-0") }}
         </div>
+        {% for error in form.url_path.errors %}
+        <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
     </div>
 </form>
 

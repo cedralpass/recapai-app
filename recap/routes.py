@@ -108,10 +108,10 @@ def show(id):
         stmt = sa.select(Article).where(Article.id == id, Article.user_id == current_user.id).order_by(Article.id.desc())  
         article= db.session.execute(stmt).scalar_one()
     except sa.exc.NoResultFound as nre:
-        flash('Article not found')
+        flash('Article not found', 'error')
         print(nre)
     except Exception as ex:
-        flash('General Exception')
+        flash('General Exception', 'error')
         print(ex)
 
     if 'Content-Type' in request.headers.keys() and request.headers['Content-Type'] == 'application/json':

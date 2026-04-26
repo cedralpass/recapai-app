@@ -8,8 +8,8 @@
 {%else%}
 <div class="container mx-auto overflow-x-auto">
   <div class="flex flex-col md:flex-row gap-6">
-    <div class="flex-1 min-w-[280px] w-full md:w-[280px] flex-shrink-0 px-4" name="content">
-        <div class="prose prose-slate max-w-none">
+    <div class="flex-1 min-w-0 px-4" name="content">
+        <div class="prose prose-slate max-w-prose">
             <h1 class="text-2xl font-bold mb-2">{{ article.title }}</h1>
             {% if article.author_name is not none %}
             <p class="text-gray-600 text-sm mb-4">by {{ article.author_name }}</p>
@@ -19,7 +19,11 @@
             </div>
             
             <div class="text-gray-800 leading-relaxed mb-8">
-                {{ article.summary }}
+                {% if article.summary %}
+                {% for para in article.summary.split('\n') %}
+                {% if para.strip() %}<p class="mb-4">{{ para }}</p>{% endif %}
+                {% endfor %}
+                {% endif %}
             </div>
 
             <div class="flex flex-col sm:flex-row gap-4 mt-6">

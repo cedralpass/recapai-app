@@ -17,34 +17,32 @@
 </head>
 
 <body class="min-h-screen bg-gray-50">
-    <nav class="flex flex-nowrap gap-0 text-xl font-medium bg-black text-slate-200 py-2">
-        <div class="flex-auto px-3">
+    <nav class="flex flex-wrap items-center gap-y-1 font-medium bg-black text-slate-200 py-2 px-3">
+        <div class="flex-1 min-w-0 text-xl">
             <b>Recap AI</b>: Summarize articles for reading later
         </div>
-        <div class="flex-auto items-end text-base">
-            <div class="float-right px-3">
-                <span class=""><a href="{{ url_for('routes.index') }}"
-                        class="font-medium text-slate-200 underline dark:text-slate-500 hover:no-underline">Home</a></span>
-                {% if current_user.is_anonymous %}
-                <span class=""><a href="{{ url_for('auth.login') }}"
-                        class="font-medium text-slate-200 underline dark:text-slate-500 hover:no-underline">Login</a></span>
-                {% else %}
-                <span class=""><a href="{{ url_for('profile.user', username=current_user.username) }}"
-                        class="font-medium text-slate-200 underline dark:text-slate-500 hover:no-underline">Profile</a></span>
-                <span class=""><a href="{{ url_for('auth.logout') }}"
-                        class="font-medium text-slate-200 underline dark:text-slate-500 hover:no-underline">Logout</a></span>
-                {% endif %}
-            </div>
+        <div class="flex gap-3 shrink-0 text-base">
+            <a href="{{ url_for('routes.index') }}"
+                    class="font-medium text-slate-200 underline dark:text-slate-500 hover:no-underline">Home</a>
+            {% if current_user.is_anonymous %}
+            <a href="{{ url_for('auth.login') }}"
+                    class="font-medium text-slate-200 underline dark:text-slate-500 hover:no-underline">Login</a>
+            {% else %}
+            <a href="{{ url_for('profile.user', username=current_user.username) }}"
+                    class="font-medium text-slate-200 underline dark:text-slate-500 hover:no-underline">Profile</a>
+            <a href="{{ url_for('auth.logout') }}"
+                    class="font-medium text-slate-200 underline dark:text-slate-500 hover:no-underline">Logout</a>
+            {% endif %}
         </div>
     </nav>
-    {% with messages = get_flashed_messages() %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-    <div class="px-2 bg-green-200 text-slate-900 rounded-xl py-2 my-2 mx-2 text-base" id="flash">
-        <ul class="list-none">
-            {% for message in messages %}
-            <li>{{ message | safe }}</li>
-            {% endfor %}
-        </ul>
+    <div class="px-2 py-2 my-2 mx-2 text-base space-y-1" id="flash">
+        {% for category, message in messages %}
+        <div class="rounded-xl px-3 py-2 {% if category == 'error' %}bg-red-100 text-red-900{% else %}bg-green-200 text-slate-900{% endif %}">
+            {{ message | safe }}
+        </div>
+        {% endfor %}
     </div>
     {% endif %}
     {% endwith %}
