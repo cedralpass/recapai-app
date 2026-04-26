@@ -12,6 +12,8 @@ Two Flask services run together:
 
 ## Development Setup
 
+See [docs/development.md](docs/development.md) for the full development strategy — native harness for fast iteration with Claude Code, and Docker for pre-deploy validation.
+
 ### Activate virtual environment
 ```bash
 source .venv/bin/activate

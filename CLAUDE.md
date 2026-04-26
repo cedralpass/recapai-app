@@ -54,9 +54,33 @@ For UI/logic changes, run all four services natively — changes are visible ins
 
 The preview browser connects to `recap` at port 8080. Template edits, Python changes, and CSS changes all take effect without restarting.
 
-**Use Docker only for:**
+**Monitoring background services (`tailwind`, `rq-worker`):**
+These have no web UI. Use `preview_logs` with their server ID to check output:
+- `tailwind` — shows "Done in Xms" on each CSS rebuild
+- `rq-worker` — shows job start/finish/failure as articles are classified
+
+**Stale process warning:**
+If the preview browser shows a `host.docker.internal` DB error, the `recap` server was reused from a previous session with old env vars. Fix: `preview_stop` then `preview_start("recap")`.
+
+### Environment variables
+
+`recap/.env` is the single source of truth for local development:
+```
+RECAP_POSTGRES_HOST=localhost
+RECAP_AI_API_URL=http://localhost:8082/
+```
+
+**Never change these values for Docker.** Pass overrides via `-e` at runtime instead.
+
+| Variable | Local dev | Docker override |
+|----------|-----------|-----------------|
+| `RECAP_POSTGRES_HOST` | `localhost` | `host.docker.internal` |
+| `RECAP_AI_API_URL` | `http://localhost:8082/` | `http://localhost:8000/aiapi/` |
+
+### Use Docker only for
+
 - Pre-deploy smoke testing (`devops/Dockerfile.full`)
-- Testing `initialize_run.sh` startup behavior
+- Testing `initialize_render_run.sh` startup behavior
 - Simulating the Render container environment
 
 **Local Docker run command** (for integration testing):
@@ -68,6 +92,10 @@ docker run --detach -p 8000:8000 \
   -e RECAP_AI_API_URL=http://localhost:8000/aiapi/ \
   recap-full
 ```
+
+The preview browser cannot reach port 8000 (sandboxed to 8080). Use your regular browser for Docker testing.
+
+See [docs/development.md](docs/development.md) for the full development strategy.
 
 ---
 
