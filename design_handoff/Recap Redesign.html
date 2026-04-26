@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recap AI — Redesign</title>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="recap-pages/nav.jsx"></script>
+  <script type="text/babel" src="recap-pages/homepage.jsx"></script>
+  <script type="text/babel" src="recap-pages/app-home.jsx"></script>
+  <script type="text/babel" src="recap-pages/article-detail.jsx"></script>
+  <script type="text/babel" src="recap-pages/other-pages.jsx"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body, #root { height: 100%; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard } = window;
+
+function App() {
+  return (
+    <DesignCanvas>
+
+      <DCSection id="s1" title="01 · Homepage (unauthenticated)">
+        <DCArtboard id="home-mobile" label="Mobile  390px" width={390} height={920}>
+          <HomePage width={390} />
+        </DCArtboard>
+        <DCArtboard id="home-desktop" label="Desktop  1280px" width={1280} height={820}>
+          <HomePage width={1280} />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="s2" title="02 · Auth — Login &amp; Register">
+        <DCArtboard id="login" label="Login" width={390} height={520}>
+          <LoginPage width={390} />
+        </DCArtboard>
+        <DCArtboard id="register" label="Create Account" width={390} height={540}>
+          <RegisterPage width={390} />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="s3" title="03 · App Home — Article List">
+        <DCArtboard id="app-mobile" label="Mobile  390px" width={390} height={820}>
+          <AppHome width={390} />
+        </DCArtboard>
+        <DCArtboard id="app-desktop" label="Desktop  1280px" width={1280} height={700}>
+          <AppHome width={1280} />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="s4" title="04 · Article Detail">
+        <DCArtboard id="detail-mobile" label="Mobile  390px" width={390} height={860}>
+          <ArticleDetail width={390} />
+        </DCArtboard>
+        <DCArtboard id="detail-desktop" label="Desktop  1280px" width={1280} height={680}>
+          <ArticleDetail width={1280} />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="s5" title="05 · Profile">
+        <DCArtboard id="profile-mobile" label="Mobile  390px" width={390} height={620}>
+          <ProfilePage width={390} />
+        </DCArtboard>
+      </DCSection>
+
+    </DesignCanvas>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
