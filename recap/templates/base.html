@@ -42,7 +42,7 @@
     <div class="px-2 bg-green-200 text-slate-900 rounded-xl py-2 my-2 mx-2 text-base" id="flash">
         <ul class="list-none">
             {% for message in messages %}
-            <li>{{ message }}</li>
+            <li>{{ message | safe }}</li>
             {% endfor %}
         </ul>
     </div>

@@ -129,7 +129,8 @@ def reclassify(id):
     #recap.tasks.classify_url(url_path, g.user['id'])
     job = launch_task(name='recap.tasks.classify_url', description='url classification', url=article.url_path, user_id=current_user.id)
     print('Job is Executing ' + job.id + ' its status ' + job.get_status(refresh=True))
-    flash('Article is being reclassified by job' + job.id + '. Articles will be classified within 20 seconds')
+    job_url = url_for('routes.job_show', id=job.id)
+    flash(f'Article is being reclassified. Job <a href="{job_url}" class="underline font-mono text-sm">{job.id}</a> — will be classified within 20 seconds.')
     #current_app.logger.info("Classification Service returned")               
     return redirect(url_for('routes.index'))
 
