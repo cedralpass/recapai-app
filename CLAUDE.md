@@ -97,6 +97,19 @@ The preview browser cannot reach port 8000 (sandboxed to 8080). Use your regular
 
 See [docs/development.md](docs/development.md) for the full development strategy.
 
+### Worktree hygiene — end of session checklist
+
+Claude Code sessions run in a git worktree (`claude/magical-banach` etc). Changes made to files
+in the worktree can be staged but not committed, leaving them invisible to `main`.
+
+Before closing a session, verify both the main repo and the active worktree are clean:
+```bash
+git status                                          # main repo
+git -C .claude/worktrees/<worktree-name> status    # active worktree
+```
+
+If staged changes exist in the worktree: commit them to the branch, then merge to main and push.
+
 ---
 
 ## Running Tests
@@ -106,6 +119,23 @@ See [docs/development.md](docs/development.md) for the full development strategy
 AI_API_LogLevel=DEBUG AI_API_OPENAI=test AI_API_SECRET_KEY=test AI_OPEN_AI_MODEL=gpt-4 \
   .venv/bin/pytest tests/ -v
 ```
+
+### Integration test approach
+
+HTTP boundaries are mocked with **`respx`** (httpx-native, no VCR.py needed).
+Recorded fixtures live in `tests/fixtures/`:
+- `flask_tutorial_part1.html` — raw article HTML fetched with the same headers `fetch_article_content` uses
+- `openai_flask_tutorial_response.json` — actual OpenAI response captured from a live rq-worker run
+
+To record a new article fixture:
+```bash
+.venv/bin/python -c "
+import httpx
+r = httpx.get('YOUR_URL', headers={'User-Agent': 'Recap/1.0'}, follow_redirects=True)
+open('tests/fixtures/your_article.html', 'w').write(r.text)
+"
+```
+Then run a live classification and copy the JSON from the rq-worker logs into a matching fixture file.
 
 ---
 
