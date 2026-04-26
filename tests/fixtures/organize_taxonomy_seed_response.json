@@ -1,0 +1,42 @@
+{
+  "description": "The categories have been consolidated to reduce redundancy. Business Strategy and Leadership are combined into Business Leadership. Communication Strategies and Writing Techniques are merged into Communication and Writing. Cooking Techniques and Culinary Arts are unified under Culinary Skills. Sports Science remains unchanged. Artificial Intelligence and Software Architecture are kept as separate categories.",
+  "mappings": [
+    {
+      "new_category": "Artificial Intelligence",
+      "old_category": "Artificial Intelligence"
+    },
+    {
+      "new_category": "Software Architecture",
+      "old_category": "Software Architecture"
+    },
+    {
+      "new_category": "Business Leadership",
+      "old_category": "Business Strategy"
+    },
+    {
+      "new_category": "Business Leadership",
+      "old_category": "Leadership"
+    },
+    {
+      "new_category": "Communication and Writing",
+      "old_category": "Communication Strategies"
+    },
+    {
+      "new_category": "Communication and Writing",
+      "old_category": "Writing Techniques"
+    },
+    {
+      "new_category": "Culinary Skills",
+      "old_category": "Cooking Techniques"
+    },
+    {
+      "new_category": "Culinary Skills",
+      "old_category": "Culinary Arts"
+    },
+    {
+      "new_category": "Sports Science",
+      "old_category": "Sports Science"
+    }
+  ],
+  "ref_key": "1"
+}

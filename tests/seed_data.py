@@ -1,7 +1,7 @@
 """
 Seed article data derived from real testuser classifications.
 
-50 articles across 10 categories, used to build a realistic
+52 articles across 10 categories, used to build a realistic
 multi-category dataset for UX and taxonomy tests.
 
 Usage — import the fixture from conftest.py:
