@@ -17,23 +17,25 @@
 </head>
 
 <body class="min-h-screen bg-gray-50">
-    <nav class="flex flex-wrap items-center gap-y-1 font-medium bg-black text-slate-200 py-2 px-3">
-        <div class="flex-1 min-w-0 text-xl">
-            <b>Recap AI</b>: Summarize articles for reading later
+    <nav class="flex flex-wrap items-center gap-y-1 bg-black text-slate-200 py-2 px-3">
+        <div class="flex-1 min-w-0">
+            <a href="{{ url_for('routes.index') }}" class="text-slate-200 no-underline hover:no-underline">
+                <span class="text-lg font-black">Recap</span><span class="text-lg font-light opacity-70"> AI</span>
+            </a>
         </div>
-        <div class="flex gap-3 shrink-0 text-base items-center">
-            <a href="{{ url_for('routes.index') }}"
-                    class="font-medium text-slate-200 underline dark:text-slate-500 hover:no-underline">Home</a>
+        <div class="flex gap-4 shrink-0 items-center text-sm">
             {% if current_user.is_anonymous %}
             <a href="{{ url_for('auth.login') }}"
                     class="font-medium text-slate-200 underline hover:no-underline">Login</a>
             <a href="{{ url_for('auth.register') }}"
-                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-sm transition-colors">Create Account &rarr;</a>
+                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded transition-colors">Create Account &rarr;</a>
             {% else %}
+            <a href="{{ url_for('routes.index') }}"
+                    class="text-slate-200 underline hover:no-underline">Home</a>
             <a href="{{ url_for('profile.user', username=current_user.username) }}"
-                    class="font-medium text-slate-200 underline dark:text-slate-500 hover:no-underline">Profile</a>
+                    class="text-slate-200 underline hover:no-underline">Profile</a>
             <a href="{{ url_for('auth.logout') }}"
-                    class="font-medium text-slate-200 underline dark:text-slate-500 hover:no-underline">Logout</a>
+                    class="bg-blue-500 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded transition-colors">Logout</a>
             {% endif %}
         </div>
     </nav>

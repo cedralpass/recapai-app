@@ -1,20 +1,16 @@
 <script>
     async function checkJobStatus(job_id, article_id) {
-        // validate article_id is an integer
         if (!Number.isInteger(parseInt(article_id))) {
             console.error('Invalid article_id. Expected an integer value.');
             if (intervalID>0) {clearInterval(intervalID)};
-            return; // or throw an error, or handle the invalid input as needed
+            return;
         }
-
-        // Validate job_id is a valid GUID
         const guidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         if (!guidRegex.test(job_id)) {
             console.error('Invalid job_id. Expected a valid GUID value.');
             if (intervalID>0) {clearInterval(intervalID)};
-            return; // or throw an error, or handle the invalid input as needed
+            return;
         }
-    
         let path_for_job_status = `/job/${job_id}/show`;
         const response = await fetch(path_for_job_status);
         const classificaiton_status = await response.json();
@@ -50,45 +46,12 @@
             let flash_message = document.createElement("span");
             flash_message.append("Done classifying " + article_json['title']);
             flash.replaceChildren(flash_message)
-
-        }
-
-    }
-</script>
-
-<script>
-    function showFilter() {
-        let filter_element = document.getElementById("filter");
-        if (filter_element.classList.contains("hidden")) {
-            filter_element.classList.remove("hidden");
-            filter_element.classList.add("visible");
-        } else {
-            filter_element.classList.remove("visible");
-            filter_element.classList.add("hidden");
         }
     }
 </script>
-<button onclick="showFilter();" class="md:hidden"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-        stroke-width="1.5" stroke="currentColor" class="size-6">
-        <path stroke-linecap="round" stroke-linejoin="round"
-            d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" />
-    </svg></button><span onclick="showFilter();" class="text-sm align-text-top md:hidden">{% if request.args.get('category') is not none %} Filtered by:
-    {{request.args.get('category')}} {% else %} Filter your Articles. {%endif%}</span>
-<div class="container w-full max-w-sm p-2 hidden" id="filter">
-    <ul class="flex flex-row flex-wrap text-sm text-center">
-        {% if groupings is not none %}
-        <li class="flex-1 h-12 m-1 p-1 bg-gray-200 text-sm"><a href="{{ url_for('routes.index' )}}">All</a></li>
-        {% for grouping in groupings %}
-        <li class="flex-1 h-12 m-1 p-1 bg-gray-200 text-sm text-center"><a
-                href="{{ url_for('routes.index', category=grouping.category )}}">{{grouping.category}}({{grouping.count}})</a>
-        </li>
-        {% endfor %}
-        {% endif %}
-    </ul>
-</div>
 
-<div class="bg-white px-1 pt-4 pb-4 mb-2 w-full">
-    <h1 class="font-bold text-lg">Articles you have bookmarked:</h1>
+<div class="w-full">
+    <div class="font-bold text-sm text-gray-900 mb-3">Your bookmarks</div>
     <div id="article_container">
         {% for article in articles %}
         {% if article.classified is none %}
@@ -116,22 +79,22 @@
         </div>
 
         {% else %}
-        <div class="bg-white shadow-lg rounded px-3 pt-3 pb-3 mb-2">
+        <div class="bg-white shadow-sm rounded-lg px-3 py-3 mb-2">
             <div class="flex justify-between items-start gap-2 mb-1">
-                <b class="text-base leading-snug">{{article.title}}</b>
-                <span class="text-xs text-gray-500 whitespace-nowrap shrink-0">{{ article.created.strftime('%b %d, %Y') }}</span>
+                <b class="font-bold text-sm text-gray-900 leading-snug">{{article.title}}</b>
+                <span class="text-xs text-gray-400 whitespace-nowrap shrink-0">{{ article.created.strftime('%b %d, %Y') }}</span>
             </div>
             {% if article.author_name %}
-            <div class="text-sm text-gray-600 mb-1">{{ article.author_name }}</div>
+            <div class="text-xs text-gray-500 mb-1.5">{{ article.author_name }}</div>
             {% endif %}
             {% if article.summary %}
-            <p class="text-sm text-gray-700 mb-2 line-clamp-2">{{ article.summary }}</p>
+            <p class="text-xs text-gray-600 leading-relaxed mb-2 line-clamp-2">{{ article.summary }}</p>
             {% endif %}
-            <div class="flex justify-between items-center gap-2 mt-1">
-                <span class="inline-block bg-gray-100 rounded-full px-2 py-0.5 text-xs font-semibold text-gray-700">{{article.category}}</span>
+            <div class="flex justify-between items-center gap-2">
+                <span class="inline-block bg-gray-100 rounded-full px-2.5 py-0.5 text-xs font-semibold text-gray-700">{{article.category}}</span>
                 <div class="flex items-center gap-3">
-                    <span class="text-xs text-gray-400 truncate max-w-[160px]">{{ article.url_path | replace('https://', '') | replace('http://', '') }}</span>
-                    <a class="text-sm font-medium text-blue-600 hover:underline shrink-0" href="{{ url_for('routes.show', id=article.id) }}">View &rarr;</a>
+                    <span class="text-xs text-gray-400 truncate max-w-[120px]">{{ article.url_path | replace('https://', '') | replace('http://', '') }}</span>
+                    <a class="text-xs font-semibold text-blue-500 hover:underline shrink-0" href="{{ url_for('routes.show', id=article.id) }}">View &rarr;</a>
                 </div>
             </div>
         </div>
