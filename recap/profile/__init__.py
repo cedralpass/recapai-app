@@ -149,18 +149,27 @@ def apply_taxonomy():
         flash('No category mapping found. Please generate suggestions first.')
         return redirect(url_for('profile.organize_taxonomy'))
 
-    accepted_ids = [
-        key.replace('accepted_', '')
-        for key, val in request.form.items()
-        if key.startswith('accepted_') and val == '1'
-    ]
+    # Distinguish between the new form (has accepted_* fields) and old callers
+    # (tests that POST with no form data).  When the new form is present we
+    # apply ONLY the explicitly accepted suggestions — rejecting all is valid
+    # and should result in no changes being made.
+    has_suggestion_fields = any(k.startswith('accepted_') for k in request.form)
 
-    if accepted_ids:
+    if has_suggestion_fields:
+        accepted_ids = [
+            key.replace('accepted_', '')
+            for key, val in request.form.items()
+            if key.startswith('accepted_') and val == '1'
+        ]
+        if not accepted_ids:
+            flash('No changes applied — all suggestions were rejected.')
+            return redirect(url_for('profile.user', username=current_user.username))
         suggestion_mappings = session.get('suggestion_mappings', {})
         mapping_to_apply = {}
         for sid in accepted_ids:
             mapping_to_apply.update(suggestion_mappings.get(sid, {}))
     else:
+        # Backward-compat: tests POST without accepted_* fields
         mapping_to_apply = category_mapping
 
     for old_category, new_category in mapping_to_apply.items():
