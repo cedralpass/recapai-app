@@ -195,4 +195,4 @@
 {% endif %}
 {% endblock %}
 
-{% block main_class %}{% endblock %}
+{% block main_class %}{% if current_user.is_authenticated %}px-4 py-3{% endif %}{% endblock %}
