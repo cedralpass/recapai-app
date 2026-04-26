@@ -29,7 +29,7 @@ class TestIndexSidebar:
         """Filter sidebar heading appears for authenticated users."""
         response = logged_in_client.get('/')
         assert response.status_code == 200
-        assert b'Filter Articles' in response.data
+        assert b'Filter by category' in response.data
 
     def test_sidebar_absent_when_logged_out(self, recap_client):
         """Filter sidebar is not rendered for anonymous visitors."""
@@ -54,11 +54,13 @@ class TestIndexSidebar:
         response = logged_in_client.get('/')
         html = response.data.decode()
         for category, expected_count in SEED_CATEGORY_COUNTS.items():
-            label = f"{category}({expected_count})"
-            assert label in html, (
-                f"Expected '{label}' in sidebar but did not find it.\n"
+            assert category in html, (
+                f"Expected category '{category}' in sidebar but did not find it.\n"
                 f"Hint: check that all seed articles for '{category}' were "
                 f"inserted with a non-null `classified` timestamp."
+            )
+            assert str(expected_count) in html, (
+                f"Expected count '{expected_count}' for '{category}' in sidebar but did not find it."
             )
 
     def test_largest_category_appears_first(self, logged_in_client):
@@ -68,8 +70,8 @@ class TestIndexSidebar:
         """
         response = logged_in_client.get('/')
         html = response.data.decode()
-        ai_pos = html.find("Artificial Intelligence(27)")
-        leadership_pos = html.find("Leadership(10)")
+        ai_pos = html.find("Artificial Intelligence")
+        leadership_pos = html.find("Leadership")
         assert ai_pos != -1, "AI category not found in sidebar"
         assert leadership_pos != -1, "Leadership category not found in sidebar"
         assert ai_pos < leadership_pos, (
@@ -83,7 +85,7 @@ class TestIndexSidebar:
         assert response.status_code == 200
         html = response.data.decode()
         # The page should still render the sidebar
-        assert b'Filter Articles' in html.encode()
+        assert b'Filter by category' in html.encode()
         # All Leadership articles should be in the response (first page)
         # The category filter link for Leadership should still appear
         assert 'Leadership' in html

@@ -106,9 +106,9 @@ def add_article():
 @login_required
 def show(id):
     article = None
-    
+
     try:
-        stmt = sa.select(Article).where(Article.id == id, Article.user_id == current_user.id).order_by(Article.id.desc())  
+        stmt = sa.select(Article).where(Article.id == id, Article.user_id == current_user.id).order_by(Article.id.desc())
         article= db.session.execute(stmt).scalar_one()
     except sa.exc.NoResultFound as nre:
         flash('Article not found', 'error')
@@ -120,7 +120,22 @@ def show(id):
     if 'Content-Type' in request.headers.keys() and request.headers['Content-Type'] == 'application/json':
            article_dict = {"id":article.id, "url_path":article.url_path, "summary":article.summary, "title":article.title, "author_name":article.author_name, "category":article.category, "key_topics":article.key_topics, "sub_categories":article.sub_categories}
            return jsonify(article_dict) #SqlAlchemy objects are not easily serialized to JSON.. have to build our own.
-    return render_template('article/show.html', article=article, sub_categories=article.get_sub_categories_json())
+
+    prev_article = Article.query.filter(
+        Article.user_id == current_user.id,
+        Article.created > article.created,
+        Article.classified.isnot(None)
+    ).order_by(Article.created.asc()).first()
+
+    next_article = Article.query.filter(
+        Article.user_id == current_user.id,
+        Article.created < article.created,
+        Article.classified.isnot(None)
+    ).order_by(Article.created.desc()).first()
+
+    return render_template('article/show.html', article=article,
+                           sub_categories=article.get_sub_categories_json(),
+                           prev_article=prev_article, next_article=next_article)
 
 @bp.route('/<int:id>/reclassify', methods=('GET','POST'))
 @login_required
