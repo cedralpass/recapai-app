@@ -111,6 +111,65 @@ def authenticated_client(recap_client, test_user):
     return recap_client
 
 @pytest.fixture
+def seeded_user(recap_app):
+    """
+    A test user pre-loaded with 53 classified articles across 10 categories.
+
+    Use this (instead of test_user) whenever a test needs realistic multi-category
+    article data — category filtering, taxonomy work, pagination, UX assertions, etc.
+
+    Yields the User object inside the app context so callers can query the DB directly.
+    """
+    from recap.models import User, Article
+    from datetime import datetime
+    from tests.seed_data import SEED_ARTICLES
+
+    with recap_app.app_context():
+        user = User(username='seeduser', email='seeduser@example.com')
+        user.set_password('seedpass123')
+        recap_db.session.add(user)
+        recap_db.session.flush()  # get user.id before inserting articles
+
+        for data in SEED_ARTICLES:
+            article = Article(
+                user_id=user.id,
+                url_path=data["url_path"],
+                title=data.get("title"),
+                summary=data.get("summary"),
+                author_name=data.get("author_name"),
+                category=data.get("category"),
+                key_topics=data.get("key_topics"),
+                sub_categories=data.get("sub_categories"),
+                created=datetime.fromisoformat(data["created"]),
+                classified=datetime.fromisoformat(data["classified"]),
+            )
+            recap_db.session.add(article)
+
+        recap_db.session.commit()
+        yield user
+        # cleanup handled by recap_app fixture (drop_all after each test)
+
+
+@pytest.fixture
+def seeded_articles(seeded_user, recap_app):
+    """
+    All Article objects belonging to seeded_user, ordered by category then created.
+
+    Convenience wrapper — most tests need the articles themselves, not the user.
+    """
+    import sqlalchemy as sa
+    from recap.models import Article
+
+    with recap_app.app_context():
+        articles = recap_db.session.scalars(
+            sa.select(Article)
+            .where(Article.user_id == seeded_user.id)
+            .order_by(Article.category, Article.created)
+        ).all()
+        yield articles
+
+
+@pytest.fixture
 def aiapi_app():
     """Create and configure a new aiapi app instance for each test."""
     class TestConfig:
