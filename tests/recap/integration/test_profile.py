@@ -27,19 +27,16 @@ class TestUserProfileRoute:
         response = authenticated_client.get(f'/user/{username}')
         assert username.encode() in response.data
 
-    def test_user_profile_with_articles(self, authenticated_client, recap_app, test_user):
-        """Articles owned by the user are visible on their profile page."""
+    def test_user_profile_shows_action_cards(self, authenticated_client, recap_app, test_user):
+        """Profile page shows the account settings action cards, not the article list."""
         with recap_app.app_context():
-            db.session.add(Article(
-                url_path='https://example.com/profile-article',
-                user_id=test_user.id,
-            ))
-            db.session.commit()
             username = test_user.username
 
         response = authenticated_client.get(f'/user/{username}')
         assert response.status_code == 200
-        assert b'profile-article' in response.data
+        assert b'Edit Profile' in response.data
+        assert b'Reclassify Articles' in response.data
+        assert b'API Token' in response.data
 
     def test_user_profile_404_for_unknown_user(self, authenticated_client):
         """GET /user/<nonexistent> returns 404."""

@@ -15,21 +15,7 @@ bp = Blueprint('profile', __name__)
 @login_required
 def user(username):
     user = db.first_or_404(sa.select(User).where(User.username == username))
-    page = request.args.get('page', 1, type=int)
-
-    #get_articles(self,page=1, per_page=2)
-    articles_paginator = current_user.get_articles(page=page, per_page=Config.ARTICLES_PER_PAGE)
-    articles = articles_paginator.items
-    next_url = url_for('profile.user',username=user.username, page=articles_paginator.next_num) \
-        if articles_paginator.has_next else None
-    prev_url = url_for('profile.user',username=user.username, page=articles_paginator.prev_num) \
-        if articles_paginator.has_prev else None
-    
-    # list grouping of categories for article for the given user
-    groupings = current_user.get_categories()
-
-    return render_template('profile/user.html', user=user, articles=articles,
-                           next_url=next_url, prev_url=prev_url,  groupings=groupings)
+    return render_template('profile/user.html', user=user)
 
 
 @bp.route('/edit_profile', methods=['GET', 'POST'])
