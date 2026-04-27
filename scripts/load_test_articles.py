@@ -211,8 +211,8 @@ def parse_args():
     p.add_argument("--email",    default="testuser@example.com")
     p.add_argument("--password", default="TestPassword123!")
     p.add_argument("--api-url",  default="http://localhost:8080")
-    p.add_argument("--delay",    type=float, default=0.5,
-                   help="Seconds between API calls (default: 0.5)")
+    p.add_argument("--delay",    type=float, default=5.0,
+                   help="Seconds between API calls (default: 5.0)")
     p.add_argument("--dry-run",  action="store_true",
                    help="Print URLs without submitting")
     p.add_argument("--status",   action="store_true",
