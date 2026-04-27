@@ -51,7 +51,7 @@ def process_task():
         messages=prompt_array,
         response_format=response_format,
         temperature=0.3,
-        max_tokens=512,
+        max_tokens=1024,
         frequency_penalty=0.15,
         presence_penalty=0
     )
