@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="bg-white shadow-lg rounded px-2 pt-4 pb-4 mb-2 w-full max-w-sm">
+  <h1 class="text-lg font-bold">Split Large Categories</h1>
+  <p class="text-sm text-gray-600 mb-4">
+    Categories with {{ threshold }}+ articles, split into smaller groups by AI.
+  </p>
+
+  {% for category_name, data in suggestions.items() %}
+  <div class="mb-6">
+    <h2 class="font-bold text-base">{{ category_name }}
+      <span class="text-gray-500 font-normal text-sm">({{ data.original_count }} articles)</span>
+    </h2>
+    <p class="text-sm text-gray-600 mb-2">{{ data.description }}</p>
+    <ul class="flex flex-row flex-wrap text-sm text-center mb-2">
+      {% for new_cat, count in data.sub_counts %}
+      <li class="flex-1 h-12 m-1 p-1 bg-blue-100 text-sm text-center">
+        {{ new_cat }}<br><span class="text-gray-500">({{ count }})</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
+
+  <div class="mt-4">
+    <form action="{{ url_for('profile.apply_splits') }}" method="post">
+      <button type="submit"
+              class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+        Apply Splits
+      </button>
+      <a href="{{ url_for('profile.user', username=current_user.username) }}"
+         class="ml-4 text-sm text-gray-500 underline">Cancel</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

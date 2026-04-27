@@ -545,3 +545,272 @@ class TestApplyTaxonomyWithSeedData:
                     assert got == expected, (
                         f"'{old_cat}' → '{new_cat}': expected {expected} articles, got {got}"
                     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 2 — suggest_splits route
+# ---------------------------------------------------------------------------
+
+@pytest.mark.integration
+@pytest.mark.recap
+class TestSuggestSplitsRoute:
+    """
+    Tests for GET /user/<username>/suggest_splits (Phase 2).
+
+    The seeded dataset has Artificial Intelligence with 27 articles, which
+    exceeds the default threshold of 12 — perfect for exercising split logic.
+    """
+
+    SPLIT_URL = '/user/seeduser/suggest_splits'
+
+    def _ai_article_ids(self, seeded_user, recap_app):
+        """Return the DB ids of all AI-category articles for seeded_user."""
+        with recap_app.app_context():
+            rows = db.session.execute(
+                sa.select(Article.id)
+                .where(Article.user_id == seeded_user.id)
+                .where(Article.category == "Artificial Intelligence")
+                .order_by(Article.id)
+            ).all()
+        return [r[0] for r in rows]
+
+    def _make_split_fixture(self, article_ids):
+        """Build a mock AI split response assigning ids to two groups."""
+        assignments = []
+        for i, aid in enumerate(article_ids):
+            group = "LLM Techniques" if i % 2 == 0 else "AI Applications"
+            assignments.append({"article_id": aid, "new_category": group})
+        return {
+            "description": "Split into LLM research and application articles.",
+            "assignments": assignments,
+        }
+
+    @patch('recap.profile.AiApiHelper')
+    def test_suggest_splits_returns_200(
+        self, mock_ai, seeded_authenticated_client, seeded_user, recap_app
+    ):
+        """GET /suggest_splits?threshold=12 returns 200 when AI responds."""
+        ai_ids = self._ai_article_ids(seeded_user, recap_app)
+        mock_ai.PerformTask.return_value = self._make_split_fixture(ai_ids)
+
+        response = seeded_authenticated_client.get(self.SPLIT_URL + '?threshold=12')
+        assert response.status_code == 200
+
+    @patch('recap.profile.AiApiHelper')
+    def test_suggest_splits_stores_assignments_in_session(
+        self, mock_ai, seeded_authenticated_client, seeded_user, recap_app
+    ):
+        """After the route runs, split_assignments is stored in the session."""
+        ai_ids = self._ai_article_ids(seeded_user, recap_app)
+        mock_ai.PerformTask.return_value = self._make_split_fixture(ai_ids)
+
+        seeded_authenticated_client.get(self.SPLIT_URL + '?threshold=12')
+
+        with seeded_authenticated_client.session_transaction() as sess:
+            assert 'split_assignments' in sess
+            assignments = sess['split_assignments']
+            # One entry for the one large category (AI: 27)
+            assert "Artificial Intelligence" in assignments
+            # Each article_id key maps to a group name string
+            ai_assignments = assignments["Artificial Intelligence"]
+            assert len(ai_assignments) == len(ai_ids)
+            for aid in ai_ids:
+                assert str(aid) in ai_assignments
+
+    @patch('recap.profile.AiApiHelper')
+    def test_suggest_splits_shows_new_category_names(
+        self, mock_ai, seeded_authenticated_client, seeded_user, recap_app
+    ):
+        """The rendered page displays the proposed sub-category names."""
+        ai_ids = self._ai_article_ids(seeded_user, recap_app)
+        mock_ai.PerformTask.return_value = self._make_split_fixture(ai_ids)
+
+        response = seeded_authenticated_client.get(self.SPLIT_URL + '?threshold=12')
+        assert b'LLM Techniques' in response.data
+        assert b'AI Applications' in response.data
+
+    @patch('recap.profile.AiApiHelper')
+    def test_suggest_splits_redirects_when_nothing_large(
+        self, mock_ai, seeded_authenticated_client, seeded_user, recap_app
+    ):
+        """With a very high threshold, no categories qualify and user is redirected."""
+        response = seeded_authenticated_client.get(
+            self.SPLIT_URL + '?threshold=100', follow_redirects=False
+        )
+        assert response.status_code == 302
+
+    def test_suggest_splits_requires_login(self, recap_client):
+        """Unauthenticated GET redirects to login."""
+        response = recap_client.get('/user/seeduser/suggest_splits')
+        assert response.status_code == 302
+        assert '/auth/login' in response.headers['Location']
+
+
+# ---------------------------------------------------------------------------
+# Phase 2 — apply_splits route
+# ---------------------------------------------------------------------------
+
+@pytest.mark.integration
+@pytest.mark.recap
+class TestApplySplitsRoute:
+    """Tests for POST /apply_splits (Phase 2)."""
+
+    def _get_ai_article_ids(self, seeded_user, recap_app):
+        """Return DB ids of AI articles belonging to seeded_user."""
+        with recap_app.app_context():
+            rows = db.session.execute(
+                sa.select(Article.id)
+                .where(Article.user_id == seeded_user.id)
+                .where(Article.category == "Artificial Intelligence")
+                .order_by(Article.id)
+            ).all()
+        return [r[0] for r in rows]
+
+    def _set_split_session(self, client, category, assignments):
+        with client.session_transaction() as sess:
+            sess['split_assignments'] = {category: assignments}
+
+    def test_apply_splits_updates_article_categories(
+        self, seeded_authenticated_client, seeded_user, recap_app
+    ):
+        """POST /apply_splits reassigns articles to the new sub-categories."""
+        ai_ids = self._get_ai_article_ids(seeded_user, recap_app)
+        # Split first half → "LLM Techniques", second half → "AI Applications"
+        half = len(ai_ids) // 2
+        assignments = {
+            str(aid): "LLM Techniques" if i < half else "AI Applications"
+            for i, aid in enumerate(ai_ids)
+        }
+        self._set_split_session(seeded_authenticated_client, "Artificial Intelligence", assignments)
+
+        response = seeded_authenticated_client.post('/apply_splits', follow_redirects=True)
+        assert response.status_code == 200
+        assert b'Split complete' in response.data
+
+        # Verify assignments in DB
+        with recap_app.app_context():
+            for i, aid in enumerate(ai_ids):
+                article = db.session.get(Article, aid)
+                expected_cat = "LLM Techniques" if i < half else "AI Applications"
+                assert article.category == expected_cat, (
+                    f"Article {aid} should be '{expected_cat}', got '{article.category}'"
+                )
+
+    def test_apply_splits_preserves_total_article_count(
+        self, seeded_authenticated_client, seeded_user, recap_app
+    ):
+        """apply_splits must not create or delete articles — only rename categories."""
+        with recap_app.app_context():
+            total_before = db.session.scalar(
+                sa.select(sa.func.count(Article.id)).where(Article.user_id == seeded_user.id)
+            )
+
+        ai_ids = self._get_ai_article_ids(seeded_user, recap_app)
+        assignments = {str(aid): "AI Research" for aid in ai_ids}
+        self._set_split_session(seeded_authenticated_client, "Artificial Intelligence", assignments)
+
+        seeded_authenticated_client.post('/apply_splits', follow_redirects=True)
+
+        with recap_app.app_context():
+            total_after = db.session.scalar(
+                sa.select(sa.func.count(Article.id)).where(Article.user_id == seeded_user.id)
+            )
+        assert total_before == total_after
+
+    def test_apply_splits_clears_session(
+        self, seeded_authenticated_client, seeded_user, recap_app
+    ):
+        """split_assignments must be removed from the session after applying."""
+        ai_ids = self._get_ai_article_ids(seeded_user, recap_app)
+        assignments = {str(aid): "AI Research" for aid in ai_ids}
+        self._set_split_session(seeded_authenticated_client, "Artificial Intelligence", assignments)
+
+        seeded_authenticated_client.post('/apply_splits', follow_redirects=True)
+
+        with seeded_authenticated_client.session_transaction() as sess:
+            assert 'split_assignments' not in sess
+
+    def test_apply_splits_without_session_redirects(self, seeded_authenticated_client):
+        """POST without session data redirects instead of erroring."""
+        response = seeded_authenticated_client.post('/apply_splits', follow_redirects=False)
+        assert response.status_code == 302
+
+    def test_apply_splits_requires_login(self, recap_client):
+        """Unauthenticated POST redirects to login."""
+        response = recap_client.post('/apply_splits')
+        assert response.status_code == 302
+        assert '/auth/login' in response.headers['Location']
+
+
+# ---------------------------------------------------------------------------
+# Unit tests — taxonomy helper functions
+# ---------------------------------------------------------------------------
+
+@pytest.mark.unit
+@pytest.mark.recap
+class TestTaxonomyHelpers:
+    """Unit tests for build_rich_organize_context and get_categories_with_subcats."""
+
+    def test_get_categories_with_subcats_returns_sorted_by_count(
+        self, seeded_user, recap_app
+    ):
+        """Categories are returned sorted descending by article count."""
+        from recap.profile import get_categories_with_subcats
+
+        with recap_app.app_context():
+            result = get_categories_with_subcats(seeded_user.id)
+
+        # First entry must be the largest category
+        assert result[0][0] == "Artificial Intelligence"
+        assert result[0][1] == 27
+
+        # Counts must be non-increasing
+        counts = [count for _, count, _ in result]
+        assert counts == sorted(counts, reverse=True)
+
+    def test_get_categories_with_subcats_aggregates_subcats(
+        self, seeded_user, recap_app
+    ):
+        """Sub-categories for each category are de-duplicated and non-empty."""
+        from recap.profile import get_categories_with_subcats
+
+        with recap_app.app_context():
+            result = get_categories_with_subcats(seeded_user.id)
+
+        # AI category has multiple articles with sub_categories set
+        ai_row = next((r for r in result if r[0] == "Artificial Intelligence"), None)
+        assert ai_row is not None
+        _, _, subcats = ai_row
+        assert len(subcats) > 0
+        # Should be de-duplicated (a set would have been converted to sorted list)
+        assert len(subcats) == len(set(subcats))
+
+    def test_build_rich_organize_context_includes_counts_and_subcats(
+        self, seeded_user, recap_app
+    ):
+        """build_rich_organize_context includes article counts and sub-categories."""
+        from recap.profile import build_rich_organize_context
+
+        with recap_app.app_context():
+            ctx = build_rich_organize_context(seeded_user.id)
+
+        assert "Artificial Intelligence" in ctx
+        assert "27 articles" in ctx
+        # Should include at least one sub-category for AI
+        assert "AI Applications" in ctx or "Machine Learning" in ctx
+
+    def test_build_split_context_includes_article_ids_and_themes(self, recap_app):
+        """build_split_context formats article rows with ids and sub-category themes."""
+        from recap.profile import build_split_context
+
+        articles = [
+            (42, "Vision Transformers", '["Deep Learning", "Image Classification"]'),
+            (43, "RAG Systems", '["Vector Databases", "Information Retrieval"]'),
+        ]
+        with recap_app.app_context():
+            ctx = build_split_context("Artificial Intelligence", articles)
+
+        assert "[id:42]" in ctx
+        assert "[id:43]" in ctx
+        assert "Deep Learning" in ctx
+        assert "Vector Databases" in ctx

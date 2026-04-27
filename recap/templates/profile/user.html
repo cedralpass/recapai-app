@@ -12,7 +12,9 @@
         <a href="{{ url_for('profile.edit_profile') }}"
             class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-3 text-sm rounded focus:outline-none">Edit</a>
         <a href="{{ url_for('profile.organize_taxonomy') }}"
-            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-3 text-sm rounded focus:outline-none">Reclassify</a>
+            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-3 text-sm rounded focus:outline-none">Consolidate</a>
+        <a href="{{ url_for('profile.suggest_splits', username=user.username) }}"
+            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-3 text-sm rounded focus:outline-none">Split</a>
         <a href="{{ url_for('profile.api_token') }}"
             class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-3 text-sm rounded focus:outline-none">API Token</a>
     </div>
