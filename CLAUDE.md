@@ -192,8 +192,14 @@ It documents the complete visual language of the app: color tokens, typography s
 Key things to know without reading the whole doc:
 - **All styling is Tailwind utility classes** — no custom component CSS except a few global `@apply` rules in `recap/static/css/input.css`
 - **Two-column desktop layout on index** — article list (`flex-1 max-w-2xl`) + sticky filter sidebar (`w-60`), collapses to single-column on mobile
-- **Mobile filter is a toggle panel** (`#filter`, `hidden` by default, `showFilter()` JS); desktop filter is the persistent `<aside>` in `index.html` — they are separate elements
+- **Mobile filter is a horizontal scroll pill row** (`flex gap-2 overflow-x-auto`, no JS toggle); desktop filter is the persistent `<aside>` in `index.html` — they are separate elements
 - **Tailwind must be rebuilt** after any template class changes: the `tailwind` preview server watches templates and recompiles `recap/static/css/output.css` automatically during development
+
+### Redesign (completed)
+
+All major pages have been redesigned via Claude Code using the specs in `design_handoff/`. Before editing any template, read **[design_handoff/README.md](design_handoff/README.md)** for layout and component specs, and **[design_handoff/design-system.md](design_handoff/design-system.md)** (identical to `docs/design-system.md`) for tokens and patterns.
+
+Pages covered: unauthenticated homepage, login, register, forgot/reset password, authenticated index, article detail, profile, edit profile, API token, organise taxonomy.
 
 ---
 
