@@ -1,6 +1,9 @@
 import pytest
 from unittest.mock import patch, MagicMock
 import json
+from pathlib import Path
+
+FIXTURES_DIR = Path(__file__).parent.parent.parent / "fixtures"
 
 @pytest.mark.unit
 @pytest.mark.aiapi
@@ -198,3 +201,113 @@ class TestTaskProcessor:
         assert response.status_code == 200  # Should still return success
         response_data = json.loads(response.data)
         assert 'ref_key' not in response_data  # Should not have ref_key in response
+
+    # ------------------------------------------------------------------
+    # Taxonomy / max_tokens regression tests
+    # ------------------------------------------------------------------
+
+    @patch('aiapi.task_processor.OpenAI')
+    def test_max_tokens_is_1024_or_greater(self, mock_openai, aiapi_client):
+        """Regression guard: OpenAI must be called with max_tokens >= 1024.
+
+        Previously max_tokens=512 caused JSON truncation when processing
+        taxonomies with 20+ categories, raising JSONDecodeError in production.
+        """
+        mock_completion = MagicMock()
+        mock_completion.choices = [MagicMock()]
+        mock_completion.choices[0].message.content = json.dumps({"result": "ok"})
+        mock_openai.return_value.chat.completions.create.return_value = mock_completion
+
+        aiapi_client.post('/process_task', data={
+            'context': 'test context',
+            'prompt': 'test prompt',
+            'format': 'json',
+            'secret': 'test-token',
+            'ref_key': '1',
+        })
+
+        call_kwargs = mock_openai.return_value.chat.completions.create.call_args.kwargs
+        assert call_kwargs['max_tokens'] >= 1024, (
+            f"max_tokens={call_kwargs['max_tokens']} is too low — "
+            "large taxonomy responses will be truncated and cause JSONDecodeError"
+        )
+
+    @patch('aiapi.task_processor.OpenAI')
+    def test_truncated_json_from_openai_returns_500(self, mock_openai, aiapi_client):
+        """Replicate the production bug: OpenAI returns JSON cut off mid-object.
+
+        This is what happened in production when max_tokens=512 was hit on a
+        21-category taxonomy.  The endpoint should not crash with an unhandled
+        exception — it returns 500, which is caught by Flask's error handler.
+        """
+        # Simulate truncated JSON — exactly what OpenAI returned when it hit
+        # the old 512-token limit mid-response.
+        truncated = (
+            '{\n    "description": "Categories were consolidated.",\n'
+            '    "mappings": [\n'
+            '        {"new_category": "Artificial Intelligence", "old_category": "Artificial Intelligence"},\n'
+            '        {"new_category": "Business & Leadership", "old_category": "Business Strategy"'
+            # deliberately cut off here — no closing brackets
+        )
+        mock_completion = MagicMock()
+        mock_completion.choices = [MagicMock()]
+        mock_completion.choices[0].message.content = truncated
+        mock_openai.return_value.chat.completions.create.return_value = mock_completion
+
+        response = aiapi_client.post('/process_task', data={
+            'context': 'test context',
+            'prompt': 'test prompt',
+            'format': 'json',
+            'secret': 'test-token',
+            'ref_key': '2',
+        })
+
+        assert response.status_code == 500, (
+            "Truncated JSON from OpenAI should produce a 500 — "
+            "add try/except around json.loads() in task_processor.py to handle this gracefully"
+        )
+
+    @patch('aiapi.task_processor.OpenAI')
+    def test_large_taxonomy_21_categories_processes_successfully(self, mock_openai, aiapi_client):
+        """Full 21-category response (mirrors the production payload) must parse correctly.
+
+        Uses the fixture built from the actual production log to verify that
+        a taxonomy of this size is handled end-to-end without truncation errors.
+        """
+        fixture_path = FIXTURES_DIR / "organize_taxonomy_large_response.json"
+        full_response = json.loads(fixture_path.read_text())
+
+        mock_completion = MagicMock()
+        mock_completion.choices = [MagicMock()]
+        mock_completion.choices[0].message.content = json.dumps(full_response)
+        mock_openai.return_value.chat.completions.create.return_value = mock_completion
+
+        response = aiapi_client.post('/process_task', data={
+            'context': (
+                'I am using this taxonomy to categorize content: '
+                'Artificial Intelligence, Business Strategy, Consumer Electronics, Cooking, '
+                'Culinary Arts, Fitness & Health, Government Policy, Health & Wellness, '
+                'Leadership, Outdoor Recreation, Product Management, Product Review, '
+                'Recreational Fishing, Science & Technology, Software Architecture, '
+                'Software Development, Sustainability and Environment, Travel & Adventure, '
+                'Travel and Recreation, Web Design, Writing Techniques.'
+            ),
+            'prompt': (
+                'Can you recommend a category list, consolidating similar categories? '
+                'However, keep Artificial Intelligence and Software Architecture. '
+                'Keep categories concise and understandable to a human reader.'
+            ),
+            'format': 'json',
+            'secret': 'test-token',
+            'ref_key': '2',
+        })
+
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert 'mappings' in data
+        assert len(data['mappings']) == 21
+        assert data['ref_key'] == '2'
+        # Pinned categories must survive unchanged
+        pinned = [m for m in data['mappings'] if m['old_category'] == m['new_category']
+                  and m['new_category'] in ('Artificial Intelligence', 'Software Architecture')]
+        assert len(pinned) == 2

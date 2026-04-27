@@ -1,0 +1,26 @@
+{
+  "description": "Categories were consolidated to reduce overlap and improve clarity. Business Strategy and Leadership were combined under Business & Leadership. Health & Wellness and Fitness & Health were merged into Health & Fitness. Travel & Adventure and Travel and Recreation were combined into Travel & Exploration. Cooking and Culinary Arts were merged into Culinary Arts. Consumer Electronics, Product Management, and Product Review were combined under Consumer Products. Government Policy was included in Sustainability & Policy. Software Development and Web Design were combined into Software Development & Design. Outdoor Recreation and Recreational Fishing were merged into Outdoor Recreation. Science & Technology and Writing Techniques were kept as-is.",
+  "mappings": [
+    {"new_category": "Artificial Intelligence",       "old_category": "Artificial Intelligence"},
+    {"new_category": "Software Architecture",          "old_category": "Software Architecture"},
+    {"new_category": "Business & Leadership",          "old_category": "Business Strategy"},
+    {"new_category": "Business & Leadership",          "old_category": "Leadership"},
+    {"new_category": "Health & Fitness",               "old_category": "Health & Wellness"},
+    {"new_category": "Health & Fitness",               "old_category": "Fitness & Health"},
+    {"new_category": "Travel & Exploration",           "old_category": "Travel & Adventure"},
+    {"new_category": "Travel & Exploration",           "old_category": "Travel and Recreation"},
+    {"new_category": "Culinary Arts",                  "old_category": "Cooking"},
+    {"new_category": "Culinary Arts",                  "old_category": "Culinary Arts"},
+    {"new_category": "Consumer Products",              "old_category": "Consumer Electronics"},
+    {"new_category": "Consumer Products",              "old_category": "Product Management"},
+    {"new_category": "Consumer Products",              "old_category": "Product Review"},
+    {"new_category": "Sustainability & Policy",        "old_category": "Government Policy"},
+    {"new_category": "Sustainability & Policy",        "old_category": "Sustainability and Environment"},
+    {"new_category": "Software Development & Design",  "old_category": "Software Development"},
+    {"new_category": "Software Development & Design",  "old_category": "Web Design"},
+    {"new_category": "Outdoor Recreation",             "old_category": "Outdoor Recreation"},
+    {"new_category": "Outdoor Recreation",             "old_category": "Recreational Fishing"},
+    {"new_category": "Science & Technology",           "old_category": "Science & Technology"},
+    {"new_category": "Writing Techniques",             "old_category": "Writing Techniques"}
+  ]
+}

@@ -62,13 +62,18 @@ def process_task():
         json_return = response.choices[0].message.content
         current_app.logger.info("model %s cost %s", response.model, response.usage)
         
-        response_json = json.loads(json_return)
+        try:
+            response_json = json.loads(json_return)
+        except json.JSONDecodeError as e:
+            current_app.logger.error("error: OpenAI returned malformed JSON (likely truncated by max_tokens): %s", e)
+            return jsonify({"error": "Invalid JSON response from OpenAI"}), 500
+
         if ref_key is not None:
             response_json['ref_key']=ref_key
             current_app.logger.debug("classify: added ref_key to response: " + ref_key)
         else:
             current_app.logger.error("error: missing ref_key")
-        
+
         current_app.logger.debug("classify: full response " + str(response_json))
         return jsonify(response_json)
     else:
