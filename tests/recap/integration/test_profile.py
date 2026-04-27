@@ -607,10 +607,9 @@ class TestSuggestSplitsRoute:
         with seeded_authenticated_client.session_transaction() as sess:
             assert 'split_assignments' in sess
             assignments = sess['split_assignments']
-            # One entry for the one large category (AI: 27)
-            assert "Artificial Intelligence" in assignments
-            # Each article_id key maps to a group name string
-            ai_assignments = assignments["Artificial Intelligence"]
+            # One entry for the one large category (AI: 27), keyed by split ID
+            assert 'split_0' in assignments
+            ai_assignments = assignments['split_0']
             assert len(ai_assignments) == len(ai_ids)
             for aid in ai_ids:
                 assert str(aid) in ai_assignments
@@ -664,9 +663,9 @@ class TestApplySplitsRoute:
             ).all()
         return [r[0] for r in rows]
 
-    def _set_split_session(self, client, category, assignments):
+    def _set_split_session(self, client, assignments):
         with client.session_transaction() as sess:
-            sess['split_assignments'] = {category: assignments}
+            sess['split_assignments'] = {'split_0': assignments}
 
     def test_apply_splits_updates_article_categories(
         self, seeded_authenticated_client, seeded_user, recap_app
@@ -679,7 +678,7 @@ class TestApplySplitsRoute:
             str(aid): "LLM Techniques" if i < half else "AI Applications"
             for i, aid in enumerate(ai_ids)
         }
-        self._set_split_session(seeded_authenticated_client, "Artificial Intelligence", assignments)
+        self._set_split_session(seeded_authenticated_client, assignments)
 
         response = seeded_authenticated_client.post('/apply_splits', follow_redirects=True)
         assert response.status_code == 200
@@ -705,7 +704,7 @@ class TestApplySplitsRoute:
 
         ai_ids = self._get_ai_article_ids(seeded_user, recap_app)
         assignments = {str(aid): "AI Research" for aid in ai_ids}
-        self._set_split_session(seeded_authenticated_client, "Artificial Intelligence", assignments)
+        self._set_split_session(seeded_authenticated_client, assignments)
 
         seeded_authenticated_client.post('/apply_splits', follow_redirects=True)
 
@@ -721,7 +720,7 @@ class TestApplySplitsRoute:
         """split_assignments must be removed from the session after applying."""
         ai_ids = self._get_ai_article_ids(seeded_user, recap_app)
         assignments = {str(aid): "AI Research" for aid in ai_ids}
-        self._set_split_session(seeded_authenticated_client, "Artificial Intelligence", assignments)
+        self._set_split_session(seeded_authenticated_client, assignments)
 
         seeded_authenticated_client.post('/apply_splits', follow_redirects=True)
 

@@ -359,16 +359,35 @@ def suggest_splits(username):
         flash('AI did not return usable split suggestions. Try again.')
         return redirect(url_for('profile.user', username=current_user.username))
 
-    # Store flat per-article assignments in session keyed by article_id string
+    # Build suggestion_list with stable IDs for Accept/Reject form fields
+    suggestion_list = [
+        {
+            'id': f'split_{i}',
+            'category': cat_name,
+            'original_count': data['original_count'],
+            'description': data['description'],
+            'sub_counts': data['sub_counts'],
+        }
+        for i, (cat_name, data) in enumerate(suggestions.items())
+    ]
+    # Map category_name → suggestion dict for quick template lookups
+    large_cats = {s['category']: s for s in suggestion_list}
+
+    # Store assignments in session keyed by split ID (not category name)
     session['split_assignments'] = {
-        cat: data['assignments']
-        for cat, data in suggestions.items()
+        f'split_{i}': data['assignments']
+        for i, (_, data) in enumerate(suggestions.items())
     }
+
+    # All categories for the two-column diff view
+    all_categories = current_user.get_categories()
 
     return render_template(
         'profile/suggest_splits.html',
         title='Split Large Categories',
-        suggestions=suggestions,
+        suggestion_list=suggestion_list,
+        all_categories=all_categories,
+        large_cats=large_cats,
         threshold=threshold,
     )
 
@@ -388,8 +407,24 @@ def apply_splits():
         flash('No split assignments found. Please generate suggestions first.')
         return redirect(url_for('profile.user', username=current_user.username))
 
+    # Selective apply: form submits accepted_split_N=1 for each accepted suggestion.
+    # When those fields are absent (e.g. tests that POST with no form data) apply all.
+    has_decision_fields = any(k.startswith('accepted_') for k in request.form)
+    if has_decision_fields:
+        accepted_sids = [
+            k[len('accepted_'):]
+            for k, v in request.form.items()
+            if k.startswith('accepted_') and v == '1'
+        ]
+        if not accepted_sids:
+            flash('No splits applied — all suggestions were rejected.')
+            return redirect(url_for('profile.user', username=current_user.username))
+        to_apply = {sid: split_assignments[sid] for sid in accepted_sids if sid in split_assignments}
+    else:
+        to_apply = split_assignments
+
     updated_count = 0
-    for _category_name, assignments in split_assignments.items():
+    for _sid, assignments in to_apply.items():
         for article_id_str, new_category in assignments.items():
             article = db.session.get(Article, int(article_id_str))
             if article and article.user_id == current_user.id:

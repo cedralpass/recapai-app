@@ -1,36 +1,203 @@
 {% extends "base.html" %}
+{% block main_class %}min-h-screen bg-gray-50 py-6{% endblock %}
+
 {% block content %}
-<div class="bg-white shadow-lg rounded px-2 pt-4 pb-4 mb-2 w-full max-w-sm">
-  <h1 class="text-lg font-bold">Split Large Categories</h1>
-  <p class="text-sm text-gray-600 mb-4">
-    Categories with {{ threshold }}+ articles, split into smaller groups by AI.
+<div class="max-w-2xl mx-auto px-4">
+
+  <!-- Page header -->
+  <h1 class="text-2xl font-extrabold text-gray-900 mb-1">Split Large Categories</h1>
+  <p class="text-sm text-gray-500 mb-5">
+    AI has suggested splitting categories with {{ threshold }}+ articles into focused groups.
+    Review and apply the changes below.
   </p>
 
-  {% for category_name, data in suggestions.items() %}
-  <div class="mb-6">
-    <h2 class="font-bold text-base">{{ category_name }}
-      <span class="text-gray-500 font-normal text-sm">({{ data.original_count }} articles)</span>
-    </h2>
-    <p class="text-sm text-gray-600 mb-2">{{ data.description }}</p>
-    <ul class="flex flex-row flex-wrap text-sm text-center mb-2">
-      {% for new_cat, count in data.sub_counts %}
-      <li class="flex-1 h-12 m-1 p-1 bg-blue-100 text-sm text-center">
-        {{ new_cat }}<br><span class="text-gray-500">({{ count }})</span>
-      </li>
+  {% if not suggestion_list %}
+  <div class="text-center py-10 text-gray-400">No large categories found to split.</div>
+
+  {% else %}
+
+  <!-- Legend -->
+  <div class="flex flex-wrap gap-4 mb-5 text-xs text-gray-500">
+    <span class="flex items-center gap-1.5">
+      <span class="w-2 h-2 rounded-full bg-gray-400 inline-block"></span> Unchanged
+    </span>
+    <span class="flex items-center gap-1.5">
+      <span class="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span> Being split
+    </span>
+    <span class="flex items-center gap-1.5">
+      <span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span> New category
+    </span>
+  </div>
+
+  <!-- Diff grid: Current | Proposed -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+
+    <!-- Current column -->
+    <div>
+      <div class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
+        Current ({{ all_categories|length }} categories)
+      </div>
+      {% for cat, count in all_categories %}
+      {% set is_large = cat in large_cats %}
+      <div class="flex items-center justify-between rounded-lg px-3 py-2.5 mb-1.5 border-[1.5px]
+        {{ 'bg-amber-50 border-yellow-300' if is_large else 'bg-gray-50 border-gray-200' }}">
+        <span class="text-sm font-semibold truncate
+          {{ 'text-amber-800' if is_large else 'text-gray-700' }}">
+          {{ cat }}
+        </span>
+        <span class="text-xs font-bold rounded-full px-2 py-0.5 shrink-0
+          {{ 'bg-amber-100 text-amber-800' if is_large else 'bg-gray-200 text-gray-500' }}">
+          {{ count }}
+        </span>
+      </div>
       {% endfor %}
-    </ul>
+    </div>
+
+    <!-- Proposed column (updated by JS on Accept/Reject) -->
+    <div id="proposed-col">
+      {% set ns = namespace(count=0) %}
+      {% for cat, count in all_categories %}
+        {% if cat in large_cats %}
+          {% set ns.count = ns.count + large_cats[cat].sub_counts|length %}
+        {% else %}
+          {% set ns.count = ns.count + 1 %}
+        {% endif %}
+      {% endfor %}
+      <div class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
+        Proposed (<span id="proposed-count">{{ ns.count }}</span> categories)
+      </div>
+
+      {% for cat, count in all_categories %}
+        {% if cat in large_cats %}
+          {% set s = large_cats[cat] %}
+          <!-- Original chip — hidden by default (accepted), shown on reject -->
+          <div class="hidden flex items-center justify-between rounded-lg px-3 py-2.5 mb-1.5 border-[1.5px] bg-amber-50 border-yellow-300"
+               data-split-id="{{ s.id }}" data-chip-type="original">
+            <span class="text-sm font-semibold text-amber-800 truncate">{{ cat }}</span>
+            <span class="text-xs font-bold rounded-full px-2 py-0.5 shrink-0 bg-amber-100 text-amber-800">{{ count }}</span>
+          </div>
+          <!-- New sub-category chips — visible by default, hidden on reject -->
+          {% for new_cat, new_count in s.sub_counts %}
+          <div class="flex items-center justify-between rounded-lg px-3 py-2.5 mb-1.5 border-[1.5px] bg-green-50 border-green-300"
+               data-split-id="{{ s.id }}" data-chip-type="new">
+            <span class="text-sm font-semibold text-green-800 truncate">{{ new_cat }}</span>
+            <span class="text-xs font-bold rounded-full px-2 py-0.5 shrink-0 bg-green-100 text-green-800">{{ new_count }}</span>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="flex items-center justify-between rounded-lg px-3 py-2.5 mb-1.5 border-[1.5px] bg-gray-50 border-gray-200">
+            <span class="text-sm font-semibold text-gray-700 truncate">{{ cat }}</span>
+            <span class="text-xs font-bold rounded-full px-2 py-0.5 shrink-0 bg-gray-200 text-gray-500">{{ count }}</span>
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+  </div>
+
+  <!-- Divider -->
+  <div class="border-t border-gray-200 mb-5"></div>
+
+  <!-- Suggestions section header -->
+  <div class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
+    AI suggestions &mdash; {{ suggestion_list|length }} split{{ 's' if suggestion_list|length != 1 else '' }}
+  </div>
+
+  <!-- Suggestion cards -->
+  {% for s in suggestion_list %}
+  <div class="bg-white rounded-xl border border-gray-200 p-4 mb-3" id="suggestion-{{ s.id }}">
+    <div class="flex items-start justify-between gap-3 mb-3">
+      <div class="font-bold text-sm text-gray-900">Split category</div>
+      <div class="flex rounded-md overflow-hidden border border-gray-200 shrink-0">
+        <button type="button"
+                onclick="setSuggestion('{{ s.id }}', true)"
+                class="accept-btn px-3 py-1.5 text-xs font-semibold bg-green-500 text-white">
+          ✓ Accept
+        </button>
+        <button type="button"
+                onclick="setSuggestion('{{ s.id }}', false)"
+                class="reject-btn px-3 py-1.5 text-xs font-semibold bg-white text-gray-400">
+          ✕ Reject
+        </button>
+      </div>
+    </div>
+    <!-- Split flow: source → new sub-categories -->
+    <div class="flex flex-wrap items-center gap-2 mb-2">
+      <span class="inline-flex items-center bg-amber-50 border border-yellow-300 text-amber-800 rounded-full px-3 py-1 text-xs font-semibold">
+        {{ s.category }} ({{ s.original_count }})
+      </span>
+      <span class="text-gray-400">&rarr;</span>
+      {% for new_cat, new_count in s.sub_counts %}
+      <span class="inline-flex items-center bg-green-50 border border-green-300 text-green-800 rounded-full px-3 py-1 text-xs font-semibold">
+        {{ new_cat }} ({{ new_count }})
+      </span>
+      {% if not loop.last %}<span class="text-gray-400 font-bold">+</span>{% endif %}
+      {% endfor %}
+    </div>
+    <p class="text-xs text-gray-500 leading-relaxed">{{ s.description }}</p>
   </div>
   {% endfor %}
 
-  <div class="mt-4">
-    <form action="{{ url_for('profile.apply_splits') }}" method="post">
-      <button type="submit"
-              class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-        Apply Splits
+  <!-- Apply form -->
+  <div class="mt-5">
+    <form action="{{ url_for('profile.apply_splits') }}" method="post" id="splits-form">
+      {% for s in suggestion_list %}
+      <input type="hidden" name="accepted_{{ s.id }}" value="1" id="input_{{ s.id }}">
+      {% endfor %}
+      <button type="submit" id="apply-btn"
+              class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors">
+        Apply splits
       </button>
-      <a href="{{ url_for('profile.user', username=current_user.username) }}"
-         class="ml-4 text-sm text-gray-500 underline">Cancel</a>
     </form>
+    <a href="{{ url_for('profile.user', username=current_user.username) }}"
+       class="block text-center mt-3 text-sm text-gray-400 underline">Cancel</a>
   </div>
+
+  {% endif %}
+
 </div>
+
+<script>
+function setSuggestion(id, accepted) {
+  document.getElementById('input_' + id).value = accepted ? '1' : '0';
+
+  const card = document.getElementById('suggestion-' + id);
+  const acceptBtn = card.querySelector('.accept-btn');
+  const rejectBtn = card.querySelector('.reject-btn');
+  if (accepted) {
+    acceptBtn.className = 'accept-btn px-3 py-1.5 text-xs font-semibold bg-green-500 text-white';
+    rejectBtn.className = 'reject-btn px-3 py-1.5 text-xs font-semibold bg-white text-gray-400';
+  } else {
+    rejectBtn.className = 'reject-btn px-3 py-1.5 text-xs font-semibold bg-red-500 text-white';
+    acceptBtn.className = 'accept-btn px-3 py-1.5 text-xs font-semibold bg-white text-gray-400';
+  }
+
+  // Toggle proposed column chips
+  const col = document.getElementById('proposed-col');
+  col.querySelectorAll('[data-split-id="' + id + '"][data-chip-type="original"]')
+     .forEach(el => el.classList.toggle('hidden', accepted));
+  col.querySelectorAll('[data-split-id="' + id + '"][data-chip-type="new"]')
+     .forEach(el => el.classList.toggle('hidden', !accepted));
+
+  // Recount visible chips
+  let count = 0;
+  col.querySelectorAll('div[class*="rounded-lg"]').forEach(el => {
+    if (!el.classList.contains('hidden')) count++;
+  });
+  document.getElementById('proposed-count').textContent = count;
+
+  // Grey out apply button when nothing accepted
+  const anyAccepted = Array.from(document.querySelectorAll('[id^="input_"]'))
+    .some(inp => inp.value === '1');
+  const applyBtn = document.getElementById('apply-btn');
+  if (anyAccepted) {
+    applyBtn.className = 'w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors';
+    applyBtn.disabled = false;
+  } else {
+    applyBtn.className = 'w-full bg-gray-200 text-gray-400 font-bold py-3 rounded-lg cursor-default';
+    applyBtn.disabled = true;
+  }
+}
+</script>
+
 {% endblock %}
