@@ -90,7 +90,7 @@ class AiApiHelper:
         current_app.logger.debug('AiApiHelper: calling post to %s', ai_url)
         request_data = {'context': context, 'prompt': prompt, 'format': format, 'secret': "abc123", 'ref_key': ref_key}
         try:
-            r = httpx.post(ai_url, data=request_data, timeout=60)
+            r = httpx.post(ai_url, data=request_data, timeout=120)
             results_json = r.json()
             current_app.logger.debug("AiApiHelper: recieved results as %s", results_json)
         except httpx.HTTPError as http_err:

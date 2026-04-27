@@ -308,9 +308,6 @@ def suggest_splits(username):
         flash(f'No categories exceed {threshold} articles — nothing to split.')
         return redirect(url_for('profile.user', username=current_user.username))
 
-    # Max articles per AI call — keeps requests well within the 60 s timeout
-    BATCH_SIZE = 30
-
     SPLIT_PROMPT = (
         "Split these articles into 2-4 distinct, meaningful groups based on their themes. "
         "Name each group clearly (2-4 words). "
@@ -336,23 +333,16 @@ def suggest_splits(username):
             .order_by(Article.id)
         ).all()
 
-        # For large categories, process in batches to avoid AI API timeouts.
-        # Each batch is processed independently; assignments are merged afterwards.
-        all_assignments = {}
-        descriptions = []
-        batches = [article_rows[i:i + BATCH_SIZE] for i in range(0, len(article_rows), BATCH_SIZE)]
-        for batch in batches:
-            context = build_split_context(category_name, batch)
-            result = AiApiHelper.PerformTask(context, SPLIT_PROMPT, SPLIT_FORMAT, current_user.id)
-            if result and 'assignments' in result:
-                for a in result['assignments']:
-                    if 'article_id' in a and 'new_category' in a:
-                        all_assignments[str(a['article_id'])] = a['new_category']
-                if result.get('description'):
-                    descriptions.append(result['description'])
+        context = build_split_context(category_name, article_rows)
+        result = AiApiHelper.PerformTask(context, SPLIT_PROMPT, SPLIT_FORMAT, current_user.id)
 
-        if all_assignments:
-            assignments = all_assignments
+        if result and 'assignments' in result:
+            # Flatten to {article_id_str: new_category} for session storage
+            assignments = {
+                str(a['article_id']): a['new_category']
+                for a in result['assignments']
+                if 'article_id' in a and 'new_category' in a
+            }
             # Compute projected sub-category counts for preview
             sub_counts = {}
             for new_cat in assignments.values():
@@ -360,7 +350,7 @@ def suggest_splits(username):
 
             suggestions[category_name] = {
                 'original_count': count,
-                'description': ' '.join(descriptions),
+                'description': result.get('description', ''),
                 'assignments': assignments,
                 'sub_counts': sorted(sub_counts.items(), key=lambda x: x[1], reverse=True),
             }
