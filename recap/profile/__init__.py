@@ -450,7 +450,11 @@ def create_category_mapping(mappings):
     Returns:
         dict: Dictionary mapping old categories to new categories
     """
-    return {mapping['old_category']: mapping['new_category'] for mapping in mappings}
+    return {
+        mapping['old_category']: mapping['new_category']
+        for mapping in mappings
+        if 'old_category' in mapping and 'new_category' in mapping
+    }
 
 
 @bp.route('/settings/api-token', methods=['GET', 'POST'])
