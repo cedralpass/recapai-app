@@ -107,16 +107,18 @@ def build_prompt(context, prompt, format_instructions=None, prompt_history=None)
     if context:
         prompt_array.append({"role": "system", "content": context})
 
-    prompt_array.append({"role": "user", "content": prompt})
+    # Append format instructions directly to the user message so they sit in
+    # the same turn as the task — avoids a trailing system message that some
+    # models treat as lower-priority than user instructions.
+    user_content = prompt
+    if format_instructions:
+        user_content = f"{prompt}\n\n{format_instructions}"
+    prompt_array.append({"role": "user", "content": user_content})
 
     if prompt_history:
         for pair in prompt_history:
            prompt_array.append({"role": "user", "content": pair["prompt"]})
-           prompt_array.append({"role": "system", "content": pair["response"]})
-
-    
-    if format_instructions:
-        prompt_array.append({"role": "system", "content": format_instructions})
+           prompt_array.append({"role": "assistant", "content": pair["response"]})
 
 
     current_app.logger.debug("Prompt to process: %s", prompt_array)

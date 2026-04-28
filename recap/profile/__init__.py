@@ -144,12 +144,18 @@ def organize_taxonomy():
     PROMPT = (
         "Can you recommend a consolidated category list? "
         "Merge similar or related categories, especially small ones with 1-3 articles. "
-        "Keep Artificial Intelligence and Software Architecture as separate categories. "
         "Keep category names concise and understandable to a human reader."
     )
-    FORMAT = """Respond in a structured JSON message, mapping old categories to new categories. Can you also explain what topics changed as a single description element in the JSON. The description should be concise and understandable to a human reader. The final structure must be formatted in this structure:
-        {\r\n    \"description\": \"A summary of the changes to the topics.\",\r\n    \"mappings\": [\r\n        {\r\n            \"new_category\": \"new_category_value\",\r\n            \"old_category\": \"old_category_value\"\r\n        },\r\n        {\r\n            \"new_category\": \"new_category_value\",\r\n            \"old_category\": \"old_category_value\"\r\n        }\r\n    ],\r\n    \"ref_key\": \"2\"\r\n}
-        """
+    FORMAT = (
+        "Respond with JSON in this exact structure:\n"
+        "{\n"
+        '  "description": "A concise summary of the changes made.",\n'
+        '  "mappings": [\n'
+        '    {"new_category": "New Name", "old_category": "Old Name"},\n'
+        '    {"new_category": "New Name", "old_category": "Old Name"}\n'
+        "  ]\n"
+        "}"
+    )
 
     json_response = AiApiHelper.PerformTask(context_string, PROMPT, FORMAT, current_user.id)
 

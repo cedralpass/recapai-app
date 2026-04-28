@@ -102,28 +102,26 @@ class TestTaskProcessor:
             assert result[1]['content'] == prompt
 
     def test_build_prompt_with_format(self, aiapi_client):
-        """Test build_prompt function with format instructions."""
+        """Format instructions are appended to the user message, not a separate system message."""
         from aiapi.task_processor import build_prompt
-        
+
         with aiapi_client.application.app_context():
             context = "System context"
             prompt = "User prompt"
             format_instructions = "Format instructions"
-            
+
             result = build_prompt(context, prompt, format_instructions)
-            
-            assert len(result) == 3
+
+            assert len(result) == 2  # system context + user (prompt + format)
             assert result[0]['role'] == 'system'
             assert result[0]['content'] == context
             assert result[1]['role'] == 'user'
-            assert result[1]['content'] == prompt
-            assert result[2]['role'] == 'system'
-            assert result[2]['content'] == format_instructions
+            assert result[1]['content'] == f"{prompt}\n\n{format_instructions}"
 
     def test_build_prompt_with_history(self, aiapi_client):
-        """Test build_prompt function with prompt history."""
+        """Prompt history pairs use assistant role (not system) for responses."""
         from aiapi.task_processor import build_prompt
-        
+
         with aiapi_client.application.app_context():
             context = "System context"
             prompt = "User prompt"
@@ -131,22 +129,16 @@ class TestTaskProcessor:
                 {"prompt": "previous question", "response": "previous answer"},
                 {"prompt": "older question", "response": "older answer"}
             ]
-            
+
             result = build_prompt(context, prompt, prompt_history=prompt_history)
-            
-            assert len(result) == 6  # 1 system + 4 history (2 pairs) + 1 final prompt
-            assert result[0]['role'] == 'system'
-            assert result[0]['content'] == context
-            assert result[1]['role'] == 'user'
-            assert result[1]['content'] == prompt
-            assert result[2]['role'] == 'user'
-            assert result[2]['content'] == "previous question"
-            assert result[3]['role'] == 'system'
-            assert result[3]['content'] == "previous answer"
-            assert result[4]['role'] == 'user'
-            assert result[4]['content'] == "older question"
-            assert result[5]['role'] == 'system'
-            assert result[5]['content'] == 'older answer'
+
+            assert len(result) == 6  # 1 system + 4 history (2 pairs) + 1 final user prompt
+            assert result[0] == {'role': 'system', 'content': context}
+            assert result[1] == {'role': 'user', 'content': prompt}
+            assert result[2] == {'role': 'user', 'content': 'previous question'}
+            assert result[3] == {'role': 'assistant', 'content': 'previous answer'}
+            assert result[4] == {'role': 'user', 'content': 'older question'}
+            assert result[5] == {'role': 'assistant', 'content': 'older answer'}
 
     @patch('aiapi.task_processor.OpenAI')
     def test_process_task_no_choices(self, mock_openai, aiapi_client):
