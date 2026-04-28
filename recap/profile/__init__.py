@@ -63,8 +63,8 @@ def build_rich_organize_context(user_id):
     for cat, count, subcats in cats:
         article_word = "article" if count == 1 else "articles"
         if subcats:
-            # Cap at 8 sub-cats to avoid token bloat while keeping signal density
-            subcats_str = ", ".join(subcats[:8])
+            # Cap at 4 sub-cats — keeps signal density while halving token count
+            subcats_str = ", ".join(subcats[:4])
             lines.append(f"- {cat} ({count} {article_word}): {subcats_str}")
         else:
             lines.append(f"- {cat} ({count} {article_word})")
