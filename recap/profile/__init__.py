@@ -153,6 +153,13 @@ def organize_taxonomy():
 
     json_response = AiApiHelper.PerformTask(context_string, PROMPT, FORMAT, current_user.id)
 
+    from flask import current_app as _app
+    _app.logger.info("organize_taxonomy AI response keys: %s", list(json_response.keys()) if json_response else 'empty')
+
+    if not json_response or 'mappings' not in json_response:
+        flash('AI did not return usable suggestions — it may have timed out. Please try again.')
+        return redirect(url_for('profile.user', username=current_user.username))
+
     description = json_response.get('description', '')
     mappings = json_response.get('mappings', [])
 
@@ -164,7 +171,8 @@ def organize_taxonomy():
     # A group of one where old == new is "unchanged" — skip it.
     from_groups = {}
     for m in mappings:
-        from_groups.setdefault(m['new_category'], []).append(m['old_category'])
+        if 'new_category' in m and 'old_category' in m:
+            from_groups.setdefault(m['new_category'], []).append(m['old_category'])
 
     suggestions = []
     suggestion_mappings = {}  # sid -> {old_cat: new_cat} used by apply_taxonomy
