@@ -107,16 +107,21 @@ The `recap` server auto-copies `recap/.env` from the main repo on first start if
 
 ### Worktree hygiene — end of session checklist
 
-Claude Code sessions run in a git worktree (`claude/magical-banach` etc). Changes made to files
-in the worktree can be staged but not committed, leaving them invisible to `main`.
+Claude Code sessions run in a git worktree (`claude/blissful-ardinghelli` etc), but **commits go
+directly to `main`** — `git status` and `git commit` run from the main repo root (`/Users/geoffreysmalling/development/recapai-app`), which is on branch `main`. The worktree branch itself stays behind and never receives commits.
 
-Before closing a session, verify both the main repo and the active worktree are clean:
+At session end the Claude Code UI shows a diff between the worktree branch and `main` ("+446 -172"
+style). This is expected and harmless — it just reflects that `main` has moved ahead. It does NOT
+mean changes are lost or pending.
+
+To verify everything is clean:
 ```bash
-git status                                          # main repo
-git -C .claude/worktrees/<worktree-name> status    # active worktree
+git status                  # should be clean on main (only output.css may be modified)
+git log --oneline -3        # confirm latest commits are present
 ```
 
-If staged changes exist in the worktree: commit them to the branch, then merge to main and push.
+If `git status` is clean and commits are present, nothing needs to be done. Ignore the Claude Code
+session diff UI — all code is on `main` and pushed.
 
 ---
 
@@ -211,15 +216,30 @@ recap/              ← Main Flask app (web UI)
   models.py         ← SQLAlchemy models (User, Article)
   api_v1.py         ← REST API blueprint: POST /api/v1/articles (Bearer token auth)
   profile/          ← Profile/settings blueprint (incl. /settings/api-token)
+    __init__.py     ← Taxonomy routes: organize_taxonomy, apply_taxonomy,
+                       suggest_splits, apply_splits (see docs/taxonomy_organnization.md)
   tasks.py          ← RQ task: classify_url (calls OpenAI)
   templates/        ← Jinja2 templates
   static/css/       ← Tailwind output.css (rebuilt by tailwind server)
 
 aiapi/              ← Separate AI API Flask app
+  task_processor.py ← build_prompt(), OpenAI call (temp=0.3, max_tokens=4096, timeout=180s)
 chrome-extension/   ← Manifest V3 Chrome Extension (no build step)
 tests/              ← pytest: unit + integration
 migrations/         ← Alembic migrations
 ```
+
+### Taxonomy AI features
+
+Two user-facing routes let users reorganise their article taxonomy with AI assistance:
+
+- **Consolidate** (`GET /organize_taxonomy`) — merges similar/overlapping categories
+- **Split** (`GET /user/<username>/suggest_splits`) — breaks large categories (≥12 articles) into sub-groups
+
+Both use `AiApiHelper.PerformTask()` → `aiapi/task_processor.py` → OpenAI. Prompt structure,
+example payloads, OpenAI parameters, and tuning levers are documented in
+**[docs/taxonomy_organnization.md](docs/taxonomy_organnization.md)**. Read that before modifying
+any prompt strings, context builders, or the OpenAI call parameters in `task_processor.py`.
 
 ---
 
