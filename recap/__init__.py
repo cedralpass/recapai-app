@@ -101,6 +101,14 @@ def configure_app(app, env='dev'):
     app.config['MAIL_USERNAME'] = Config.MAIL_USERNAME
     app.config['MAIL_PASSWORD'] = Config.MAIL_PASSWORD
 
+def maybe_ping_aiapi():
+    from flask import current_app
+    key = 'aiapi:ping:last'
+    if not current_app.redis.exists(key):
+        current_app.redis.setex(key, 600, '1')
+        current_app.task_queue.enqueue('recap.tasks.ping_aiapi')
+
+
 def configure_loggging():
     log_level = Config.RECAP_Log_Level
 

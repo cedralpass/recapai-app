@@ -5,7 +5,7 @@ from recap.profile.forms import EditProfileForm
 from flask_login import current_user, login_required
 import json
 import sqlalchemy as sa
-from recap import db
+from recap import db, maybe_ping_aiapi
 from recap.models import User, Article
 from recap.config import Config
 from recap.aiapi_helper import AiApiHelper
@@ -17,6 +17,7 @@ bp = Blueprint('profile', __name__)
 @bp.route('/user/<username>')
 @login_required
 def user(username):
+    maybe_ping_aiapi()
     user = db.first_or_404(sa.select(User).where(User.username == username))
     return render_template('profile/user.html', user=user)
 

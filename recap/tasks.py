@@ -176,3 +176,13 @@ def suggest_splits_task(user_id, threshold=12):
 
     app.redis.setex(f'taxonomy:splits:{job.id}', 3600, json.dumps(suggestions))
 
+
+def ping_aiapi():
+    import urllib.request
+    url = Config.RECAP_AI_API_URL.rstrip('/') + '/hello'
+    try:
+        urllib.request.urlopen(url, timeout=30)
+        app.logger.info('ping_aiapi: AI API is awake')
+    except Exception as e:
+        app.logger.warning('ping_aiapi: request failed: %s', e)
+

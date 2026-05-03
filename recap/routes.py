@@ -3,7 +3,7 @@ from flask import (
 )
 from flask_login import current_user, login_user, logout_user, login_required
 import sqlalchemy as sa
-from recap import db
+from recap import db, maybe_ping_aiapi
 from recap.forms import  ArticleForm
 from recap.models import User, Article
 from urllib.parse import urlsplit
@@ -19,6 +19,7 @@ bp = Blueprint('routes', __name__)
 @bp.route('/', methods=['GET', 'POST'])
 @bp.route('/index', methods=['GET', 'POST'])
 def index():
+    maybe_ping_aiapi()
     form = ArticleForm()
     if form.validate_on_submit():
         #TODO: Validate that the form.url_path is a valid url

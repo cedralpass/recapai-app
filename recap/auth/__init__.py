@@ -4,7 +4,7 @@ from flask import (
 from recap.auth.forms import LoginForm, RegistrationForm, ResetPasswordForm,ResetPasswordRequestForm
 from flask_login import current_user, login_user, logout_user, login_required
 import sqlalchemy as sa
-from recap import db
+from recap import db, maybe_ping_aiapi
 from recap.models import User
 from urllib.parse import urlsplit
 from recap.auth.email import send_password_reset_email
@@ -13,6 +13,7 @@ bp = Blueprint('auth', __name__)
 #TODO: move login to a blueprint requires, flash, render_template, redirect
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
+    maybe_ping_aiapi()
     if current_user.is_authenticated:
         return redirect(url_for('routes.index'))
     form = LoginForm()

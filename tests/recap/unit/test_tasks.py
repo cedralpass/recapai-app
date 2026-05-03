@@ -183,6 +183,45 @@ class TestClassifyUrl:
 
 @pytest.mark.unit
 @pytest.mark.recap
+class TestMaybePingAiapi:
+    """Tests for maybe_ping_aiapi() — Redis-throttled keep-alive enqueue logic."""
+
+    def test_enqueues_when_key_absent(self, recap_app):
+        """When the throttle key is absent, sets it and enqueues the ping task."""
+        from recap import maybe_ping_aiapi
+
+        mock_redis = MagicMock()
+        mock_redis.exists.return_value = False
+        mock_queue = MagicMock()
+
+        with patch.object(recap_app, 'redis', mock_redis), \
+             patch.object(recap_app, 'task_queue', mock_queue):
+            with recap_app.app_context():
+                maybe_ping_aiapi()
+
+        mock_redis.exists.assert_called_once_with('aiapi:ping:last')
+        mock_redis.setex.assert_called_once_with('aiapi:ping:last', 600, '1')
+        mock_queue.enqueue.assert_called_once_with('recap.tasks.ping_aiapi')
+
+    def test_no_enqueue_when_key_present(self, recap_app):
+        """When the throttle key exists, nothing is enqueued (throttle active)."""
+        from recap import maybe_ping_aiapi
+
+        mock_redis = MagicMock()
+        mock_redis.exists.return_value = True
+        mock_queue = MagicMock()
+
+        with patch.object(recap_app, 'redis', mock_redis), \
+             patch.object(recap_app, 'task_queue', mock_queue):
+            with recap_app.app_context():
+                maybe_ping_aiapi()
+
+        mock_redis.setex.assert_not_called()
+        mock_queue.enqueue.assert_not_called()
+
+
+@pytest.mark.unit
+@pytest.mark.recap
 class TestSendPasswordResetEmailTask:
     """Tests for send_password_reset_email_task."""
 
