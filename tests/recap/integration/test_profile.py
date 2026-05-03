@@ -144,49 +144,72 @@ class TestOrganizeTaxonomyRoute:
         response = authenticated_client.get('/organize_taxonomy')
         assert response.status_code == 200
 
-    @patch('recap.profile.AiApiHelper')
-    def test_organize_taxonomy_shows_ai_description(
-        self, mock_ai, authenticated_client, recap_app, test_user
+    def test_organize_taxonomy_shows_processing_page(
+        self, authenticated_client, recap_app, test_user
     ):
-        """The AI-generated description appears in the rendered page."""
-        mock_ai.PerformTask.return_value = {
+        """GET /organize_taxonomy immediately returns the spinner/processing page."""
+        from unittest.mock import MagicMock
+        mock_job = MagicMock()
+        mock_job.id = 'test-job-id-org'
+        with patch.object(recap_app.task_queue, 'enqueue', return_value=mock_job):
+            response = authenticated_client.get('/organize_taxonomy')
+        assert response.status_code == 200
+        assert b'Working on it' in response.data
+        assert b'test-job-id-org' in response.data
+
+    def test_organize_taxonomy_result_shows_ai_description(
+        self, authenticated_client, recap_app, test_user
+    ):
+        """The AI description appears on the result page (loaded from Redis)."""
+        from unittest.mock import MagicMock
+        with recap_app.app_context():
+            db.session.add(Article(url_path='https://a.com/2', user_id=test_user.id, category='Tech'))
+            db.session.add(Article(url_path='https://a.com/s', user_id=test_user.id, category='Software'))
+            db.session.commit()
+
+        redis_data = json.dumps({
             'description': 'Merged Tech and Software into Technology.',
             'mappings': [
                 {'old_category': 'Tech', 'new_category': 'Technology'},
                 {'old_category': 'Software', 'new_category': 'Technology'},
             ],
-        }
+        }).encode()
 
-        with recap_app.app_context():
-            db.session.add(Article(
-                url_path='https://a.com/2', user_id=test_user.id, category='Tech',
-            ))
-            db.session.commit()
+        with patch.object(recap_app.redis, 'get', return_value=redis_data):
+            response = authenticated_client.get('/organize_taxonomy/result/fake-job-id')
 
-        response = authenticated_client.get('/organize_taxonomy')
+        assert response.status_code == 200
         assert b'Merged Tech and Software into Technology.' in response.data
 
-    @patch('recap.profile.AiApiHelper')
-    def test_organize_taxonomy_stores_mapping_in_session(
-        self, mock_ai, authenticated_client, recap_app, test_user
+    def test_organize_taxonomy_result_stores_mapping_in_session(
+        self, authenticated_client, recap_app, test_user
     ):
-        """After the AI call, the category mapping is stored in the session."""
-        mock_ai.PerformTask.return_value = {
-            'description': 'Some changes.',
-            'mappings': [{'old_category': 'Tech', 'new_category': 'Technology'}],
-        }
-
+        """The result route stores category_mapping in the session."""
         with recap_app.app_context():
-            db.session.add(Article(
-                url_path='https://a.com/3', user_id=test_user.id, category='Tech',
-            ))
+            db.session.add(Article(url_path='https://a.com/3', user_id=test_user.id, category='Tech'))
             db.session.commit()
 
-        authenticated_client.get('/organize_taxonomy')
+        redis_data = json.dumps({
+            'description': 'Some changes.',
+            'mappings': [{'old_category': 'Tech', 'new_category': 'Technology'}],
+        }).encode()
+
+        with patch.object(recap_app.redis, 'get', return_value=redis_data):
+            authenticated_client.get('/organize_taxonomy/result/fake-job-id')
 
         with authenticated_client.session_transaction() as sess:
             assert 'category_mapping' in sess
             assert sess['category_mapping'] == {'Tech': 'Technology'}
+
+    def test_organize_taxonomy_result_expired_redirects(
+        self, authenticated_client, recap_app
+    ):
+        """Result route redirects when the Redis key has expired."""
+        with patch.object(recap_app.redis, 'get', return_value=None):
+            response = authenticated_client.get(
+                '/organize_taxonomy/result/fake-job-id', follow_redirects=False
+            )
+        assert response.status_code == 302
 
     def test_organize_taxonomy_requires_login(self, recap_client):
         """Unauthenticated GET redirects to login."""
@@ -318,13 +341,12 @@ def _article_counts_by_category(recap_app, user_id):
 class TestOrganizeTaxonomyWithSeedData:
     """Verify organize_taxonomy stores a complete, well-formed mapping for a real dataset."""
 
-    @patch('recap.profile.AiApiHelper')
     def test_session_mapping_covers_fixture_categories(
-        self, mock_ai, seeded_authenticated_client, seeded_user, recap_app
+        self, seeded_authenticated_client, seeded_user, recap_app
     ):
         """
         Every old_category in the recorded fixture must appear as a key in the
-        session mapping after organize_taxonomy runs.
+        session mapping after the result route runs.
 
         Note: the recorded fixture may not cover every seed category — the AI
         occasionally omits low-frequency categories (e.g. Neuroscience was absent
@@ -334,9 +356,10 @@ class TestOrganizeTaxonomyWithSeedData:
         """
         fixture = _load_seed_fixture()
         fixture_old_categories = {m['old_category'] for m in fixture['mappings']}
-        mock_ai.PerformTask.return_value = fixture
+        redis_data = json.dumps(fixture).encode()
 
-        seeded_authenticated_client.get('/organize_taxonomy')
+        with patch.object(recap_app.redis, 'get', return_value=redis_data):
+            seeded_authenticated_client.get('/organize_taxonomy/result/fake-job-id')
 
         with seeded_authenticated_client.session_transaction() as sess:
             mapping = sess.get('category_mapping', {})
@@ -583,57 +606,92 @@ class TestSuggestSplitsRoute:
             "assignments": assignments,
         }
 
-    @patch('recap.profile.AiApiHelper')
     def test_suggest_splits_returns_200(
-        self, mock_ai, seeded_authenticated_client, seeded_user, recap_app
+        self, seeded_authenticated_client, seeded_user, recap_app
     ):
-        """GET /suggest_splits?threshold=12 returns 200 when AI responds."""
-        ai_ids = self._ai_article_ids(seeded_user, recap_app)
-        mock_ai.PerformTask.return_value = self._make_split_fixture(ai_ids)
-
-        response = seeded_authenticated_client.get(self.SPLIT_URL + '?threshold=12')
+        """GET /suggest_splits immediately returns the processing page."""
+        from unittest.mock import MagicMock
+        mock_job = MagicMock()
+        mock_job.id = 'test-splits-job-id'
+        with patch.object(recap_app.task_queue, 'enqueue', return_value=mock_job):
+            response = seeded_authenticated_client.get(self.SPLIT_URL + '?threshold=12')
         assert response.status_code == 200
+        assert b'Working on it' in response.data
 
-    @patch('recap.profile.AiApiHelper')
-    def test_suggest_splits_stores_assignments_in_session(
-        self, mock_ai, seeded_authenticated_client, seeded_user, recap_app
+    def test_suggest_splits_result_stores_assignments_in_session(
+        self, seeded_authenticated_client, seeded_user, recap_app
     ):
-        """After the route runs, split_assignments is stored in the session."""
+        """The result route stores split_assignments in the session."""
         ai_ids = self._ai_article_ids(seeded_user, recap_app)
-        mock_ai.PerformTask.return_value = self._make_split_fixture(ai_ids)
+        fixture = self._make_split_fixture(ai_ids)
+        sub_counts = {}
+        for a in fixture['assignments']:
+            sub_counts[a['new_category']] = sub_counts.get(a['new_category'], 0) + 1
 
-        seeded_authenticated_client.get(self.SPLIT_URL + '?threshold=12')
+        redis_data = json.dumps({
+            'Artificial Intelligence': {
+                'original_count': len(ai_ids),
+                'description': fixture['description'],
+                'assignments': {str(a['article_id']): a['new_category'] for a in fixture['assignments']},
+                'sub_counts': sorted(sub_counts.items(), key=lambda x: x[1], reverse=True),
+            }
+        }).encode()
+
+        with patch.object(recap_app.redis, 'get', return_value=redis_data):
+            seeded_authenticated_client.get('/suggest_splits/result/fake-job-id')
 
         with seeded_authenticated_client.session_transaction() as sess:
             assert 'split_assignments' in sess
             assignments = sess['split_assignments']
-            # One entry for the one large category (AI: 27), keyed by split ID
             assert 'split_0' in assignments
             ai_assignments = assignments['split_0']
             assert len(ai_assignments) == len(ai_ids)
             for aid in ai_ids:
                 assert str(aid) in ai_assignments
 
-    @patch('recap.profile.AiApiHelper')
-    def test_suggest_splits_shows_new_category_names(
-        self, mock_ai, seeded_authenticated_client, seeded_user, recap_app
+    def test_suggest_splits_result_shows_new_category_names(
+        self, seeded_authenticated_client, seeded_user, recap_app
     ):
-        """The rendered page displays the proposed sub-category names."""
+        """The result page displays the proposed sub-category names."""
         ai_ids = self._ai_article_ids(seeded_user, recap_app)
-        mock_ai.PerformTask.return_value = self._make_split_fixture(ai_ids)
+        fixture = self._make_split_fixture(ai_ids)
+        sub_counts = {}
+        for a in fixture['assignments']:
+            sub_counts[a['new_category']] = sub_counts.get(a['new_category'], 0) + 1
 
-        response = seeded_authenticated_client.get(self.SPLIT_URL + '?threshold=12')
+        redis_data = json.dumps({
+            'Artificial Intelligence': {
+                'original_count': len(ai_ids),
+                'description': fixture['description'],
+                'assignments': {str(a['article_id']): a['new_category'] for a in fixture['assignments']},
+                'sub_counts': sorted(sub_counts.items(), key=lambda x: x[1], reverse=True),
+            }
+        }).encode()
+
+        with patch.object(recap_app.redis, 'get', return_value=redis_data):
+            response = seeded_authenticated_client.get('/suggest_splits/result/fake-job-id')
+
         assert b'LLM Techniques' in response.data
         assert b'AI Applications' in response.data
 
-    @patch('recap.profile.AiApiHelper')
-    def test_suggest_splits_redirects_when_nothing_large(
-        self, mock_ai, seeded_authenticated_client, seeded_user, recap_app
+    def test_suggest_splits_result_expired_redirects(
+        self, seeded_authenticated_client, recap_app
     ):
-        """With a very high threshold, no categories qualify and user is redirected."""
-        response = seeded_authenticated_client.get(
-            self.SPLIT_URL + '?threshold=100', follow_redirects=False
-        )
+        """Result route redirects when the Redis key has expired."""
+        with patch.object(recap_app.redis, 'get', return_value=None):
+            response = seeded_authenticated_client.get(
+                '/suggest_splits/result/fake-job-id', follow_redirects=False
+            )
+        assert response.status_code == 302
+
+    def test_suggest_splits_result_empty_suggestions_redirects(
+        self, seeded_authenticated_client, recap_app
+    ):
+        """Result route redirects when task found no large categories."""
+        with patch.object(recap_app.redis, 'get', return_value=json.dumps({}).encode()):
+            response = seeded_authenticated_client.get(
+                '/suggest_splits/result/fake-job-id', follow_redirects=False
+            )
         assert response.status_code == 302
 
     def test_suggest_splits_requires_login(self, recap_client):
@@ -752,7 +810,7 @@ class TestTaxonomyHelpers:
         self, seeded_user, recap_app
     ):
         """Categories are returned sorted descending by article count."""
-        from recap.profile import get_categories_with_subcats
+        from recap.taxonomy_helpers import get_categories_with_subcats
 
         with recap_app.app_context():
             result = get_categories_with_subcats(seeded_user.id)
@@ -769,7 +827,7 @@ class TestTaxonomyHelpers:
         self, seeded_user, recap_app
     ):
         """Sub-categories for each category are de-duplicated and non-empty."""
-        from recap.profile import get_categories_with_subcats
+        from recap.taxonomy_helpers import get_categories_with_subcats
 
         with recap_app.app_context():
             result = get_categories_with_subcats(seeded_user.id)

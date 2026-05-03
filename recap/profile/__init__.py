@@ -2,98 +2,16 @@ from flask import (
     Blueprint, flash, g, redirect, render_template, request, session, url_for, current_app
 )
 from recap.profile.forms import EditProfileForm
-from flask_login import current_user, login_user, logout_user, login_required
+from flask_login import current_user, login_required
 import json
 import sqlalchemy as sa
 from recap import db
 from recap.models import User, Article
 from recap.config import Config
 from recap.aiapi_helper import AiApiHelper
+from recap.taxonomy_helpers import build_rich_organize_context, build_split_context
 
 bp = Blueprint('profile', __name__)
-
-
-# ---------------------------------------------------------------------------
-# Taxonomy helpers
-# ---------------------------------------------------------------------------
-
-def get_categories_with_subcats(user_id):
-    """
-    Returns [(category_name, count, subcats_list), ...] sorted by count descending.
-
-    subcats_list is a de-duplicated, sorted list of sub-category strings aggregated
-    across every classified article in that category.  Unclassified articles and
-    null sub_categories are skipped safely.
-    """
-    rows = db.session.execute(
-        sa.select(Article.category, Article.sub_categories)
-        .where(Article.user_id == user_id)
-        .where(Article.classified.isnot(None))
-    ).all()
-
-    data = {}
-    for cat, subcats_json in rows:
-        if cat is None:
-            continue
-        if cat not in data:
-            data[cat] = {'count': 0, 'subcats': set()}
-        data[cat]['count'] += 1
-        if subcats_json:
-            try:
-                data[cat]['subcats'].update(json.loads(subcats_json))
-            except (json.JSONDecodeError, TypeError):
-                pass
-
-    return [
-        (cat, d['count'], sorted(d['subcats']))
-        for cat, d in sorted(data.items(), key=lambda x: x[1]['count'], reverse=True)
-    ]
-
-
-def build_rich_organize_context(user_id):
-    """
-    Build the organize_taxonomy context string enriched with article counts and
-    aggregated sub-categories per category.
-
-    Example output line:
-        - Artificial Intelligence (27 articles): Deep Learning, Fine-tuning, LLM, RAG
-    """
-    cats = get_categories_with_subcats(user_id)
-    lines = ["I am using this taxonomy to categorize content:"]
-    for cat, count, subcats in cats:
-        article_word = "article" if count == 1 else "articles"
-        if subcats:
-            # Cap at 4 sub-cats — keeps signal density while halving token count
-            subcats_str = ", ".join(subcats[:4])
-            lines.append(f"- {cat} ({count} {article_word}): {subcats_str}")
-        else:
-            lines.append(f"- {cat} ({count} {article_word})")
-    return "\n".join(lines)
-
-
-def build_split_context(category_name, articles):
-    """
-    Build the context string for splitting a single large category.
-
-    articles: iterable of Row(id, title, sub_categories) from a SQLAlchemy query.
-    """
-    lines = [
-        f'Category "{category_name}" has grown large and needs splitting into smaller groups.',
-        "Here are the articles with their content themes:",
-        "",
-    ]
-    for article_id, title, subcats_json in articles:
-        subcats = []
-        if subcats_json:
-            try:
-                subcats = json.loads(subcats_json)
-            except (json.JSONDecodeError, TypeError):
-                pass
-        subcats_str = ", ".join(subcats) if subcats else "none"
-        lines.append(
-            f"[id:{article_id}] {title or 'Untitled'} | themes: {subcats_str}"
-        )
-    return "\n".join(lines)
 
 
 @bp.route('/user/<username>')
@@ -125,66 +43,48 @@ def edit_profile():
 @bp.route('/organize_taxonomy', methods=['GET'])
 @login_required
 def organize_taxonomy():
-    """
-    Organize and suggest improvements to the user's content categories using AI.
-
-    Uses a richer context that includes article counts and aggregated sub-categories
-    so the AI can make better merge decisions — especially for small (1-3 article)
-    categories whose names alone don't reveal whether they overlap.
-
-    Returns:
-        Rendered template with structured diff data for the new review UI.
-    """
-    categories = current_user.get_categories()
-
-    # Build enriched context: counts + aggregated sub-categories per category
-    context_string = build_rich_organize_context(current_user.id)
-
-    # Prompt explicitly targets small categories for merging
-    PROMPT = (
-        "Can you recommend a consolidated category list? "
-        "Merge similar or related categories, especially small ones with 1-3 articles. "
-        "Keep category names concise and understandable to a human reader."
+    job = current_app.task_queue.enqueue(
+        'recap.tasks.organize_taxonomy_task',
+        current_user.id,
+        job_timeout=300,
     )
-    FORMAT = (
-        "Respond with JSON in this exact structure:\n"
-        "{\n"
-        '  "description": "A concise summary of the changes made.",\n'
-        '  "mappings": [\n'
-        '    {"new_category": "New Name", "old_category": "Old Name"},\n'
-        '    {"new_category": "New Name", "old_category": "Old Name"}\n'
-        "  ]\n"
-        "}"
+    return render_template(
+        'profile/taxonomy_processing.html',
+        job_id=job.id,
+        result_url=url_for('profile.organize_taxonomy_result', job_id=job.id),
+        retry_url=url_for('profile.organize_taxonomy'),
+        title='Organising Taxonomy…',
+        show_progress=False,
     )
 
-    json_response = AiApiHelper.PerformTask(context_string, PROMPT, FORMAT, current_user.id)
 
-    from flask import current_app as _app
-    _app.logger.info("organize_taxonomy AI response keys: %s", list(json_response.keys()) if json_response else 'empty')
-
-    if not json_response or 'mappings' not in json_response:
-        flash('AI did not return usable suggestions — it may have timed out. Please try again.')
+@bp.route('/organize_taxonomy/result/<job_id>')
+@login_required
+def organize_taxonomy_result(job_id):
+    redis = current_app.redis
+    data = redis.get(f'taxonomy:organize:{job_id}')
+    if not data:
+        flash('Result expired or not found. Please try again.')
         return redirect(url_for('profile.user', username=current_user.username))
 
+    json_response = json.loads(data)
+    categories = current_user.get_categories()
     description = json_response.get('description', '')
     mappings = json_response.get('mappings', [])
 
-    # Full flat mapping (kept for backward-compat and session storage)
     category_mapping = create_category_mapping(mappings)
     current_counts = {cat.category: cat.count for cat in categories}
 
-    # Build structured suggestions by grouping mappings by new_category.
-    # A group of one where old == new is "unchanged" — skip it.
     from_groups = {}
     for m in mappings:
         if 'new_category' in m and 'old_category' in m:
             from_groups.setdefault(m['new_category'], []).append(m['old_category'])
 
     suggestions = []
-    suggestion_mappings = {}  # sid -> {old_cat: new_cat} used by apply_taxonomy
+    suggestion_mappings = {}
     for i, (new_cat, old_cats) in enumerate(from_groups.items()):
         if len(old_cats) == 1 and old_cats[0] == new_cat:
-            continue  # truly unchanged — not a suggestion
+            continue
         sid = f'merge_{i}'
         to_count = sum(current_counts.get(old, 0) for old in old_cats)
         suggestions.append({
@@ -198,7 +98,6 @@ def organize_taxonomy():
         })
         suggestion_mappings[sid] = {old: new_cat for old in old_cats}
 
-    # Annotate current categories with their change status
     merging_from = {cat for s in suggestions for cat in s['from_categories']}
     current_annotated = []
     for g in categories:
@@ -214,7 +113,6 @@ def organize_taxonomy():
             'is_new': g.category.startswith('New Category:'),
         })
 
-    # Proposed taxonomy: unchanged categories + merge results
     unchanged_cats = [c for c in current_annotated if c['type'] == 'unchanged']
     merged_results = [
         {
@@ -225,7 +123,6 @@ def organize_taxonomy():
     ]
     proposed_annotated = unchanged_cats + merged_results
 
-    # Backward-compat flat suggested list
     suggested_counts = {}
     for old, new in category_mapping.items():
         suggested_counts[new] = suggested_counts.get(new, 0) + current_counts.get(old, 0)
@@ -305,75 +202,38 @@ def apply_taxonomy():
 @bp.route('/user/<username>/suggest_splits', methods=['GET'])
 @login_required
 def suggest_splits(username):
-    """
-    Phase 2: For each category that exceeds *threshold* articles, ask the AI to
-    split it into 2-4 meaningful sub-groups and store the per-article assignments
-    in the session for preview/apply.
-
-    Query parameters:
-        threshold (int, default 12): minimum article count to consider for splitting
-    """
     threshold = request.args.get('threshold', 12, type=int)
+    job = current_app.task_queue.enqueue(
+        'recap.tasks.suggest_splits_task',
+        current_user.id,
+        threshold,
+        job_timeout=600,
+    )
+    return render_template(
+        'profile/taxonomy_processing.html',
+        job_id=job.id,
+        result_url=url_for('profile.suggest_splits_result', job_id=job.id),
+        retry_url=url_for('profile.suggest_splits', username=current_user.username),
+        title='Splitting Categories…',
+        show_progress=True,
+    )
 
-    categories = current_user.get_categories()
-    large_categories = [(cat, count) for cat, count in categories if count >= threshold]
 
-    if not large_categories:
-        flash(f'No categories exceed {threshold} articles — nothing to split.')
+@bp.route('/suggest_splits/result/<job_id>')
+@login_required
+def suggest_splits_result(job_id):
+    redis = current_app.redis
+    data = redis.get(f'taxonomy:splits:{job_id}')
+    if not data:
+        flash('Result expired or not found. Please try again.')
         return redirect(url_for('profile.user', username=current_user.username))
 
-    SPLIT_PROMPT = (
-        "Split these articles into 2-4 distinct, meaningful groups based on their themes. "
-        "Name each group clearly (2-4 words). "
-        "Assign every article to exactly one group."
-    )
-    SPLIT_FORMAT = (
-        'Respond with JSON in this exact structure:\n'
-        '{\n'
-        '  "description": "Brief rationale for the groupings",\n'
-        '  "assignments": [\n'
-        '    {"article_id": 42, "new_category": "Group Name"},\n'
-        '    {"article_id": 43, "new_category": "Group Name"}\n'
-        '  ]\n'
-        '}'
-    )
-
-    suggestions = {}
-    for category_name, count in large_categories:
-        article_rows = db.session.execute(
-            sa.select(Article.id, Article.title, Article.sub_categories)
-            .where(Article.user_id == current_user.id)
-            .where(Article.category == category_name)
-            .order_by(Article.id)
-        ).all()
-
-        context = build_split_context(category_name, article_rows)
-        result = AiApiHelper.PerformTask(context, SPLIT_PROMPT, SPLIT_FORMAT, current_user.id)
-
-        if result and 'assignments' in result:
-            # Flatten to {article_id_str: new_category} for session storage
-            assignments = {
-                str(a['article_id']): a['new_category']
-                for a in result['assignments']
-                if 'article_id' in a and 'new_category' in a
-            }
-            # Compute projected sub-category counts for preview
-            sub_counts = {}
-            for new_cat in assignments.values():
-                sub_counts[new_cat] = sub_counts.get(new_cat, 0) + 1
-
-            suggestions[category_name] = {
-                'original_count': count,
-                'description': result.get('description', ''),
-                'assignments': assignments,
-                'sub_counts': sorted(sub_counts.items(), key=lambda x: x[1], reverse=True),
-            }
+    suggestions = json.loads(data)
 
     if not suggestions:
         flash('AI did not return usable split suggestions. Try again.')
         return redirect(url_for('profile.user', username=current_user.username))
 
-    # Build suggestion_list with stable IDs for Accept/Reject form fields
     suggestion_list = [
         {
             'id': f'split_{i}',
@@ -384,16 +244,13 @@ def suggest_splits(username):
         }
         for i, (cat_name, data) in enumerate(suggestions.items())
     ]
-    # Map category_name → suggestion dict for quick template lookups
     large_cats = {s['category']: s for s in suggestion_list}
 
-    # Store assignments in session keyed by split ID (not category name)
     session['split_assignments'] = {
-        f'split_{i}': data['assignments']
-        for i, (_, data) in enumerate(suggestions.items())
+        f'split_{i}': suggestions[cat_name]['assignments']
+        for i, cat_name in enumerate(suggestions.keys())
     }
 
-    # All categories for the two-column diff view
     all_categories = current_user.get_categories()
 
     return render_template(
@@ -402,7 +259,7 @@ def suggest_splits(username):
         suggestion_list=suggestion_list,
         all_categories=all_categories,
         large_cats=large_cats,
-        threshold=threshold,
+        threshold=12,
     )
 
 

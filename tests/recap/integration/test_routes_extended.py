@@ -240,6 +240,7 @@ class TestJobShowRoute:
         mock_job.id = 'show-job-id'
         mock_job.get_status.return_value = 'finished'
         mock_job.description = 'example task'
+        mock_job.meta = {}
         mocker.patch.object(recap_app.task_queue, 'fetch_job', return_value=mock_job)
 
         response = authenticated_client.get('/job/show-job-id/show')

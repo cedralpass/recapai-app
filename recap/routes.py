@@ -81,7 +81,7 @@ def job():
 def job_show(id):
     job = current_app.task_queue.fetch_job(job_id=id)
     status = job.get_status(refresh=True)
-    response = {"id":job.id, "status":status, "description":job.description}    
+    response = {"id": job.id, "status": status, "description": job.description, "meta": job.meta}
     return response
 
 
