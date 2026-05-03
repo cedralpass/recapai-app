@@ -163,7 +163,20 @@ def delete(id):
     flash('Article is deteled')
     return redirect(url_for('routes.index'))
 
-# TODO - understand args and kwargs better for dynamic params 
+@bp.route('/debug/ping-status')
+@login_required
+def ping_status():
+    key = 'aiapi:ping:last'
+    exists = bool(current_app.redis.exists(key))
+    ttl = current_app.redis.ttl(key)
+    return jsonify({
+        'key_exists': exists,
+        'ttl_seconds': ttl,
+        'ai_api_url': Config.RECAP_AI_API_URL.rstrip('/') + '/hello',
+    })
+
+
+# TODO - understand args and kwargs better for dynamic params
 def launch_task(name, description, *args, **kwargs):
     rq_job = current_app.task_queue.enqueue(name, description=description, args=args, kwargs=kwargs)
     return rq_job
