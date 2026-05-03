@@ -105,8 +105,11 @@ def maybe_ping_aiapi():
     from flask import current_app
     key = 'aiapi:ping:last'
     if not current_app.redis.exists(key):
+        current_app.logger.info('maybe_ping_aiapi: throttle key absent — enqueuing ping_aiapi')
         current_app.redis.setex(key, 600, '1')
         current_app.task_queue.enqueue('recap.tasks.ping_aiapi')
+    else:
+        current_app.logger.debug('maybe_ping_aiapi: throttle key present — skipping')
 
 
 def configure_loggging():

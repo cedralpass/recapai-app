@@ -180,9 +180,10 @@ def suggest_splits_task(user_id, threshold=12):
 def ping_aiapi():
     import urllib.request
     url = Config.RECAP_AI_API_URL.rstrip('/') + '/hello'
+    app.logger.info('ping_aiapi: pinging %s', url)
     try:
-        urllib.request.urlopen(url, timeout=30)
-        app.logger.info('ping_aiapi: AI API is awake')
+        response = urllib.request.urlopen(url, timeout=30)
+        app.logger.info('ping_aiapi: success — HTTP %s from %s', response.status, url)
     except Exception as e:
-        app.logger.warning('ping_aiapi: request failed: %s', e)
+        app.logger.warning('ping_aiapi: failed — %s — url=%s', e, url)
 
