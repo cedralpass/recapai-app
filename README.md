@@ -118,17 +118,22 @@ docker stop <container_id>
 
 The app is hosted on [Render](https://render.com). Services are deployed as Docker images pulled from GitHub Container Registry (`ghcr.io/cedralpass/`).
 
-**Build and push image:**
-```bash
-sh ./devops/build_for_render.sh
-```
+**Deploys are automated** — push to `main` and GitHub Actions handles everything:
+1. Runs the test suite (deploy is blocked if tests fail)
+2. Builds `recap-aiapi` and `recap-full` Docker images and pushes to GHCR
+3. Triggers Render deploy hooks to pull the new images
 
-**Services defined in `render.yaml`:**
+**Services:**
 - `recap-full` — main web app (recap + aiapi + workers)
 - `recap-aiapi` — standalone aiapi service
 - `recaprai-redis-dev` — managed Redis instance
 
-See [devops/render_hosting.md](devops/render_hosting.md) for Render setup details.
+**Manual build** (if needed outside of CI):
+```bash
+sh ./devops/build_for_render.sh
+```
+
+See [docs/development.md](docs/development.md) for CI/CD details and required GitHub secrets.
 
 
 ## Chrome Extension
