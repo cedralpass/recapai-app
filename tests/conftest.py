@@ -8,6 +8,26 @@ from pathlib import Path
 project_root = str(Path(__file__).parent.parent)
 sys.path.insert(0, project_root)
 
+# Set defaults before importing any app modules — config.py reads these at class definition time
+os.environ.setdefault("RECAP_LogLevel", "DEBUG")
+os.environ.setdefault("SECRET_KEY", "test-secret-key")
+os.environ.setdefault("RECAP_REDIS_URL", "redis://localhost:6379")
+os.environ.setdefault("RECAP_RQ_QUEUE", "test-queue")
+os.environ.setdefault("ARTICLES_PER_PAGE", "10")
+os.environ.setdefault("MAIL_SERVER", "localhost")
+os.environ.setdefault("MAIL_PORT", "587")
+os.environ.setdefault("MAIL_USE_TLS", "1")
+os.environ.setdefault("MAIL_USERNAME", "test@test.com")
+os.environ.setdefault("MAIL_PASSWORD", "test")
+os.environ.setdefault("MAIL_DEFUALT_FROM", "test@test.com")
+os.environ.setdefault("TASK_SERVER_NAME", "localhost")
+os.environ.setdefault("RECAP_AI_API_URL", "http://localhost:8082/")
+os.environ.setdefault("RECAP_POSTGRES_USER", "test")
+os.environ.setdefault("RECAP_POSTGRES_PASSWORD", "test")
+os.environ.setdefault("RECAP_POSTGRES_HOST", "localhost")
+os.environ.setdefault("RECAP_POSTGRES_PORT", "5432")
+os.environ.setdefault("RECAP_POSTGRES_DB", "test")
+
 from recap import create_app as create_recap_app
 from aiapi import create_app as create_aiapi_app
 from recap import db as recap_db
