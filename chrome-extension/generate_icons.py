@@ -4,8 +4,10 @@ Run from the chrome-extension/ directory:
     python3 generate_icons.py
 Requires Pillow: pip install Pillow
 """
-from PIL import Image, ImageDraw, ImageFont
+
 import os
+
+from PIL import Image, ImageDraw, ImageFont
 
 os.makedirs("icons", exist_ok=True)
 

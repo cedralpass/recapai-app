@@ -1,6 +1,7 @@
 import pytest
-from recap.models import User
+
 from recap import db
+from recap.models import User
 
 
 @pytest.mark.integration
@@ -8,13 +9,13 @@ from recap import db
 class TestApiTokenSettingsPage:
     def test_get_requires_login(self, recap_client):
         """Unauthenticated GET is redirected to login."""
-        response = recap_client.get('/settings/api-token')
+        response = recap_client.get("/settings/api-token")
         assert response.status_code == 302
-        assert '/auth/login' in response.headers['Location']
+        assert "/auth/login" in response.headers["Location"]
 
     def test_get_returns_200_for_authenticated_user(self, authenticated_client):
         """Authenticated GET returns 200."""
-        response = authenticated_client.get('/settings/api-token')
+        response = authenticated_client.get("/settings/api-token")
         assert response.status_code == 200
 
     def test_get_shows_token_on_page(self, authenticated_client, test_user, recap_app):
@@ -22,7 +23,7 @@ class TestApiTokenSettingsPage:
         with recap_app.app_context():
             token = test_user.get_or_create_api_token()
 
-        response = authenticated_client.get('/settings/api-token')
+        response = authenticated_client.get("/settings/api-token")
         assert token.encode() in response.data
 
     def test_get_creates_token_if_none_exists(self, authenticated_client, test_user, recap_app):
@@ -30,7 +31,7 @@ class TestApiTokenSettingsPage:
         with recap_app.app_context():
             assert test_user.api_token is None
 
-        response = authenticated_client.get('/settings/api-token')
+        response = authenticated_client.get("/settings/api-token")
         assert response.status_code == 200
 
         with recap_app.app_context():
@@ -44,8 +45,8 @@ class TestApiTokenSettingsPage:
             old_token = test_user.get_or_create_api_token()
 
         response = authenticated_client.post(
-            '/settings/api-token',
-            data={'action': 'regenerate'},
+            "/settings/api-token",
+            data={"action": "regenerate"},
             follow_redirects=True,
         )
         assert response.status_code == 200
@@ -61,8 +62,8 @@ class TestApiTokenSettingsPage:
             test_user.get_or_create_api_token()
 
         response = authenticated_client.post(
-            '/settings/api-token',
-            data={'action': 'regenerate'},
+            "/settings/api-token",
+            data={"action": "regenerate"},
             follow_redirects=True,
         )
 

@@ -1,17 +1,18 @@
-import re
 import functools
 import json
-from flask import (
-    Blueprint, flash, g, redirect, render_template, request, url_for, jsonify, current_app, logging
-)
-from werkzeug.exceptions import abort
+import re
+
+from flask import Blueprint, current_app, flash, g, jsonify, logging, redirect, render_template, request, url_for
 from openai import OpenAI
+from werkzeug.exceptions import abort
+
 from aiapi.config import AIAPIConfig
 
 try:
     import httpx
-    from readability import Document
     from lxml import html as lxml_html
+    from readability import Document
+
     _HAS_READABILITY = True
 except ImportError:
     httpx = None
@@ -19,7 +20,7 @@ except ImportError:
     lxml_html = None
     _HAS_READABILITY = False
 
-bp = Blueprint('classify', __name__)
+bp = Blueprint("classify", __name__)
 
 
 def fetch_article_content(url, max_chars=12000, timeout=18):
@@ -58,24 +59,26 @@ def fetch_article_content(url, max_chars=12000, timeout=18):
         current_app.logger.debug("fetch_article_content failed for %s: %s", url, e)
         return None
 
+
 def login_required(view):
     @functools.wraps(view)
     def wrapped_view(**kwargs):
-        key = extract_from_request('secret')
+        key = extract_from_request("secret")
         if key is None:
             return jsonify("Not Authorized"), 401
         return view(**kwargs)
 
     return wrapped_view
 
-@bp.route('/classify_url',methods=('GET', 'POST'))
+
+@bp.route("/classify_url", methods=("GET", "POST"))
 @login_required
 def classify_url():
     url = None
     ref_key = None
-    url = extract_from_request('url')
-    ref_key = extract_from_request('ref_key')
-    content = request.form.get('content')
+    url = extract_from_request("url")
+    ref_key = extract_from_request("ref_key")
+    content = request.form.get("content")
     if content is not None and isinstance(content, str):
         content = content.strip() or None
     else:
@@ -92,12 +95,12 @@ def classify_url():
     elif content:
         current_app.logger.debug("classify: using content from request (%d chars)", len(content))
 
-    json_return={}
+    json_return = {}
 
-    #create OpenAI request
+    # create OpenAI request
     client = OpenAI(api_key=current_app.config["AI_API_OPENAI"])
 
-    #make OpenAI Call
+    # make OpenAI Call
     response = client.chat.completions.create(
         model=AIAPIConfig.AI_OPEN_AI_MODEL,
         messages=build_prompt(url, content=content),
@@ -105,10 +108,10 @@ def classify_url():
         temperature=0.25,
         max_tokens=512,
         frequency_penalty=0.15,
-        presence_penalty=0
+        presence_penalty=0,
     )
-    
-    if len(response.choices)>=1:
+
+    if len(response.choices) >= 1:
         current_app.logger.info("classify: recieved response with >=1 choice from OpenAI")
         current_app.logger.debug(response.choices[0].message.content)
         json_return = response.choices[0].message.content
@@ -118,22 +121,26 @@ def classify_url():
 
     response_json = json.loads(json_return)
     if ref_key is not None:
-        response_json['ref_key']=ref_key
+        response_json["ref_key"] = ref_key
         current_app.logger.debug("classify: added ref_key to response: " + ref_key)
     else:
         current_app.logger.error("error: missing ref_key")
-    
+
     current_app.logger.debug("classify: full response " + str(response_json))
     return jsonify(response_json)
 
+
 def extract_from_request(key):
-    value=None
+    value = None
     current_app.logger.debug("classify: request form keys: " + str(request.form.keys()))
     value = request.form.get(key)
     if value is None:
-        current_app.logger.error("error: must supply url and secret for url for classification.  Supply a ref_key for refeference to an object.")
+        current_app.logger.error(
+            "error: must supply url and secret for url for classification.  Supply a ref_key for refeference to an object."
+        )
         current_app.logger.debug("extract_from_request: value to missing for %s with value", key)
     return value
+
 
 def build_prompt(url, content=None):
     if content:
@@ -159,9 +166,6 @@ def build_prompt(url, content=None):
             "Respond in a structured JSON with keys: author, blog_title, category, summary, key_topics, sub_categories, url."
         )
         user_content = "please classify this blog post: " + str(url)
-    prompt_string = [
-        {"role": "system", "content": system_content},
-        {"role": "user", "content": user_content}
-    ]
+    prompt_string = [{"role": "system", "content": system_content}, {"role": "user", "content": user_content}]
     current_app.logger.debug("prompt to classify: %s", prompt_string)
     return prompt_string

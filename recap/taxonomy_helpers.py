@@ -1,5 +1,7 @@
 import json
+
 import sqlalchemy as sa
+
 from recap import db
 from recap.models import Article
 
@@ -23,17 +25,17 @@ def get_categories_with_subcats(user_id):
         if cat is None:
             continue
         if cat not in data:
-            data[cat] = {'count': 0, 'subcats': set()}
-        data[cat]['count'] += 1
+            data[cat] = {"count": 0, "subcats": set()}
+        data[cat]["count"] += 1
         if subcats_json:
             try:
-                data[cat]['subcats'].update(json.loads(subcats_json))
+                data[cat]["subcats"].update(json.loads(subcats_json))
             except (json.JSONDecodeError, TypeError):
                 pass
 
     return [
-        (cat, d['count'], sorted(d['subcats']))
-        for cat, d in sorted(data.items(), key=lambda x: x[1]['count'], reverse=True)
+        (cat, d["count"], sorted(d["subcats"]))
+        for cat, d in sorted(data.items(), key=lambda x: x[1]["count"], reverse=True)
     ]
 
 
@@ -76,7 +78,5 @@ def build_split_context(category_name, articles):
             except (json.JSONDecodeError, TypeError):
                 pass
         subcats_str = ", ".join(subcats) if subcats else "none"
-        lines.append(
-            f"[id:{article_id}] {title or 'Untitled'} | themes: {subcats_str}"
-        )
+        lines.append(f"[id:{article_id}] {title or 'Untitled'} | themes: {subcats_str}")
     return "\n".join(lines)

@@ -6,13 +6,14 @@ If these tests fail:
 - Local: pip install -r requirements.txt (use lxml>=5.1.0,<5.2 so html.clean is built-in).
 - Alpine Docker: ensure Dockerfile has libxml2-dev libxslt-dev gcc musl-dev before pip install.
 """
+
 import pytest
 
 
 def test_readability_and_lxml_import():
     """readability.Document and lxml.html must be importable for content extraction."""
-    from readability import Document
     from lxml import html
+    from readability import Document
 
     assert Document is not None
     assert html is not None

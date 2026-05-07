@@ -24,10 +24,10 @@ Consolidation variants:
     names-titles   Category names + article titles per category
 """
 
-import sys
-import os
-import json
 import argparse
+import json
+import os
+import sys
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
@@ -41,14 +41,14 @@ CONSOLIDATION_PROMPT = (
     "Keep category names concise and understandable to a human reader."
 )
 CONSOLIDATION_FORMAT = (
-    'Respond with JSON in this exact structure:\n'
-    '{\n'
+    "Respond with JSON in this exact structure:\n"
+    "{\n"
     '  "description": "A summary of the changes.",\n'
     '  "mappings": [\n'
     '    {"new_category": "new_name", "old_category": "old_name"}\n'
-    '  ],\n'
+    "  ],\n"
     '  "ref_key": "2"\n'
-    '}'
+    "}"
 )
 
 SPLIT_PROMPT = (
@@ -57,18 +57,19 @@ SPLIT_PROMPT = (
     "Assign every article to exactly one group."
 )
 SPLIT_FORMAT = (
-    'Respond with JSON in this exact structure:\n'
-    '{\n'
+    "Respond with JSON in this exact structure:\n"
+    "{\n"
     '  "description": "Brief rationale for the groupings",\n'
     '  "assignments": [\n'
     '    {"article_id": 42, "new_category": "Group Name"},\n'
     '    {"article_id": 43, "new_category": "Group Name"}\n'
-    '  ]\n'
-    '}'
+    "  ]\n"
+    "}"
 )
 
 
 # --- Context builders -------------------------------------------------------
+
 
 def build_names_only_context(categories):
     """Current organize_taxonomy approach: just category names."""
@@ -132,6 +133,7 @@ def build_split_context(category_name, articles):
 
 # --- Result display helpers -------------------------------------------------
 
+
 def print_distribution(categories, label="Current"):
     total = sum(c for _, c in categories)
     print(f"\n{'─'*60}")
@@ -150,29 +152,28 @@ def print_distribution(categories, label="Current"):
 
 
 def print_consolidation_result(variant_name, context, result, original_categories):
-    if not result or 'mappings' not in result:
+    if not result or "mappings" not in result:
         print(f"\n[{variant_name}] AI returned no usable result: {result}")
         return
 
-    mappings = result['mappings']
-    description = result.get('description', '')
+    mappings = result["mappings"]
+    description = result.get("description", "")
 
     # Build new category counts from mappings
     original_counts = {cat: count for cat, count in original_categories}
     new_counts = {}
     for m in mappings:
-        old = m.get('old_category', '')
-        new = m.get('new_category', '')
+        old = m.get("old_category", "")
+        new = m.get("new_category", "")
         new_counts[new] = new_counts.get(new, 0) + original_counts.get(old, 0)
 
     # Detect merges (many→one) and renames (one→one)
     new_sources = {}
     for m in mappings:
-        old, new = m.get('old_category', ''), m.get('new_category', '')
+        old, new = m.get("old_category", ""), m.get("new_category", "")
         new_sources.setdefault(new, []).append(old)
     merges = {new: olds for new, olds in new_sources.items() if len(olds) > 1}
-    renames = {new: olds[0] for new, olds in new_sources.items()
-               if len(olds) == 1 and olds[0] != new}
+    renames = {new: olds[0] for new, olds in new_sources.items() if len(olds) == 1 and olds[0] != new}
 
     print(f"\n{'='*60}")
     print(f"  VARIANT: {variant_name}")
@@ -181,39 +182,39 @@ def print_consolidation_result(variant_name, context, result, original_categorie
     print()
     print(f"  Result: {len(original_categories)} → {len(new_counts)} categories")
     if merges:
-        print(f"\n  Merges:")
+        print("\n  Merges:")
         for new, olds in sorted(merges.items()):
             olds_str = " + ".join(f"{o}({original_counts.get(o,0)})" for o in olds)
             print(f"    {olds_str} → {new}({new_counts[new]})")
     if renames:
-        print(f"\n  Renames:")
+        print("\n  Renames:")
         for new, old in sorted(renames.items()):
             print(f"    {old} → {new}")
 
-    print(f"\n  Proposed taxonomy:")
+    print("\n  Proposed taxonomy:")
     for cat, count in sorted(new_counts.items(), key=lambda x: x[1], reverse=True):
         bar = "█" * min(count, 30)
         print(f"    {cat:<40} {count:>4}  {bar}")
 
     # Show unmapped original categories (AI missed them)
-    mapped_olds = {m.get('old_category') for m in mappings}
+    mapped_olds = {m.get("old_category") for m in mappings}
     unmapped = set(original_counts.keys()) - mapped_olds
     if unmapped:
         print(f"\n  ⚠  Not covered by mappings (AI omitted): {', '.join(sorted(unmapped))}")
 
 
 def print_split_result(category_name, original_count, result):
-    if not result or 'assignments' not in result:
+    if not result or "assignments" not in result:
         print(f"\n  [{category_name}] AI returned no usable result: {result}")
         return
 
-    description = result.get('description', '')
-    assignments = result['assignments']
+    description = result.get("description", "")
+    assignments = result["assignments"]
 
     # Count articles per new sub-category
     sub_counts = {}
     for a in assignments:
-        new_cat = a.get('new_category', 'Unknown')
+        new_cat = a.get("new_category", "Unknown")
         sub_counts[new_cat] = sub_counts.get(new_cat, 0) + 1
 
     unassigned = original_count - len(assignments)
@@ -230,32 +231,33 @@ def print_split_result(category_name, original_count, result):
 
 # --- Main -------------------------------------------------------------------
 
+
 def parse_args():
     p = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    p.add_argument("--username", default="testuser2",
-                   help="User to analyze (default: testuser2)")
-    p.add_argument("--variant", choices=["names-only", "names-subcats", "names-titles"],
-                   default=None,
-                   help="Run a single consolidation variant (default: all three)")
-    p.add_argument("--split", action="store_true",
-                   help="Run Phase 2 split prompts for large categories")
-    p.add_argument("--threshold", type=int, default=15,
-                   help="Min articles to consider for splitting (default: 15)")
-    p.add_argument("--dry-run", action="store_true",
-                   help="Print contexts without calling the AI API")
+    p.add_argument("--username", default="testuser2", help="User to analyze (default: testuser2)")
+    p.add_argument(
+        "--variant",
+        choices=["names-only", "names-subcats", "names-titles"],
+        default=None,
+        help="Run a single consolidation variant (default: all three)",
+    )
+    p.add_argument("--split", action="store_true", help="Run Phase 2 split prompts for large categories")
+    p.add_argument("--threshold", type=int, default=15, help="Min articles to consider for splitting (default: 15)")
+    p.add_argument("--dry-run", action="store_true", help="Print contexts without calling the AI API")
     return p.parse_args()
 
 
 def main():
     args = parse_args()
 
-    from recap import create_app, db
     import sqlalchemy as sa
-    from recap.models import User, Article
+
+    from recap import create_app, db
     from recap.aiapi_helper import AiApiHelper
+    from recap.models import Article, User
 
     app = create_app()
 
@@ -267,11 +269,11 @@ def main():
 
         # ── Current distribution ──────────────────────────────────────────
         categories = db.session.execute(
-            sa.select(Article.category, sa.func.count(Article.id).label('count'))
+            sa.select(Article.category, sa.func.count(Article.id).label("count"))
             .where(Article.user_id == user.id)
             .where(Article.classified.isnot(None))
             .group_by(Article.category)
-            .order_by(sa.desc('count'))
+            .order_by(sa.desc("count"))
         ).all()
 
         print_distribution(categories, label=f"Current ({args.username})")
@@ -288,30 +290,27 @@ def main():
             if cat is None:
                 continue
             if cat not in cats_data:
-                cats_data[cat] = {'count': 0, 'subcats': set(), 'titles': []}
-            cats_data[cat]['count'] += 1
+                cats_data[cat] = {"count": 0, "subcats": set(), "titles": []}
+            cats_data[cat]["count"] += 1
             if subcats_json:
                 try:
-                    cats_data[cat]['subcats'].update(json.loads(subcats_json))
+                    cats_data[cat]["subcats"].update(json.loads(subcats_json))
                 except (json.JSONDecodeError, TypeError):
                     pass
             if title:
-                cats_data[cat]['titles'].append(title)
+                cats_data[cat]["titles"].append(title)
 
         cats_with_subcats = [
-            (cat, d['count'], sorted(d['subcats']))
-            for cat, d in sorted(cats_data.items(), key=lambda x: x[1]['count'], reverse=True)
+            (cat, d["count"], sorted(d["subcats"]))
+            for cat, d in sorted(cats_data.items(), key=lambda x: x[1]["count"], reverse=True)
         ]
         cats_with_titles = [
-            (cat, d['count'], d['titles'])
-            for cat, d in sorted(cats_data.items(), key=lambda x: x[1]['count'], reverse=True)
+            (cat, d["count"], d["titles"])
+            for cat, d in sorted(cats_data.items(), key=lambda x: x[1]["count"], reverse=True)
         ]
 
         # ── Consolidation variants ────────────────────────────────────────
-        run_variants = (
-            [args.variant] if args.variant
-            else ["names-only", "names-subcats", "names-titles"]
-        )
+        run_variants = [args.variant] if args.variant else ["names-only", "names-subcats", "names-titles"]
 
         variant_contexts = {
             "names-only": build_names_only_context(categories),

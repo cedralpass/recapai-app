@@ -28,10 +28,11 @@ Examples:
     .venv/bin/python scripts/load_test_articles.py --status
 """
 
-import sys
-import os
-import time
 import argparse
+import os
+import sys
+import time
+
 import httpx
 
 # ── Project root on sys.path so we can import the Flask app ──────────────────
@@ -205,18 +206,14 @@ URLS = [
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description=__doc__,
-                                formatter_class=argparse.RawDescriptionHelpFormatter)
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--username", default="testuser")
-    p.add_argument("--email",    default="testuser@example.com")
+    p.add_argument("--email", default="testuser@example.com")
     p.add_argument("--password", default="TestPassword123!")
-    p.add_argument("--api-url",  default="http://localhost:8080")
-    p.add_argument("--delay",    type=float, default=5.0,
-                   help="Seconds between API calls (default: 5.0)")
-    p.add_argument("--dry-run",  action="store_true",
-                   help="Print URLs without submitting")
-    p.add_argument("--status",   action="store_true",
-                   help="After submitting, poll until all articles are classified")
+    p.add_argument("--api-url", default="http://localhost:8080")
+    p.add_argument("--delay", type=float, default=5.0, help="Seconds between API calls (default: 5.0)")
+    p.add_argument("--dry-run", action="store_true", help="Print URLs without submitting")
+    p.add_argument("--status", action="store_true", help="After submitting, poll until all articles are classified")
     return p.parse_args()
 
 
@@ -226,8 +223,9 @@ def setup_test_user(username, email, password):
     Returns (user_id, api_token).
     """
     # Deferred import — needs Flask app context
-    from recap import create_app, db
     import sqlalchemy as sa
+
+    from recap import create_app, db
     from recap.models import User
 
     app = create_app()
@@ -253,8 +251,9 @@ def poll_status(user_id, article_ids, api_base, token, poll_interval=5, timeout=
     Poll the DB until every article in article_ids has been classified.
     Prints a summary table when done (or times out).
     """
-    from recap import create_app, db
     import sqlalchemy as sa
+
+    from recap import create_app, db
     from recap.models import Article
 
     app = create_app()
@@ -264,9 +263,7 @@ def poll_status(user_id, article_ids, api_base, token, poll_interval=5, timeout=
     print(f"\nPolling for classification of {len(pending)} articles …")
     while pending and time.time() < deadline:
         with app.app_context():
-            rows = db.session.scalars(
-                sa.select(Article).where(Article.id.in_(pending))
-            ).all()
+            rows = db.session.scalars(sa.select(Article).where(Article.id.in_(pending))).all()
             just_done = {r.id for r in rows if r.classified is not None}
             for r in rows:
                 if r.id in just_done:
@@ -283,10 +280,10 @@ def poll_status(user_id, article_ids, api_base, token, poll_interval=5, timeout=
 
 
 def print_summary(results):
-    total   = len(results)
-    queued  = sum(1 for r in results if r["status"] == "queued")
+    total = len(results)
+    queued = sum(1 for r in results if r["status"] == "queued")
     skipped = sum(1 for r in results if r["status"] == "skipped")
-    failed  = sum(1 for r in results if r["status"] == "error")
+    failed = sum(1 for r in results if r["status"] == "error")
 
     print(f"\n{'─'*60}")
     print(f"  Total URLs : {total}")
@@ -317,8 +314,8 @@ def main():
 
     # ── Step 2: submit URLs ───────────────────────────────────────────────────
     endpoint = f"{args.api_url.rstrip('/')}/api/v1/articles"
-    headers  = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-    results  = []
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    results = []
     article_ids = []
 
     print(f"\n── Submitting {len(URLS)} URLs to {endpoint} ─────────────────────────")
@@ -345,8 +342,7 @@ def main():
             else:
                 print(f"  [{i:3d}/{len(URLS)}] ERROR {resp.status_code}  {url[:60]}")
                 print(f"         {body}")
-                results.append({"status": "error", "url": url, "http_status": resp.status_code,
-                                 "detail": str(body)})
+                results.append({"status": "error", "url": url, "http_status": resp.status_code, "detail": str(body)})
 
             if i < len(URLS):
                 time.sleep(args.delay)

@@ -1,83 +1,101 @@
-from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for, current_app, jsonify
-)
-from flask_login import current_user, login_user, logout_user, login_required
-import sqlalchemy as sa
-from recap import db, maybe_ping_aiapi
-from recap.forms import  ArticleForm
-from recap.models import User, Article
 from urllib.parse import urlsplit
-from recap.config import  Config
+
+import sqlalchemy as sa
+from flask import Blueprint, current_app, flash, g, jsonify, redirect, render_template, request, session, url_for
+from flask_login import current_user, login_required, login_user, logout_user
+
+from recap import db, maybe_ping_aiapi
 from recap.auth.email import send_password_reset_email
 from recap.auth.forms import RegistrationForm
+from recap.config import Config
+from recap.forms import ArticleForm
+from recap.models import Article, User
+
+bp = Blueprint("routes", __name__)
 
 
-
-
-bp = Blueprint('routes', __name__)
-
-@bp.route('/', methods=['GET', 'POST'])
-@bp.route('/index', methods=['GET', 'POST'])
+@bp.route("/", methods=["GET", "POST"])
+@bp.route("/index", methods=["GET", "POST"])
 def index():
     maybe_ping_aiapi()
     form = ArticleForm()
     if form.validate_on_submit():
-        #TODO: Validate that the form.url_path is a valid url
+        # TODO: Validate that the form.url_path is a valid url
         article = Article(url_path=form.url_path.data, user=current_user)
         db.session.add(article)
         db.session.commit()
-        #TODO: Theroy is DB is asleep and task is fired off before its woken up.
+        # TODO: Theroy is DB is asleep and task is fired off before its woken up.
         current_app.logger.debug("launching task to classify %s for article.id %s", article.url_path, article.id)
-        job = launch_task(name='recap.tasks.classify_url', description='using AI to classify url', url=article.url_path, user_id=current_user.id)
-        current_app.logger.debug("task launched to classify %s for article.url_path %s",job.id , article.url_path)
-        session["latest_job_id"]=job.id
-        flash('Your article is being classified!')
-        return redirect(url_for('routes.index'))
-    
-    page = request.args.get('page', 1, type=int)
+        job = launch_task(
+            name="recap.tasks.classify_url",
+            description="using AI to classify url",
+            url=article.url_path,
+            user_id=current_user.id,
+        )
+        current_app.logger.debug("task launched to classify %s for article.url_path %s", job.id, article.url_path)
+        session["latest_job_id"] = job.id
+        flash("Your article is being classified!")
+        return redirect(url_for("routes.index"))
 
-    #get_articles(self,page=1, per_page=2)
-    #set articles, next_url, prev_url to None
+    page = request.args.get("page", 1, type=int)
+
+    # get_articles(self,page=1, per_page=2)
+    # set articles, next_url, prev_url to None
     articles = None
     next_url = None
     prev_url = None
     category = None
     groupings = None
     if current_user.is_authenticated:
-        category = request.args.get('category')
-        #current_user.get_articles(page=page, per_page=Config.ARTICLES_PER_PAGE, category=category)
+        category = request.args.get("category")
+        # current_user.get_articles(page=page, per_page=Config.ARTICLES_PER_PAGE, category=category)
         articles_paginator = current_user.get_articles(page=page, per_page=Config.ARTICLES_PER_PAGE, category=category)
         articles = articles_paginator.items
 
-        next_url = url_for('routes.index', page=articles_paginator.next_num, category=category) \
-            if articles_paginator.has_next else None
-        prev_url = url_for('routes.index', page=articles_paginator.prev_num, category=category) \
-            if articles_paginator.has_prev else None
-        
+        next_url = (
+            url_for("routes.index", page=articles_paginator.next_num, category=category)
+            if articles_paginator.has_next
+            else None
+        )
+        prev_url = (
+            url_for("routes.index", page=articles_paginator.prev_num, category=category)
+            if articles_paginator.has_prev
+            else None
+        )
+
         # list grouping of categories for article for the given user
         groupings = current_user.get_categories()
-        
+
     cta_form = RegistrationForm() if current_user.is_anonymous else None
-    return render_template("index.html", title='Home Page', form=form,
-                           articles=articles, next_url=next_url, prev_url=prev_url, groupings=groupings,
-                           cta_form=cta_form)
+    return render_template(
+        "index.html",
+        title="Home Page",
+        form=form,
+        articles=articles,
+        next_url=next_url,
+        prev_url=prev_url,
+        groupings=groupings,
+        cta_form=cta_form,
+    )
 
-@bp.route('/css', methods=['GET', 'POST'])
+
+@bp.route("/css", methods=["GET", "POST"])
 def css():
-    flash('Invalid username or password')
-    if 'Content-Type' in request.headers.keys() and request.headers['Content-Type'] == 'application/json':
-           return jsonify("css")
-    return render_template("css.html", title='CSS')
+    flash("Invalid username or password")
+    if "Content-Type" in request.headers.keys() and request.headers["Content-Type"] == "application/json":
+        return jsonify("css")
+    return render_template("css.html", title="CSS")
 
 
-@bp.route('/job')
+@bp.route("/job")
 @login_required
 def job():
-    job = launch_task(name='recap.tasks.example', description='example', seconds=5)
-    return 'Job is Executing ' + job.id + ' its status ' + job.get_status(refresh=True)
+    job = launch_task(name="recap.tasks.example", description="example", seconds=5)
+    return "Job is Executing " + job.id + " its status " + job.get_status(refresh=True)
+
 
 # a url for showing a job_id
-@bp.route('/job/<string:id>/show')
+@bp.route("/job/<string:id>/show")
 @login_required
 def job_show(id):
     job = current_app.task_queue.fetch_job(job_id=id)
@@ -86,7 +104,7 @@ def job_show(id):
     return response
 
 
-@bp.route('/add_article', methods=['GET', 'POST'])
+@bp.route("/add_article", methods=["GET", "POST"])
 @login_required
 def add_article():
     form = ArticleForm()
@@ -95,89 +113,122 @@ def add_article():
         db.session.add(article)
         db.session.commit()
 
-        job = launch_task(name='recap.tasks.classify_url', description='using AI to classify url', url=article.url_path, user_id=current_user.id)
+        job = launch_task(
+            name="recap.tasks.classify_url",
+            description="using AI to classify url",
+            url=article.url_path,
+            user_id=current_user.id,
+        )
         print(job.id)
 
-        flash('Your article is being classified!')
-        return redirect(url_for('routes.index'))
+        flash("Your article is being classified!")
+        return redirect(url_for("routes.index"))
     else:
-        return render_template('add_article.html', title='add_article',
-                           form=form)
-@bp.route('/<int:id>/show', methods=('GET','POST'))
+        return render_template("add_article.html", title="add_article", form=form)
+
+
+@bp.route("/<int:id>/show", methods=("GET", "POST"))
 @login_required
 def show(id):
     article = None
 
     try:
-        stmt = sa.select(Article).where(Article.id == id, Article.user_id == current_user.id).order_by(Article.id.desc())
-        article= db.session.execute(stmt).scalar_one()
+        stmt = (
+            sa.select(Article).where(Article.id == id, Article.user_id == current_user.id).order_by(Article.id.desc())
+        )
+        article = db.session.execute(stmt).scalar_one()
     except sa.exc.NoResultFound as nre:
-        flash('Article not found', 'error')
+        flash("Article not found", "error")
         print(nre)
     except Exception as ex:
-        flash('General Exception', 'error')
+        flash("General Exception", "error")
         print(ex)
 
-    if 'Content-Type' in request.headers.keys() and request.headers['Content-Type'] == 'application/json':
-           article_dict = {"id":article.id, "url_path":article.url_path, "summary":article.summary, "title":article.title, "author_name":article.author_name, "category":article.category, "key_topics":article.key_topics, "sub_categories":article.sub_categories}
-           return jsonify(article_dict) #SqlAlchemy objects are not easily serialized to JSON.. have to build our own.
+    if "Content-Type" in request.headers.keys() and request.headers["Content-Type"] == "application/json":
+        article_dict = {
+            "id": article.id,
+            "url_path": article.url_path,
+            "summary": article.summary,
+            "title": article.title,
+            "author_name": article.author_name,
+            "category": article.category,
+            "key_topics": article.key_topics,
+            "sub_categories": article.sub_categories,
+        }
+        return jsonify(article_dict)  # SqlAlchemy objects are not easily serialized to JSON.. have to build our own.
 
-    prev_article = Article.query.filter(
-        Article.user_id == current_user.id,
-        Article.created > article.created,
-        Article.classified.isnot(None)
-    ).order_by(Article.created.asc()).first()
+    prev_article = (
+        Article.query.filter(
+            Article.user_id == current_user.id, Article.created > article.created, Article.classified.isnot(None)
+        )
+        .order_by(Article.created.asc())
+        .first()
+    )
 
-    next_article = Article.query.filter(
-        Article.user_id == current_user.id,
-        Article.created < article.created,
-        Article.classified.isnot(None)
-    ).order_by(Article.created.desc()).first()
+    next_article = (
+        Article.query.filter(
+            Article.user_id == current_user.id, Article.created < article.created, Article.classified.isnot(None)
+        )
+        .order_by(Article.created.desc())
+        .first()
+    )
 
-    return render_template('article/show.html', article=article,
-                           sub_categories=article.get_sub_categories_json(),
-                           prev_article=prev_article, next_article=next_article)
+    return render_template(
+        "article/show.html",
+        article=article,
+        sub_categories=article.get_sub_categories_json(),
+        prev_article=prev_article,
+        next_article=next_article,
+    )
 
-@bp.route('/<int:id>/reclassify', methods=('GET','POST'))
+
+@bp.route("/<int:id>/reclassify", methods=("GET", "POST"))
 @login_required
 def reclassify(id):
     print("inside reclassify")
-    stmt = sa.select(Article).where(Article.id == id, Article.user_id == current_user.id).order_by(Article.id.desc())  
-    article= db.session.execute(stmt).scalar_one()
-   # current_app.logger.info("calling async Classification Service for article %s", article['url_path'])
-    #recap.tasks.classify_url(url_path, g.user['id'])
-    job = launch_task(name='recap.tasks.classify_url', description='url classification', url=article.url_path, user_id=current_user.id)
-    print('Job is Executing ' + job.id + ' its status ' + job.get_status(refresh=True))
-    job_url = url_for('routes.job_show', id=job.id)
-    flash(f'Article is being reclassified. Job <a href="{job_url}" class="underline font-mono text-sm">{job.id}</a> — will be classified within 20 seconds.')
-    #current_app.logger.info("Classification Service returned")               
-    return redirect(url_for('routes.index'))
+    stmt = sa.select(Article).where(Article.id == id, Article.user_id == current_user.id).order_by(Article.id.desc())
+    article = db.session.execute(stmt).scalar_one()
+    # current_app.logger.info("calling async Classification Service for article %s", article['url_path'])
+    # recap.tasks.classify_url(url_path, g.user['id'])
+    job = launch_task(
+        name="recap.tasks.classify_url", description="url classification", url=article.url_path, user_id=current_user.id
+    )
+    print("Job is Executing " + job.id + " its status " + job.get_status(refresh=True))
+    job_url = url_for("routes.job_show", id=job.id)
+    flash(
+        f'Article is being reclassified. Job <a href="{job_url}" class="underline font-mono text-sm">{job.id}</a> — will be classified within 20 seconds.'
+    )
+    # current_app.logger.info("Classification Service returned")
+    return redirect(url_for("routes.index"))
 
-@bp.route('/<int:id>/delete', methods=('GET',))
+
+@bp.route("/<int:id>/delete", methods=("GET",))
 @login_required
 def delete(id):
-    stmt = sa.select(Article).where(Article.id == id, Article.user_id == current_user.id).order_by(Article.id.desc())  
-    article= db.session.execute(stmt).scalar_one()
+    stmt = sa.select(Article).where(Article.id == id, Article.user_id == current_user.id).order_by(Article.id.desc())
+    article = db.session.execute(stmt).scalar_one()
     db.session.delete(article)
     db.session.commit()
-    flash('Article is deteled')
-    return redirect(url_for('routes.index'))
+    flash("Article is deteled")
+    return redirect(url_for("routes.index"))
 
-@bp.route('/debug/ping-status')
+
+@bp.route("/debug/ping-status")
 @login_required
 def ping_status():
-    key = 'aiapi:ping:last'
+    key = "aiapi:ping:last"
     exists = bool(current_app.redis.exists(key))
     ttl = current_app.redis.ttl(key)
-    return jsonify({
-        'key_exists': exists,
-        'ttl_seconds': ttl,
-        'ai_api_url': Config.RECAP_AI_API_URL.rstrip('/') + '/hello',
-    })
+    return jsonify(
+        {
+            "key_exists": exists,
+            "ttl_seconds": ttl,
+            "ai_api_url": Config.RECAP_AI_API_URL.rstrip("/") + "/hello",
+        }
+    )
 
 
 # TODO - understand args and kwargs better for dynamic params
 def launch_task(name, description, *args, **kwargs):
     rq_job = current_app.task_queue.enqueue(name, description=description, args=args, kwargs=kwargs)
     return rq_job
-    

@@ -1,0 +1,19 @@
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes (unused imports, undefined names)
+    "I",   # isort (import ordering)
+    "W",   # pycodestyle warnings
+]
+ignore = [
+    "E501",  # line too long — handled by formatter
+    "F401",  # unused imports — too noisy during cleanup phase; re-enable later
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["F811"]  # allow fixture redefinition in tests
+"migrations/*" = ["E", "F", "I", "W"]  # don't lint alembic-generated files

@@ -1,18 +1,19 @@
-from flask import (
-    Blueprint, flash, g, redirect, render_template, request, url_for,jsonify, current_app, logging
-)
-from werkzeug.exceptions import abort
 import functools
 import json
+
+from flask import Blueprint, current_app, flash, g, jsonify, logging, redirect, render_template, request, url_for
 from openai import OpenAI
+from werkzeug.exceptions import abort
+
 from aiapi.config import AIAPIConfig
 
-bp = Blueprint('task_processor', __name__)
+bp = Blueprint("task_processor", __name__)
+
 
 def login_required(view):
     @functools.wraps(view)
     def wrapped_view(**kwargs):
-        key = extract_from_request('secret')
+        key = extract_from_request("secret")
         if key is None:
             return jsonify("Not Authorized"), 401
 
@@ -20,16 +21,16 @@ def login_required(view):
 
     return wrapped_view
 
-@bp.route('/process_task',methods=(['POST']))
+
+@bp.route("/process_task", methods=(["POST"]))
 @login_required
 def process_task():
-    url = None
     ref_key = None
-    context = extract_from_request('context')
-    prompt = extract_from_request('prompt')
-    format = extract_from_request('format')
-    ref_key = extract_from_request('ref_key')
-    prompt_history = extract_from_request('prompt_history')
+    context = extract_from_request("context")
+    prompt = extract_from_request("prompt")
+    format = extract_from_request("format")
+    ref_key = extract_from_request("ref_key")
+    prompt_history = extract_from_request("prompt_history")
     prompt_history_json = None
     if prompt_history:
         prompt_history_json = json.loads(prompt_history)
@@ -37,15 +38,15 @@ def process_task():
     if prompt is None:
         current_app.logger.error("error: missing prompt")
         return jsonify({"error": "Missing prompt"}), 400
-   
-    json_return={}
-    response_format =  { "type": "json_object" } 
 
-    #create OpenAI request
+    json_return = {}
+    response_format = {"type": "json_object"}
+
+    # create OpenAI request
     client = OpenAI(api_key=current_app.config["AI_API_OPENAI"])
     prompt_array = build_prompt(context, prompt, format, prompt_history_json)
 
-    #make OpenAI Call (tuned for factual tasks: lower temperature, slight frequency_penalty)
+    # make OpenAI Call (tuned for factual tasks: lower temperature, slight frequency_penalty)
     response = client.chat.completions.create(
         model=AIAPIConfig.AI_OPEN_AI_MODEL,
         messages=prompt_array,
@@ -53,15 +54,15 @@ def process_task():
         temperature=0.3,
         max_tokens=4096,
         frequency_penalty=0.15,
-        presence_penalty=0
+        presence_penalty=0,
     )
-    
-    if len(response.choices)>=1:
+
+    if len(response.choices) >= 1:
         current_app.logger.info("classify: recieved response with >=1 choice from OpenAI")
         current_app.logger.debug(response.choices[0].message.content)
         json_return = response.choices[0].message.content
         current_app.logger.info("model %s cost %s", response.model, response.usage)
-        
+
         try:
             response_json = json.loads(json_return)
         except json.JSONDecodeError as e:
@@ -69,7 +70,7 @@ def process_task():
             return jsonify({"error": "Invalid JSON response from OpenAI"}), 500
 
         if ref_key is not None:
-            response_json['ref_key']=ref_key
+            response_json["ref_key"] = ref_key
             current_app.logger.debug("classify: added ref_key to response: " + ref_key)
         else:
             current_app.logger.error("error: missing ref_key")
@@ -81,14 +82,18 @@ def process_task():
         error_response = {"error": "No response from OpenAI"}
         return jsonify(error_response)
 
+
 def extract_from_request(key):
-    value=None
+    value = None
     current_app.logger.debug("classify: request form keys: " + str(request.form.keys()))
     value = request.form.get(key)
     if value is None:
-        current_app.logger.error("error: must supply url and secret for url for classification.  Supply a ref_key for refeference to an object.")
+        current_app.logger.error(
+            "error: must supply url and secret for url for classification.  Supply a ref_key for refeference to an object."
+        )
         current_app.logger.debug("extract_from_request: value to missing for %s with value", key)
     return value
+
 
 def build_prompt(context, prompt, format_instructions=None, prompt_history=None):
     """
@@ -117,11 +122,8 @@ def build_prompt(context, prompt, format_instructions=None, prompt_history=None)
 
     if prompt_history:
         for pair in prompt_history:
-           prompt_array.append({"role": "user", "content": pair["prompt"]})
-           prompt_array.append({"role": "assistant", "content": pair["response"]})
-
+            prompt_array.append({"role": "user", "content": pair["prompt"]})
+            prompt_array.append({"role": "assistant", "content": pair["response"]})
 
     current_app.logger.debug("Prompt to process: %s", prompt_array)
     return prompt_array
-
-

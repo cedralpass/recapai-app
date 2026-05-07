@@ -1,15 +1,16 @@
 import os
-
-from flask import Flask, jsonify, logging
-from logging.handlers import RotatingFileHandler
 from logging.config import dictConfig
+from logging.handlers import RotatingFileHandler
+
 from environs import Env
+from flask import Flask, jsonify, logging
+
 from aiapi.config import AIAPIConfig
+
 
 def create_app():
     # create and configure the app
-    test_config = None
-    #TODO: figure out better config
+    # TODO: figure out better config
     env = Env()
     env.read_env()
     configure_loggging()
@@ -23,16 +24,20 @@ def create_app():
         pass
 
     from . import classify
-    app.register_blueprint(classify.bp) #register the auth blueprint
+
+    app.register_blueprint(classify.bp)  # register the auth blueprint
     from . import task_processor
-    app.register_blueprint(task_processor.bp) #register the auth blueprint
+
+    app.register_blueprint(task_processor.bp)  # register the auth blueprint
 
     # a simple page that says hello
-    @app.route('/hello')
+    @app.route("/hello")
     def hello():
-        json_obj ={"key":"Hello, World! in JSON"}
+        json_obj = {"key": "Hello, World! in JSON"}
         return jsonify(json_obj)
+
     return app
+
 
 def configure_loggging():
     log_level = AIAPIConfig.AI_API_LogLevel
@@ -54,20 +59,19 @@ def configure_loggging():
                     "formatter": "default",
                 },
                 "file": {
-                "class": "logging.handlers.RotatingFileHandler",
-                "filename": "aiapi_app.log",
-                "maxBytes": 1024*1024,
-                "backupCount": 2,
-                "formatter": "default",
-            }
+                    "class": "logging.handlers.RotatingFileHandler",
+                    "filename": "aiapi_app.log",
+                    "maxBytes": 1024 * 1024,
+                    "backupCount": 2,
+                    "formatter": "default",
+                },
             },
-            "root": {"level": log_level, "handlers": ["console","file"]},
+            "root": {"level": log_level, "handlers": ["console", "file"]},
         }
     )
 
-def configure_app(env, app):
-    app.config["AI_API_OPENAI"]=AIAPIConfig.AI_API_OPENAI #OpenAI API Key
-    app.config["AI_API_LogLevel"]=AIAPIConfig.AI_API_LogLevel # Set Log Level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-    app.config["SECRET_KEY"]=AIAPIConfig.AI_API_SECRET_KEY # set the key to secure Flask App
 
-    
+def configure_app(env, app):
+    app.config["AI_API_OPENAI"] = AIAPIConfig.AI_API_OPENAI  # OpenAI API Key
+    app.config["AI_API_LogLevel"] = AIAPIConfig.AI_API_LogLevel  # Set Log Level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    app.config["SECRET_KEY"] = AIAPIConfig.AI_API_SECRET_KEY  # set the key to secure Flask App

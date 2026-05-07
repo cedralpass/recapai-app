@@ -20,6 +20,7 @@ Fixtures on disk (recorded once from live services):
   tests/fixtures/openai_flask_tutorial_response.json — actual OpenAI response captured
                                                         from a live rq-worker run
 """
+
 import json
 import urllib.parse
 from pathlib import Path
@@ -29,9 +30,7 @@ import httpx
 import pytest
 import respx
 
-FLASK_TUTORIAL_URL = (
-    "https://blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-i-hello-world"
-)
+FLASK_TUTORIAL_URL = "https://blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-i-hello-world"
 # No trailing slash — avoids double-slash in AiApiHelper: env("RECAP_AI_API_URL") + "/classify_url"
 AIAPI_TEST_BASE = "http://aiapi.test"
 
@@ -41,6 +40,7 @@ FIXTURES = Path(__file__).parent.parent.parent / "fixtures"
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="module")
 def flask_tutorial_html():
@@ -65,10 +65,10 @@ def _aiapi_json_response(openai_fixture, ref_key="1"):
 # Tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.integration
 @pytest.mark.recap
 class TestClassificationPipeline:
-
     def test_article_fields_are_saved_after_full_pipeline(
         self, recap_app, openai_fixture, flask_tutorial_html, monkeypatch
     ):
@@ -82,8 +82,8 @@ class TestClassificationPipeline:
           - save_classification_result: every field written to SQLite in-memory DB
         """
         from recap import db
-        from recap.models import Article, User
         from recap.aiapi_helper import AiApiHelper
+        from recap.models import Article, User
         from recap.tasks import save_classification_result
 
         monkeypatch.setenv("RECAP_AI_API_URL", AIAPI_TEST_BASE)
@@ -100,9 +100,7 @@ class TestClassificationPipeline:
 
             with respx.mock(assert_all_called=True) as mock:
                 # Boundary 1: article fetch → recorded HTML → readability extracts text
-                mock.get(FLASK_TUTORIAL_URL).mock(
-                    return_value=httpx.Response(200, text=flask_tutorial_html)
-                )
+                mock.get(FLASK_TUTORIAL_URL).mock(return_value=httpx.Response(200, text=flask_tutorial_html))
                 # Boundary 2: aiapi response → recorded fixture JSON
                 mock.post(f"{AIAPI_TEST_BASE}/classify_url").mock(
                     return_value=httpx.Response(
@@ -138,8 +136,8 @@ class TestClassificationPipeline:
         full article body rather than just a URL to guess from.
         """
         from recap import db
-        from recap.models import User
         from recap.aiapi_helper import AiApiHelper
+        from recap.models import User
 
         monkeypatch.setenv("RECAP_AI_API_URL", AIAPI_TEST_BASE)
         captured: dict = {}
@@ -151,9 +149,7 @@ class TestClassificationPipeline:
             db.session.commit()
 
             with respx.mock as mock:
-                mock.get(FLASK_TUTORIAL_URL).mock(
-                    return_value=httpx.Response(200, text=flask_tutorial_html)
-                )
+                mock.get(FLASK_TUTORIAL_URL).mock(return_value=httpx.Response(200, text=flask_tutorial_html))
 
                 def capture_and_respond(request: httpx.Request) -> httpx.Response:
                     form = dict(urllib.parse.parse_qsl(request.content.decode()))
@@ -163,23 +159,19 @@ class TestClassificationPipeline:
                         json=_aiapi_json_response(openai_fixture, ref_key=str(user.id)),
                     )
 
-                mock.post(f"{AIAPI_TEST_BASE}/classify_url").mock(
-                    side_effect=capture_and_respond
-                )
+                mock.post(f"{AIAPI_TEST_BASE}/classify_url").mock(side_effect=capture_and_respond)
 
                 AiApiHelper.ClassifyUrl(FLASK_TUTORIAL_URL, user.id)
 
             # readability should extract real Flask article text
-            assert "Flask" in captured["content"], (
-                "readability-extracted text forwarded to aiapi should contain 'Flask'"
-            )
-            assert len(captured["content"]) > 500, (
-                "extracted content should be substantial, not just a title or snippet"
-            )
+            assert (
+                "Flask" in captured["content"]
+            ), "readability-extracted text forwarded to aiapi should contain 'Flask'"
+            assert (
+                len(captured["content"]) > 500
+            ), "extracted content should be substantial, not just a title or snippet"
 
-    def test_aiapi_503_returns_empty_dict_without_raising(
-        self, recap_app, monkeypatch
-    ):
+    def test_aiapi_503_returns_empty_dict_without_raising(self, recap_app, monkeypatch):
         """
         When aiapi is unavailable (503), ClassifyUrl returns {} gracefully.
 
@@ -192,15 +184,14 @@ class TestClassificationPipeline:
         with recap_app.app_context():
             with respx.mock as mock:
                 mock.get(FLASK_TUTORIAL_URL).mock(
-                    return_value=httpx.Response(
-                        200, text="<html><body><p>Article body text.</p></body></html>"
-                    )
+                    return_value=httpx.Response(200, text="<html><body><p>Article body text.</p></body></html>")
                 )
                 mock.post(f"{AIAPI_TEST_BASE}/classify_url").mock(
                     return_value=httpx.Response(503, text="Service Unavailable")
                 )
 
                 from recap.aiapi_helper import AiApiHelper
+
                 result = AiApiHelper.ClassifyUrl(FLASK_TUTORIAL_URL, 99)
 
             assert result == {}
@@ -219,9 +210,7 @@ class TestAiapiClassifyWithRealLogic:
       - parses the OpenAI JSON response and returns it with ref_key injected
     """
 
-    def test_aiapi_returns_classified_json_with_content(
-        self, aiapi_app, openai_fixture
-    ):
+    def test_aiapi_returns_classified_json_with_content(self, aiapi_app, openai_fixture):
         """aiapi /classify_url with content in the request returns the OpenAI fixture."""
         from unittest.mock import MagicMock
 

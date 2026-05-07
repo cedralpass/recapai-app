@@ -1,11 +1,11 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 setup(
-    name='recapai',
-    version='1.0.0',
+    name="recapai",
+    version="1.0.0",
     packages=find_packages(),
     include_package_data=True,
     install_requires=[
-        'flask',
+        "flask",
     ],
-) 
+)
