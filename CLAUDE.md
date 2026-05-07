@@ -97,6 +97,14 @@ The preview browser cannot reach port 8000 (sandboxed to 8080). Use your regular
 
 See [docs/development.md](docs/development.md) for the full development strategy.
 
+### Deploying
+
+Deploys are fully automated via GitHub Actions (`.github/workflows/deploy.yml`). Push to `main` and the pipeline runs automatically:
+1. **test** job — runs pytest with a Redis service container; blocks deploy on failure
+2. **build-and-deploy** job — builds both Docker images, pushes to GHCR, triggers Render deploy hooks
+
+Render env vars are configured directly in the Render dashboard (not baked into the image). The `CR_PAT` and `RENDER_DEPLOY_HOOK_*` secrets live in GitHub Actions secrets. Manual deploys via `devops/build_for_render.sh` still work if needed.
+
 ### Worktree dev servers — how they find the right code
 
 `preview_start` sets the server's CWD to the current worktree directory automatically. The launch configs use absolute paths for `.venv` and no hardcoded `cd`, so every server (`recap`, `tailwind`, `rq-worker`) runs from whichever worktree the session is in and picks up that worktree's code.
@@ -128,10 +136,10 @@ session diff UI — all code is on `main` and pushed.
 ## Running Tests
 
 ```bash
-# Source env vars first, then run pytest
-AI_API_LogLevel=DEBUG AI_API_OPENAI=test AI_API_SECRET_KEY=test AI_OPEN_AI_MODEL=gpt-4 \
-  .venv/bin/pytest tests/ -v
+.venv/bin/pytest tests/ -v
 ```
+
+All required test env vars are set as defaults in `tests/conftest.py` — no prefix needed locally. Redis must be running (`brew services start redis`) as the test suite connects to it.
 
 ### Integration test approach
 

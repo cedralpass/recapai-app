@@ -98,7 +98,7 @@ The app is available at `http://localhost:8000`. The Claude Code preview browser
 | `RECAP_POSTGRES_HOST` | `localhost` | `host.docker.internal` |
 | `RECAP_AI_API_URL` | `http://localhost:8082/` | `http://localhost:8000/aiapi/` |
 
-All other vars come from `recap/.env` baked into the image at build time (via `COPY`).
+All other vars are set directly in the Render dashboard — they are no longer baked into the image.
 
 ### What the container runs
 
@@ -113,8 +113,25 @@ All other vars come from `recap/.env` baked into the image at build time (via `C
 ## Running Tests
 
 ```bash
-AI_API_LogLevel=DEBUG AI_API_OPENAI=test AI_API_SECRET_KEY=test AI_OPEN_AI_MODEL=gpt-4 \
-  .venv/bin/pytest tests/ -v
+.venv/bin/pytest tests/ -v
 ```
 
+All required env vars default in `tests/conftest.py` — no prefix needed. Redis must be running locally (`brew services start redis`).
+
 Run tests before committing. The test suite covers unit and integration tests but does not exercise the browser UI — always verify UI changes via the native harness preview.
+
+---
+
+## CI/CD (GitHub Actions)
+
+Pushing to `main` automatically triggers `.github/workflows/deploy.yml`:
+
+1. **test** — runs pytest against a Redis service container; deploy is blocked if tests fail
+2. **build-and-deploy** — builds `recap-aiapi` and `recap-full` Docker images, pushes to GHCR (`ghcr.io/cedralpass/`), then fires Render deploy hooks
+
+**Secrets required in GitHub Actions** (`Settings → Secrets and variables → Actions`):
+- `CR_PAT` — GitHub personal access token with `write:packages` scope
+- `RENDER_DEPLOY_HOOK_AIAPI` — deploy hook URL from Render dashboard
+- `RENDER_DEPLOY_HOOK_FULL` — deploy hook URL from Render dashboard
+
+**Production env vars** are set in the Render dashboard, not in the image. Update them there when adding new required config.
