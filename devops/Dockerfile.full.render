@@ -27,9 +27,6 @@ RUN pip install gunicorn
 
 # Copy the content of the local src directory to the working directory
 COPY recap recap
-#copy .env.beta file to .env
-RUN rm -rf recap/.env
-COPY recap/.env.render.beta recap/.env
 COPY aiapi aiapi
 COPY ./app.py /app
 # migrations - required for flask db upgrade on deploy
