@@ -19,6 +19,15 @@ See [docs/development.md](docs/development.md) for the full development strategy
 source .venv/bin/activate
 ```
 
+### Install dev tools and enable linting hook
+
+```bash
+pip install -r requirements-dev.txt
+pre-commit install
+```
+
+Ruff runs automatically on every `git commit`. See [docs/development.md](docs/development.md) for details.
+
 ### Initialize the database
 ```bash
 flask --app recap init-db

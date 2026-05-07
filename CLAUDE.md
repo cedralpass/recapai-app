@@ -133,6 +133,12 @@ session diff UI — all code is on `main` and pushed.
 
 ---
 
+## Code Style
+
+**Ruff** is enforced via a pre-commit hook. All code must pass `ruff check .` and `ruff format .` before committing. The hook runs automatically — do not write code with unused imports, bare `except:`, or `== None` comparisons. See [docs/development.md](docs/development.md) for setup and manual usage.
+
+---
+
 ## Running Tests
 
 ```bash

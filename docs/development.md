@@ -110,6 +110,50 @@ All other vars are set directly in the Render dashboard — they are no longer b
 
 ---
 
+## Linting and Code Style
+
+RecapAI uses **Ruff** for linting and formatting. A pre-commit hook runs automatically on every `git commit`.
+
+### First-time setup
+
+```bash
+pip install -r requirements-dev.txt
+pre-commit install
+```
+
+That's it — the hook fires on every commit from then on.
+
+### What it does
+
+- **Ruff** — checks for unused imports, bad style, common bugs, and sorts imports
+- **ruff-format** — enforces consistent formatting (similar to Black)
+
+Auto-fixable issues are corrected in-place; the commit is blocked only if unfixable issues remain.
+
+### Run manually
+
+```bash
+# Check for issues
+.venv/bin/ruff check .
+
+# Fix auto-fixable issues
+.venv/bin/ruff check . --fix
+
+# Format all files
+.venv/bin/ruff format .
+```
+
+### Adding to CI
+
+The linter is not yet wired into GitHub Actions — it runs locally only until the codebase is fully clean. To add it, insert a lint step before the test job in `.github/workflows/deploy.yml`:
+
+```yaml
+- name: Lint
+  run: .venv/bin/ruff check .
+```
+
+---
+
 ## Running Tests
 
 ```bash
