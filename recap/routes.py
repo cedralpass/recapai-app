@@ -75,6 +75,7 @@ def index():
         next_url=next_url,
         prev_url=prev_url,
         groupings=groupings,
+        active_category=category,
         cta_form=cta_form,
     )
 
