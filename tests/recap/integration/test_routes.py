@@ -19,7 +19,6 @@ class TestAuth:
         print("\nTest Configuration:")
         print(f"TESTING: {recap_app.config['TESTING']}")
         print(f"WTF_CSRF_ENABLED: {recap_app.config.get('WTF_CSRF_ENABLED')}")
-        print(f"SECRET_KEY: {recap_app.config.get('SECRET_KEY')}")
 
         with recap_app.app_context():
             # Get registration form to get CSRF token
