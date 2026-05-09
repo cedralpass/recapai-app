@@ -242,7 +242,7 @@ def setup_test_user(username, email, password):
             print(f"  Found existing user '{username}' (id={user.id})")
 
         token = user.get_or_create_api_token()
-        print(f"  API token: {token[:8]}…")
+        print("  API token obtained")
         return user.id, token
 
 

@@ -99,7 +99,7 @@ def configure_app(app, env="dev"):
     if env == "test":
         print("\nSetting up test database...")
         app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
-        print(f"Database URI set to: {app.config['SQLALCHEMY_DATABASE_URI']}")
+        print("Database configured for testing")
 
     # setup app.config for mail server variables
     app.config["MAIL_SERVER"] = Config.MAIL_SERVER

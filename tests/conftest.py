@@ -58,7 +58,7 @@ def recap_app_session():
     app.config["TESTING"] = True
     app.config["WTF_CSRF_ENABLED"] = False  # Explicitly disable CSRF for tests
 
-    print(f"\nTEST DATABASE URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
+    print("\nTest database initialized")
 
     # Create the database
     with app.app_context():
