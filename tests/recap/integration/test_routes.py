@@ -71,9 +71,24 @@ class TestAuth:
 @pytest.mark.recap
 class TestArticles:
     def test_add_article(self, authenticated_client):
-        """Test adding a new article."""
+        """Test adding a new article via https URL."""
+        response = authenticated_client.post(
+            "/", data={"url_path": "https://example.com/article"}, follow_redirects=True
+        )
+        assert response.status_code == 200
+        assert b"Your article is being classified" in response.data
+
+    def test_add_article_http_url_rejected(self, authenticated_client):
+        """http:// URLs are rejected with a helpful error message."""
         response = authenticated_client.post(
             "/", data={"url_path": "http://example.com/article"}, follow_redirects=True
         )
         assert response.status_code == 200
-        assert b"Your article is being classified" in response.data
+        assert b"Only HTTPS URLs are accepted" in response.data
+        assert b"Your article is being classified" not in response.data
+
+    def test_add_article_invalid_url_rejected(self, authenticated_client):
+        """Non-URL strings are rejected."""
+        response = authenticated_client.post("/", data={"url_path": "not-a-url"}, follow_redirects=True)
+        assert response.status_code == 200
+        assert b"Your article is being classified" not in response.data

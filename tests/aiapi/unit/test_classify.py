@@ -1,7 +1,76 @@
 import json
+import socket
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+
+def _dns_returning(ip):
+    """Return a socket.getaddrinfo side_effect that resolves to a single IP."""
+    return [(socket.AF_INET, socket.SOCK_STREAM, 0, "", (ip, 0))]
+
+
+@pytest.mark.unit
+@pytest.mark.aiapi
+class TestIsSafeUrl:
+    """Unit tests for the SSRF guard in aiapi.classify._is_safe_url."""
+
+    def test_valid_https_public_url(self):
+        from aiapi.classify import _is_safe_url
+
+        with patch("socket.getaddrinfo", return_value=_dns_returning("93.184.216.34")):
+            assert _is_safe_url("https://example.com/article") is True
+
+    def test_http_scheme_rejected(self):
+        from aiapi.classify import _is_safe_url
+
+        assert _is_safe_url("http://example.com/article") is False
+
+    def test_file_scheme_rejected(self):
+        from aiapi.classify import _is_safe_url
+
+        assert _is_safe_url("file:///etc/passwd") is False
+
+    def test_empty_string_rejected(self):
+        from aiapi.classify import _is_safe_url
+
+        assert _is_safe_url("") is False
+
+    def test_no_hostname_rejected(self):
+        from aiapi.classify import _is_safe_url
+
+        assert _is_safe_url("https://") is False
+
+    def test_loopback_rejected(self):
+        from aiapi.classify import _is_safe_url
+
+        with patch("socket.getaddrinfo", return_value=_dns_returning("127.0.0.1")):
+            assert _is_safe_url("https://localhost/secret") is False
+
+    def test_private_10_block_rejected(self):
+        from aiapi.classify import _is_safe_url
+
+        with patch("socket.getaddrinfo", return_value=_dns_returning("10.0.0.1")):
+            assert _is_safe_url("https://internal.corp/data") is False
+
+    def test_private_192_168_block_rejected(self):
+        from aiapi.classify import _is_safe_url
+
+        with patch("socket.getaddrinfo", return_value=_dns_returning("192.168.1.1")):
+            assert _is_safe_url("https://router.local/") is False
+
+    def test_link_local_aws_metadata_rejected(self):
+        """169.254.169.254 is the cloud instance metadata endpoint — must be blocked."""
+        from aiapi.classify import _is_safe_url
+
+        with patch("socket.getaddrinfo", return_value=_dns_returning("169.254.169.254")):
+            assert _is_safe_url("https://metadata.internal/") is False
+
+    def test_unresolvable_hostname_rejected(self):
+        from aiapi.classify import _is_safe_url
+
+        with patch("socket.getaddrinfo", side_effect=socket.gaierror("Name not found")):
+            assert _is_safe_url("https://does-not-exist.invalid/") is False
 
 
 @pytest.mark.unit

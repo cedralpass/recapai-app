@@ -1,3 +1,5 @@
+import urllib.parse
+
 import sqlalchemy as sa
 from flask import Blueprint, current_app, jsonify, request
 
@@ -44,6 +46,17 @@ def create_article():
     url = body.get("url", "").strip()
     if not url:
         return jsonify({"error": "url is required"}), 400
+
+    try:
+        parsed = urllib.parse.urlparse(url)
+    except Exception:
+        return jsonify({"error": "Invalid URL"}), 400
+
+    if parsed.scheme != "https":
+        return jsonify({"error": "Only HTTPS URLs are accepted. Please update the link to start with https://"}), 400
+
+    if not parsed.hostname:
+        return jsonify({"error": "Invalid URL — hostname is missing"}), 400
 
     article = Article(url_path=url, user=user)
     db.session.add(article)

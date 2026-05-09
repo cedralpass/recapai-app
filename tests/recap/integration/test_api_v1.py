@@ -95,6 +95,32 @@ class TestPostArticleApi:
             assert article.url_path == url
             assert article.user_id == user_id
 
+    def test_returns_400_for_http_url(self, recap_client, test_user, recap_app):
+        """http:// URLs are rejected with a 400 and a helpful error message."""
+        with recap_app.app_context():
+            token = test_user.get_or_create_api_token()
+
+        response = recap_client.post(
+            "/api/v1/articles",
+            json={"url": "http://example.com/article"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 400
+        data = response.get_json()
+        assert "HTTPS" in data["error"]
+
+    def test_returns_400_for_non_url_string(self, recap_client, test_user, recap_app):
+        """Strings that aren't URLs are rejected with a 400."""
+        with recap_app.app_context():
+            token = test_user.get_or_create_api_token()
+
+        response = recap_client.post(
+            "/api/v1/articles",
+            json={"url": "not-a-url"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 400
+
     def test_enqueues_classify_url_task(self, recap_client, test_user, recap_app, mocker):
         """Valid request enqueues the recap.tasks.classify_url RQ task."""
         mock_job = mocker.MagicMock()

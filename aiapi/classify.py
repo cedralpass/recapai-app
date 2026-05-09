@@ -1,6 +1,9 @@
 import functools
+import ipaddress
 import json
 import re
+import socket
+import urllib.parse
 
 from flask import Blueprint, current_app, flash, g, jsonify, logging, redirect, render_template, request, url_for
 from openai import OpenAI
@@ -23,6 +26,48 @@ except ImportError:
 bp = Blueprint("classify", __name__)
 
 
+def _is_safe_url(url: str) -> bool:
+    """
+    Guard against SSRF: only allow https URLs that resolve to public IPs.
+    Blocks loopback, RFC-1918 private ranges, link-local (169.254/16 — cloud metadata),
+    multicast, and reserved addresses.
+    """
+    try:
+        parsed = urllib.parse.urlparse(url)
+    except Exception:
+        return False
+
+    if parsed.scheme != "https":
+        return False
+
+    hostname = parsed.hostname
+    if not hostname:
+        return False
+
+    try:
+        results = socket.getaddrinfo(hostname, None)
+    except socket.gaierror:
+        return False
+
+    for _family, _type, _proto, _canonname, sockaddr in results:
+        ip_str = sockaddr[0]
+        try:
+            ip = ipaddress.ip_address(ip_str)
+        except ValueError:
+            return False
+        if (
+            ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_multicast
+            or ip.is_reserved
+            or ip.is_unspecified
+        ):
+            return False
+
+    return True
+
+
 def fetch_article_content(url, max_chars=12000, timeout=18):
     """
     Fetch a URL and extract main article text. Returns plain text truncated to max_chars, or None on failure.
@@ -34,6 +79,9 @@ def fetch_article_content(url, max_chars=12000, timeout=18):
                 "classify: readability not available (install readability-lxml and lxml); "
                 "content fetch skipped. Rebuild image with libxml2-dev/libxslt-dev on Alpine."
             )
+        return None
+    if not _is_safe_url(url):
+        current_app.logger.warning("classify: URL blocked by SSRF filter: %s", url)
         return None
     try:
         response = httpx.get(
