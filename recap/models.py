@@ -42,9 +42,8 @@ class User(UserMixin, db.Model):
         return db.session.get(User, int(id))
 
     # get articles for user
-    def get_articles(self, page=1, per_page=2, category=None, include_read=False):
-        # select all articles of the current_user
-        stmt = sa.select(Article).where(Article.user_id == self.id).order_by(Article.id.desc())
+    def get_articles(self, page=1, per_page=2, category=None, include_read=True):
+        stmt = sa.select(Article).where(Article.user_id == self.id).order_by(Article.is_read.asc(), Article.id.desc())
         if category:
             stmt = stmt.where(Article.category == category)
         if not include_read:

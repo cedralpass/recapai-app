@@ -174,8 +174,8 @@ class TestToggleReadRoute:
 @pytest.mark.integration
 @pytest.mark.recap
 class TestIndexReadFilter:
-    def test_index_excludes_read_articles_by_default(self, authenticated_client, recap_app, test_user):
-        """GET / does not show read articles unless ?include_read=true."""
+    def test_index_includes_read_articles_by_default(self, authenticated_client, recap_app, test_user):
+        """GET / shows both read and unread articles by default."""
         _make_article(recap_app, test_user.id, url_path="https://example.com/unread-a", title="Unread Article")
         _make_article(
             recap_app, test_user.id, url_path="https://example.com/read-a", title="Read Article", is_read=True
@@ -183,19 +183,19 @@ class TestIndexReadFilter:
 
         response = authenticated_client.get("/")
         assert b"Unread Article" in response.data
-        assert b"Read Article" not in response.data
+        assert b"Read Article" in response.data
 
-    def test_index_includes_read_articles_with_param(self, authenticated_client, recap_app, test_user):
-        """GET /?include_read=true shows both read and unread articles."""
+    def test_index_hides_read_articles_with_param(self, authenticated_client, recap_app, test_user):
+        """GET /?hide_read=true omits read articles."""
         _make_article(recap_app, test_user.id, url_path="https://example.com/unread-b", title="Unread B")
         _make_article(recap_app, test_user.id, url_path="https://example.com/read-b", title="Read B", is_read=True)
 
-        response = authenticated_client.get("/?include_read=true")
+        response = authenticated_client.get("/?hide_read=true")
         assert b"Unread B" in response.data
-        assert b"Read B" in response.data
+        assert b"Read B" not in response.data
 
-    def test_index_renders_include_read_checkbox(self, authenticated_client, recap_app, test_user):
-        """GET / renders a checkbox for toggling read article visibility."""
+    def test_index_renders_hide_read_checkbox(self, authenticated_client, recap_app, test_user):
+        """GET / renders a checkbox for hiding read articles."""
         response = authenticated_client.get("/")
-        assert b"include_read" in response.data
-        assert b"Include read articles" in response.data
+        assert b"hide_read" in response.data
+        assert b"Hide read articles" in response.data

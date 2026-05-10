@@ -48,20 +48,22 @@ def index():
     groupings = None
     if current_user.is_authenticated:
         category = request.args.get("category")
-        include_read = request.args.get("include_read", "false") == "true"
-        # current_user.get_articles(page=page, per_page=Config.ARTICLES_PER_PAGE, category=category)
+        hide_read = request.args.get("hide_read", "false") == "true"
         articles_paginator = current_user.get_articles(
-            page=page, per_page=Config.ARTICLES_PER_PAGE, category=category, include_read=include_read
+            page=page, per_page=Config.ARTICLES_PER_PAGE, category=category, include_read=not hide_read
         )
         articles = articles_paginator.items
 
+        pagination_kwargs = {"category": category}
+        if hide_read:
+            pagination_kwargs["hide_read"] = "true"
         next_url = (
-            url_for("routes.index", page=articles_paginator.next_num, category=category)
+            url_for("routes.index", page=articles_paginator.next_num, **pagination_kwargs)
             if articles_paginator.has_next
             else None
         )
         prev_url = (
-            url_for("routes.index", page=articles_paginator.prev_num, category=category)
+            url_for("routes.index", page=articles_paginator.prev_num, **pagination_kwargs)
             if articles_paginator.has_prev
             else None
         )
@@ -79,7 +81,7 @@ def index():
         prev_url=prev_url,
         groupings=groupings,
         active_category=category,
-        include_read=include_read if current_user.is_authenticated else False,
+        hide_read=hide_read if current_user.is_authenticated else False,
         cta_form=cta_form,
     )
 
