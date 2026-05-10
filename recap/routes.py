@@ -48,8 +48,11 @@ def index():
     groupings = None
     if current_user.is_authenticated:
         category = request.args.get("category")
+        include_read = request.args.get("include_read", "false") == "true"
         # current_user.get_articles(page=page, per_page=Config.ARTICLES_PER_PAGE, category=category)
-        articles_paginator = current_user.get_articles(page=page, per_page=Config.ARTICLES_PER_PAGE, category=category)
+        articles_paginator = current_user.get_articles(
+            page=page, per_page=Config.ARTICLES_PER_PAGE, category=category, include_read=include_read
+        )
         articles = articles_paginator.items
 
         next_url = (
@@ -76,6 +79,7 @@ def index():
         prev_url=prev_url,
         groupings=groupings,
         active_category=category,
+        include_read=include_read if current_user.is_authenticated else False,
         cta_form=cta_form,
     )
 
@@ -145,6 +149,10 @@ def show(id):
         flash("General Exception", "error")
         print(ex)
 
+    if article and not article.is_viewed:
+        article.is_viewed = True
+        db.session.commit()
+
     if "Content-Type" in request.headers.keys() and request.headers["Content-Type"] == "application/json":
         article_dict = {
             "id": article.id,
@@ -181,6 +189,27 @@ def show(id):
         prev_article=prev_article,
         next_article=next_article,
     )
+
+
+@bp.route("/articles/<int:id>/read", methods=("GET",))
+@login_required
+def read_article(id):
+    stmt = sa.select(Article).where(Article.id == id, Article.user_id == current_user.id)
+    article = db.session.execute(stmt).scalar_one()
+    if not article.is_read:
+        article.is_read = True
+        db.session.commit()
+    return redirect(article.url_path)
+
+
+@bp.route("/articles/<int:id>/toggle-read", methods=("POST",))
+@login_required
+def toggle_read(id):
+    stmt = sa.select(Article).where(Article.id == id, Article.user_id == current_user.id)
+    article = db.session.execute(stmt).scalar_one()
+    article.is_read = not article.is_read
+    db.session.commit()
+    return redirect(request.referrer or url_for("routes.index"))
 
 
 @bp.route("/<int:id>/reclassify", methods=("GET", "POST"))

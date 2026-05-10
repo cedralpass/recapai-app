@@ -42,11 +42,13 @@ class User(UserMixin, db.Model):
         return db.session.get(User, int(id))
 
     # get articles for user
-    def get_articles(self, page=1, per_page=2, category=None):
+    def get_articles(self, page=1, per_page=2, category=None, include_read=False):
         # select all articles of the current_user
         stmt = sa.select(Article).where(Article.user_id == self.id).order_by(Article.id.desc())
         if category:
             stmt = stmt.where(Article.category == category)
+        if not include_read:
+            stmt = stmt.where(Article.is_read == False)  # noqa: E712
         articles = db.paginate(stmt, page=page, per_page=per_page, error_out=False)
         return articles
 
@@ -96,6 +98,8 @@ class Article(db.Model):
     sub_categories: so.Mapped[str] = so.mapped_column(sa.TEXT(), nullable=True)
     user: so.Mapped[User] = so.relationship(back_populates="articles")
     classified: so.Mapped[datetime] = so.mapped_column(sa.DateTime(), nullable=True)
+    is_viewed: so.Mapped[bool] = so.mapped_column(sa.Boolean, default=False, server_default="0")
+    is_read: so.Mapped[bool] = so.mapped_column(sa.Boolean, default=False, server_default="0")
 
     def __repr__(self):
         return "<Article {}>".format(self.url_path)
