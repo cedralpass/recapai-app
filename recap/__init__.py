@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from logging.config import dictConfig
 from logging.handlers import RotatingFileHandler
 
@@ -57,7 +57,7 @@ def create_app(env="dev"):
     # Add context processor for current year
     @app.context_processor
     def inject_year():
-        return {"current_year": datetime.utcnow().year}
+        return {"current_year": datetime.now(timezone.utc).year}
 
     from . import routes
 
