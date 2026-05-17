@@ -83,7 +83,10 @@ def organize_taxonomy_task(user_id):
 
     app.logger.info("organize_taxonomy_task starting for user_id=%s", user_id)
 
+    user = db.session.get(User, user_id)
     context_string = build_rich_organize_context(user_id)
+    if user and user.taxonomy_preferences:
+        context_string += f"\n\nUser preferences: {user.taxonomy_preferences}"
 
     PROMPT = (
         "Can you recommend a consolidated category list? "
@@ -134,6 +137,9 @@ def suggest_splits_task(user_id, threshold=12):
         app.redis.setex(f"taxonomy:splits:{job.id}", 3600, json.dumps({}))
         return
 
+    user = db.session.get(User, user_id)
+    user_prefs = user.taxonomy_preferences if user and user.taxonomy_preferences else None
+
     SPLIT_PROMPT = (
         "Split these articles into 2-4 distinct, meaningful groups based on their themes. "
         "Name each group clearly (2-4 words). "
@@ -162,6 +168,8 @@ def suggest_splits_task(user_id, threshold=12):
         ).all()
 
         context = build_split_context(category_name, article_rows)
+        if user_prefs:
+            context += f"\n\nUser preferences: {user_prefs}"
         result = AiApiHelper.PerformTask(context, SPLIT_PROMPT, SPLIT_FORMAT, user_id)
 
         if result and "assignments" in result:

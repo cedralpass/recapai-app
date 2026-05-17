@@ -830,3 +830,184 @@ class TestTaxonomyHelpers:
         assert "[id:43]" in ctx
         assert "Deep Learning" in ctx
         assert "Vector Databases" in ctx
+
+
+# ---------------------------------------------------------------------------
+# Taxonomy preferences — form save/load
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+@pytest.mark.recap
+class TestTaxonomyPreferencesForm:
+    """Verify taxonomy_preferences is saved and pre-filled via the edit profile form."""
+
+    def test_post_saves_taxonomy_preferences(self, authenticated_client, recap_app, test_user):
+        """POST /edit_profile with taxonomy_preferences persists the value to the DB."""
+        with recap_app.app_context():
+            user_id = test_user.id
+
+        authenticated_client.post(
+            "/edit_profile",
+            data={
+                "username": "testuser",
+                "email": "test@example.com",
+                "phone": "1234567890",
+                "taxonomy_preferences": "Always merge cooking into Gastronomy.",
+            },
+            follow_redirects=True,
+        )
+
+        with recap_app.app_context():
+            user = db.session.get(User, user_id)
+            assert user.taxonomy_preferences == "Always merge cooking into Gastronomy."
+
+    def test_post_clears_taxonomy_preferences_when_blank(self, authenticated_client, recap_app, test_user):
+        """Submitting an empty textarea stores None, not an empty string."""
+        with recap_app.app_context():
+            user_id = test_user.id
+            test_user.taxonomy_preferences = "Old preference"
+            db.session.commit()
+
+        authenticated_client.post(
+            "/edit_profile",
+            data={
+                "username": "testuser",
+                "email": "test@example.com",
+                "phone": "1234567890",
+                "taxonomy_preferences": "",
+            },
+            follow_redirects=True,
+        )
+
+        with recap_app.app_context():
+            user = db.session.get(User, user_id)
+            assert user.taxonomy_preferences is None
+
+    def test_get_prefills_taxonomy_preferences(self, authenticated_client, recap_app, test_user):
+        """GET /edit_profile renders the saved preference text in the textarea."""
+        with recap_app.app_context():
+            test_user.taxonomy_preferences = "Keep categories under 10 articles."
+            db.session.commit()
+
+        response = authenticated_client.get("/edit_profile")
+        assert b"Keep categories under 10 articles." in response.data
+
+
+# ---------------------------------------------------------------------------
+# Taxonomy preferences — task context injection
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+@pytest.mark.recap
+class TestTaxonomyPreferencesInjection:
+    """Verify user preferences are appended to AI context in both task functions."""
+
+    @patch("recap.tasks.get_current_job")
+    @patch("recap.tasks.app")
+    @patch("recap.tasks.AiApiHelper")
+    @patch("recap.taxonomy_helpers.build_rich_organize_context", return_value="base context")
+    @patch("recap.tasks.db")
+    def test_organize_task_appends_preferences_to_context(self, mock_db, _mock_ctx, mock_ai, mock_app, mock_job):
+        """organize_taxonomy_task includes 'User preferences:' when the user has them set."""
+        from unittest.mock import MagicMock
+
+        mock_user = MagicMock()
+        mock_user.taxonomy_preferences = "Keep categories under 15 articles."
+        mock_db.session.get.return_value = mock_user
+        mock_ai.PerformTask.return_value = {"mappings": [], "description": "ok"}
+        mock_job.return_value.id = "test-id"
+
+        from recap.tasks import organize_taxonomy_task
+
+        organize_taxonomy_task(99)
+
+        context = mock_ai.PerformTask.call_args[0][0]
+        assert "User preferences: Keep categories under 15 articles." in context
+
+    @patch("recap.tasks.get_current_job")
+    @patch("recap.tasks.app")
+    @patch("recap.tasks.AiApiHelper")
+    @patch("recap.taxonomy_helpers.build_rich_organize_context", return_value="base context")
+    @patch("recap.tasks.db")
+    def test_organize_task_omits_preferences_when_none(self, mock_db, _mock_ctx, mock_ai, mock_app, mock_job):
+        """organize_taxonomy_task does not add 'User preferences:' when field is None."""
+        from unittest.mock import MagicMock
+
+        mock_user = MagicMock()
+        mock_user.taxonomy_preferences = None
+        mock_db.session.get.return_value = mock_user
+        mock_ai.PerformTask.return_value = {"mappings": [], "description": "ok"}
+        mock_job.return_value.id = "test-id"
+
+        from recap.tasks import organize_taxonomy_task
+
+        organize_taxonomy_task(99)
+
+        context = mock_ai.PerformTask.call_args[0][0]
+        assert "User preferences:" not in context
+
+    @patch("recap.tasks.get_current_job")
+    @patch("recap.tasks.app")
+    @patch("recap.tasks.AiApiHelper")
+    @patch("recap.taxonomy_helpers.build_split_context", return_value="split base context")
+    @patch("recap.tasks.db")
+    def test_split_task_appends_preferences_to_context(self, mock_db, _mock_ctx, mock_ai, mock_app, mock_job):
+        """suggest_splits_task includes 'User preferences:' when the user has them set."""
+        from unittest.mock import MagicMock
+
+        mock_user = MagicMock()
+        mock_user.taxonomy_preferences = "Max 5 articles per sub-category."
+
+        cat_result = MagicMock()
+        cat_result.all.return_value = [("AI", 15)]
+        article_result = MagicMock()
+        article_result.all.return_value = [(1, "Some Article", None)]
+        mock_db.session.execute.side_effect = [cat_result, article_result]
+        mock_db.session.get.return_value = mock_user
+
+        mock_ai.PerformTask.return_value = {
+            "assignments": [{"article_id": 1, "new_category": "AI Research"}],
+            "description": "split ok",
+        }
+        mock_job.return_value.id = "split-test-id"
+
+        from recap.tasks import suggest_splits_task
+
+        suggest_splits_task(99, threshold=12)
+
+        context = mock_ai.PerformTask.call_args[0][0]
+        assert "User preferences: Max 5 articles per sub-category." in context
+
+    @patch("recap.tasks.get_current_job")
+    @patch("recap.tasks.app")
+    @patch("recap.tasks.AiApiHelper")
+    @patch("recap.taxonomy_helpers.build_split_context", return_value="split base context")
+    @patch("recap.tasks.db")
+    def test_split_task_omits_preferences_when_none(self, mock_db, _mock_ctx, mock_ai, mock_app, mock_job):
+        """suggest_splits_task does not add 'User preferences:' when field is None."""
+        from unittest.mock import MagicMock
+
+        mock_user = MagicMock()
+        mock_user.taxonomy_preferences = None
+
+        cat_result = MagicMock()
+        cat_result.all.return_value = [("AI", 15)]
+        article_result = MagicMock()
+        article_result.all.return_value = [(1, "Some Article", None)]
+        mock_db.session.execute.side_effect = [cat_result, article_result]
+        mock_db.session.get.return_value = mock_user
+
+        mock_ai.PerformTask.return_value = {
+            "assignments": [{"article_id": 1, "new_category": "AI Research"}],
+            "description": "split ok",
+        }
+        mock_job.return_value.id = "split-test-id"
+
+        from recap.tasks import suggest_splits_task
+
+        suggest_splits_task(99, threshold=12)
+
+        context = mock_ai.PerformTask.call_args[0][0]
+        assert "User preferences:" not in context

@@ -30,6 +30,7 @@ def edit_profile():
         current_user.username = form.username.data
         current_user.phone = form.phone.data
         current_user.email = form.email.data
+        current_user.taxonomy_preferences = form.taxonomy_preferences.data or None
         db.session.commit()
         flash("Your changes have been saved.")
         return redirect(url_for("profile.edit_profile"))
@@ -37,6 +38,7 @@ def edit_profile():
         form.username.data = current_user.username
         form.phone.data = current_user.phone
         form.email.data = current_user.email
+        form.taxonomy_preferences.data = current_user.taxonomy_preferences
     return render_template("profile/edit_profile.html", title="Edit Profile", form=form)
 
 

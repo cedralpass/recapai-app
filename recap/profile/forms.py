@@ -1,6 +1,6 @@
 import sqlalchemy as sa
 from flask_wtf import FlaskForm
-from wtforms import BooleanField, PasswordField, StringField, SubmitField
+from wtforms import BooleanField, PasswordField, StringField, SubmitField, TextAreaField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
 
 from recap import db
@@ -11,6 +11,7 @@ class EditProfileForm(FlaskForm):
     username = StringField("Username", validators=[DataRequired()])
     phone = StringField("Phone", validators=[Length(min=10, max=10)])
     email = StringField("Email", validators=[DataRequired(), Email()])
+    taxonomy_preferences = TextAreaField("Taxonomy preferences", validators=[Length(max=2000)])
     submit = SubmitField("Submit")
 
     def __init__(self, original_username, *args, **kwargs):

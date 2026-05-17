@@ -15,7 +15,9 @@ Recap is designed to fire off a bookmark from the browser with our Chrome extens
 - Login and create account
 - Save article from web form and Chrome extension
 - Browse and filter articles by personal taxonomy
-- Organize taxonomy automatically leveraging AI (in progress)
+- Organize taxonomy automatically leveraging AI (consolidate and split)
+- Read/viewed state on articles so you can track what you have read and clean up your list
+- Guide the AI with personal taxonomy preferences, e.g. "Always merge cooking and food tips into Gastronomy"
 
 # Planned Ideas
 
@@ -26,8 +28,6 @@ Recap is designed to fire off a bookmark from the browser with our Chrome extens
 
 ## Taxonomy & Organization
 - Improve taxonomy by adding article metadata and summary context to AI classification
-- Guide the AI with personal preferences, e.g. "Always merge cooking and food tips into Gastronomy"
-- Add read/unread state to articles so you can track what you have actually read and clean up your list
 
 ## Digests
 - Daily digest sent at the time you wrap up your day

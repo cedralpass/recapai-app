@@ -23,6 +23,7 @@ class User(UserMixin, db.Model):
     password_hash: so.Mapped[Optional[str]] = so.mapped_column(sa.String(256))
     phone: so.Mapped[str] = so.mapped_column(sa.String(15), nullable=True)
     api_token: so.Mapped[Optional[str]] = so.mapped_column(sa.String(64), nullable=True, unique=True, index=True)
+    taxonomy_preferences: so.Mapped[Optional[str]] = so.mapped_column(sa.Text(), nullable=True)
 
     articles: so.WriteOnlyMapped["Article"] = so.relationship(back_populates="user")
 
