@@ -3,6 +3,7 @@ from urllib.parse import urlsplit
 import sqlalchemy as sa
 from flask import Blueprint, current_app, flash, g, jsonify, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required, login_user, logout_user
+from rq import Queue, Worker
 
 from recap import db, maybe_ping_aiapi
 from recap.auth.email import send_password_reset_email
@@ -256,6 +257,33 @@ def ping_status():
             "key_exists": exists,
             "ttl_seconds": ttl,
             "ai_api_url": Config.RECAP_AI_API_URL.rstrip("/") + "/hello",
+        }
+    )
+
+
+@bp.route("/health/workers")
+@login_required
+def health_workers():
+    conn = current_app.redis
+    workers = Worker.all(connection=conn)
+    queue = Queue(current_app.task_queue.name, connection=conn)
+
+    worker_data = [
+        {
+            "name": w.name,
+            "state": w.get_state(),
+            "current_job_id": w.get_current_job_id(),
+            "queues": w.queue_names(),
+        }
+        for w in workers
+    ]
+
+    return jsonify(
+        {
+            "workers": worker_data,
+            "worker_count": len(worker_data),
+            "queue": queue.name,
+            "queued_jobs": queue.count,
         }
     )
 
