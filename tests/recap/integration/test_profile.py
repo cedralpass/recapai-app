@@ -820,8 +820,18 @@ class TestTaxonomyHelpers:
         from recap.profile import build_split_context
 
         articles = [
-            (42, "Vision Transformers", '["Deep Learning", "Image Classification"]'),
-            (43, "RAG Systems", '["Vector Databases", "Information Retrieval"]'),
+            (
+                42,
+                "Vision Transformers",
+                '["Deep Learning", "Image Classification"]',
+                "Explores how transformers apply to vision tasks.",
+            ),
+            (
+                43,
+                "RAG Systems",
+                '["Vector Databases", "Information Retrieval"]',
+                "Covers retrieval-augmented generation pipelines.",
+            ),
         ]
         with recap_app.app_context():
             ctx = build_split_context("Artificial Intelligence", articles)
@@ -830,6 +840,8 @@ class TestTaxonomyHelpers:
         assert "[id:43]" in ctx
         assert "Deep Learning" in ctx
         assert "Vector Databases" in ctx
+        assert "Explores how transformers" in ctx
+        assert "Covers retrieval-augmented" in ctx
 
 
 # ---------------------------------------------------------------------------
@@ -963,7 +975,7 @@ class TestTaxonomyPreferencesInjection:
         cat_result = MagicMock()
         cat_result.all.return_value = [("AI", 15)]
         article_result = MagicMock()
-        article_result.all.return_value = [(1, "Some Article", None)]
+        article_result.all.return_value = [(1, "Some Article", None, None)]
         mock_db.session.execute.side_effect = [cat_result, article_result]
         mock_db.session.get.return_value = mock_user
 
@@ -995,7 +1007,7 @@ class TestTaxonomyPreferencesInjection:
         cat_result = MagicMock()
         cat_result.all.return_value = [("AI", 15)]
         article_result = MagicMock()
-        article_result.all.return_value = [(1, "Some Article", None)]
+        article_result.all.return_value = [(1, "Some Article", None, None)]
         mock_db.session.execute.side_effect = [cat_result, article_result]
         mock_db.session.get.return_value = mock_user
 

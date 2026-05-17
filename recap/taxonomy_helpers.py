@@ -63,14 +63,14 @@ def build_split_context(category_name, articles):
     """
     Build the context string for splitting a single large category.
 
-    articles: iterable of Row(id, title, sub_categories) from a SQLAlchemy query.
+    articles: iterable of Row(id, title, sub_categories, summary) from a SQLAlchemy query.
     """
     lines = [
         f'Category "{category_name}" has grown large and needs splitting into smaller groups.',
-        "Here are the articles with their content themes:",
+        "Here are the articles with their content themes and summaries:",
         "",
     ]
-    for article_id, title, subcats_json in articles:
+    for article_id, title, subcats_json, summary in articles:
         subcats = []
         if subcats_json:
             try:
@@ -78,5 +78,8 @@ def build_split_context(category_name, articles):
             except (json.JSONDecodeError, TypeError):
                 pass
         subcats_str = ", ".join(subcats) if subcats else "none"
+        summary_str = (summary[:200] + "…") if summary and len(summary) > 200 else (summary or "")
         lines.append(f"[id:{article_id}] {title or 'Untitled'} | themes: {subcats_str}")
+        if summary_str:
+            lines.append(f"  summary: {summary_str}")
     return "\n".join(lines)

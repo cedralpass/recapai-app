@@ -161,7 +161,7 @@ def suggest_splits_task(user_id, threshold=12):
 
     for done, (category_name, count) in enumerate(large_categories):
         article_rows = db.session.execute(
-            sa.select(Article.id, Article.title, Article.sub_categories)
+            sa.select(Article.id, Article.title, Article.sub_categories, Article.summary)
             .where(Article.user_id == user_id)
             .where(Article.category == category_name)
             .order_by(Article.id)
