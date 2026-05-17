@@ -2,6 +2,7 @@ Flask==3.1.2  #flask development framework
 flask-sqlalchemy==3.1.1
 flask-migrate==4.1.0
 psycopg2-binary==2.9.9 # driver to postgres
+pgvector==0.3.6 # pgvector SQLAlchemy type for vector(1536) embeddings
 environs==10.3.0 #utility to load and validate environment variables
 marshmallow==3.21.0 #required by environs 10.3.0 (needs >=3.13.0 for __version_info__)
 redis==5.0.3

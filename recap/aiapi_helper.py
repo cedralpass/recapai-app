@@ -85,6 +85,28 @@ class AiApiHelper:
         return results_json
 
     @staticmethod
+    def EmbedText(text: str):
+        current_app.logger.debug("AiApiHelper: embedding text of length %d", len(text))
+        env = Env()
+        env.read_env()
+        ai_url = env("RECAP_AI_API_URL") + "/embed"
+        try:
+            r = httpx.post(ai_url, data={"text": text, "secret": "abc123"}, timeout=30)
+            result = r.json()
+            return result.get("embedding")
+        except httpx.HTTPError as http_err:
+            current_app.logger.error(f"HTTP error occurred: {http_err}")
+        except httpx.RequestError as req_err:
+            current_app.logger.error(f"An error occurred while requesting: {req_err}")
+        except (ConnectionError, TimeoutError) as conn_err:
+            current_app.logger.error(f"An error connecting to the API occurred: {conn_err}")
+        except ValueError as value_err:
+            current_app.logger.error(f"JSON decoding failed: {value_err}")
+        except Exception as err:
+            current_app.logger.error(f"An unexpected error occurred: {err}")
+        return None
+
+    @staticmethod
     def PerformTask(context, prompt, format, ref_key):
         current_app.logger.debug(
             "AiApiHelper: calling service to perform task for context: %s, prompt: %s, format: %s, ref_key: %s",

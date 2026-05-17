@@ -10,6 +10,7 @@ import sqlalchemy as sa
 import sqlalchemy.orm as so
 from flask import current_app
 from flask_login import UserMixin  # flask_login has a user mixin that implements the 4 required methods
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import Uuid
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -57,6 +58,18 @@ class User(UserMixin, db.Model):
             {"reset_password": self.id, "exp": time() + expires_in}, Config.RECAP_SECRET_KEY, algorithm="HS256"
         )
 
+    def search_articles(self, query_embedding, limit=20, category=None):
+        stmt = (
+            sa.select(Article)
+            .where(Article.user_id == self.id)
+            .where(Article.embedding.isnot(None))
+            .order_by(Article.embedding.cosine_distance(query_embedding))
+            .limit(limit)
+        )
+        if category:
+            stmt = stmt.where(Article.category == category)
+        return db.session.execute(stmt).scalars().all()
+
     def get_categories(self):
         groupings = (
             db.session.query(Article.category, sa.func.count(Article.id).label("count"))
@@ -100,6 +113,7 @@ class Article(db.Model):
     classified: so.Mapped[datetime] = so.mapped_column(sa.DateTime(), nullable=True)
     is_viewed: so.Mapped[bool] = so.mapped_column(sa.Boolean, default=False, server_default="0")
     is_read: so.Mapped[bool] = so.mapped_column(sa.Boolean, default=False, server_default="0")
+    embedding: so.Mapped[Optional[list]] = so.mapped_column(Vector(1536), nullable=True)
 
     def __repr__(self):
         return "<Article {}>".format(self.url_path)

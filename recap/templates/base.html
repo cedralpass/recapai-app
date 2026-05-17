@@ -30,6 +30,11 @@
             <a href="{{ url_for('auth.register') }}"
                     class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded transition-colors">Create Account &rarr;</a>
             {% else %}
+            <form action="{{ url_for('routes.search') }}" method="get">
+                <input type="text" name="q" value="{{ request.args.get('q', '') }}"
+                       placeholder="Search articles..."
+                       class="w-48 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-400">
+            </form>
             <a href="{{ url_for('routes.index') }}"
                     class="text-slate-200 underline hover:no-underline">Home</a>
             <a href="{{ url_for('profile.user', username=current_user.username) }}"

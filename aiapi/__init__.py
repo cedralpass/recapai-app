@@ -29,6 +29,9 @@ def create_app():
     from . import task_processor
 
     app.register_blueprint(task_processor.bp)  # register the auth blueprint
+    from . import embeddings
+
+    app.register_blueprint(embeddings.bp)  # register the embeddings blueprint
 
     # a simple page that says hello
     @app.route("/hello")

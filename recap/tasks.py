@@ -8,6 +8,7 @@ from rq import get_current_job
 
 from recap import create_app, db
 from recap.aiapi_helper import AiApiHelper
+from recap.article_text import build_article_text
 from recap.auth.email import send_password_reset_email
 from recap.config import Config
 from recap.models import Article, User
@@ -54,6 +55,14 @@ def classify_url(url, user_id):
         app.logger.debug("saving results to article")
         app.logger.debug(classify_result["summary"])
         save_classification_result(classify_result, article)
+        text = build_article_text(article)
+        if text:
+            embedding = AiApiHelper.EmbedText(text)
+            if embedding:
+                article.embedding = embedding
+                app.logger.debug("embedding generated and stored for article %s", article.id)
+            else:
+                app.logger.warning("embedding returned None for article %s", article.id)
         app.logger.debug("saving article")
         db.session.add(article)
         db.session.commit()
