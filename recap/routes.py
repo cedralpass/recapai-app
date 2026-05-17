@@ -250,6 +250,12 @@ def delete(id):
 @bp.route("/debug/ping-status")
 @login_required
 def ping_status():
+    return redirect(url_for("routes.health_ping_status"))
+
+
+@bp.route("/health/ping-status")
+@login_required
+def health_ping_status():
     key = "aiapi:ping:last"
     exists = bool(current_app.redis.exists(key))
     ttl = current_app.redis.ttl(key)
@@ -288,6 +294,50 @@ def health_workers():
             "queue": queue.name,
             "queued_jobs": queue.count,
         }
+    )
+
+
+@bp.route("/health/workers/clean", methods=["POST"])
+@login_required
+def health_workers_clean():
+    conn = current_app.redis
+    queue = Queue(current_app.task_queue.name, connection=conn)
+    clean_worker_registry(queue)
+    workers_after = Worker.all(connection=conn)
+    flash(f"Registry cleaned — {len(workers_after)} active worker(s) remaining.")
+    return redirect(url_for("routes.health"))
+
+
+@bp.route("/health")
+@login_required
+def health():
+    conn = current_app.redis
+    queue = Queue(current_app.task_queue.name, connection=conn)
+    workers = Worker.all(connection=conn)
+
+    ping_key = "aiapi:ping:last"
+    ping_data = {
+        "key_exists": bool(conn.exists(ping_key)),
+        "ttl_seconds": conn.ttl(ping_key),
+        "ai_api_url": Config.RECAP_AI_API_URL.rstrip("/") + "/hello",
+    }
+
+    worker_data = [
+        {
+            "name": w.name,
+            "state": w.get_state(),
+            "current_job_id": w.get_current_job_id(),
+        }
+        for w in workers
+    ]
+
+    return render_template(
+        "health.html",
+        title="System Health",
+        workers=worker_data,
+        queue_name=queue.name,
+        queued_jobs=queue.count,
+        ping=ping_data,
     )
 
 

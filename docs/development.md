@@ -42,6 +42,10 @@ Or use Claude Code's `preview_start` with the names defined in `.claude/launch.j
 - **tailwind** — shows "Done in Xms" on each CSS rebuild
 - **rq-worker** — shows job start/finish/failure as articles are classified
 
+#### Health dashboard
+
+`GET /health` (login required) shows live worker state, pending job count, and AI API ping status — useful for both local dev and production diagnosis. It also has a "Clean stale workers" button that prunes dead worker registrations from Redis. See [docs/background_jobs.md](background_jobs.md) for details.
+
 ### Environment (local dev)
 
 `recap/.env` is the single source of truth for local development:

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block main_class %}min-h-screen bg-gray-50 py-10{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6 px-3">
+
+  <div class="flex items-center justify-between">
+    <h1 class="text-2xl font-extrabold text-gray-900">System Health</h1>
+    <a href="{{ url_for('routes.health') }}"
+       class="text-sm text-blue-600 hover:underline">Refresh</a>
+  </div>
+
+  <!-- Workers card -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+      <div>
+        <div class="font-bold text-gray-900">RQ Workers</div>
+        <div class="text-xs text-gray-500 mt-0.5">Queue: <span class="font-mono">{{ queue_name }}</span></div>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-sm text-gray-500">{{ workers|length }} worker{{ 's' if workers|length != 1 else '' }}</span>
+        <form method="POST" action="{{ url_for('routes.health_workers_clean') }}"
+              onsubmit="return confirm('Remove stale worker registrations from Redis?')">
+          <button type="submit"
+                  class="text-xs border border-red-200 text-red-600 font-semibold px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors">
+            Clean stale workers
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Queue depth -->
+    <div class="flex items-center gap-2 px-5 py-3 bg-gray-50 border-b border-gray-100">
+      <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Pending jobs</span>
+      <span class="ml-auto font-mono text-sm {% if queued_jobs > 0 %}text-blue-600 font-bold{% else %}text-gray-500{% endif %}">
+        {{ queued_jobs }}
+      </span>
+    </div>
+
+    {% if workers %}
+    <ul class="divide-y divide-gray-100">
+      {% for w in workers %}
+      <li class="flex items-center gap-3 px-5 py-3">
+        <!-- State dot -->
+        <span class="w-2.5 h-2.5 rounded-full shrink-0
+          {% if w.state == 'busy' %}bg-green-400
+          {% elif w.state == 'idle' %}bg-gray-300
+          {% else %}bg-yellow-400{% endif %}"></span>
+        <span class="text-sm font-mono text-gray-700 truncate flex-1">{{ w.name }}</span>
+        <span class="text-xs px-2 py-0.5 rounded-full font-semibold
+          {% if w.state == 'busy' %}bg-green-100 text-green-700
+          {% elif w.state == 'idle' %}bg-gray-100 text-gray-500
+          {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+          {{ w.state }}
+        </span>
+        {% if w.current_job_id %}
+        <span class="text-xs text-gray-400 font-mono truncate max-w-[140px]" title="{{ w.current_job_id }}">
+          {{ w.current_job_id[:12] }}…
+        </span>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="px-5 py-8 text-center text-sm text-gray-400">
+      No workers registered. Is the RQ worker process running?
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- AI API ping card -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100">
+      <div class="font-bold text-gray-900">AI API</div>
+      <div class="text-xs text-gray-500 mt-0.5 font-mono">{{ ping.ai_api_url }}</div>
+    </div>
+    <div class="divide-y divide-gray-100">
+      <div class="flex items-center px-5 py-3">
+        <span class="text-sm text-gray-600 flex-1">Keep-alive ping active</span>
+        {% if ping.key_exists %}
+        <span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">yes</span>
+        {% else %}
+        <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-semibold">no</span>
+        {% endif %}
+      </div>
+      <div class="flex items-center px-5 py-3">
+        <span class="text-sm text-gray-600 flex-1">Throttle key TTL</span>
+        <span class="font-mono text-sm text-gray-700">
+          {% if ping.ttl_seconds >= 0 %}{{ ping.ttl_seconds }}s{% else %}—{% endif %}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- JSON links -->
+  <div class="text-xs text-gray-400 flex gap-4">
+    <a href="{{ url_for('routes.health_workers') }}" class="hover:underline">workers JSON</a>
+    <a href="{{ url_for('routes.health_ping_status') }}" class="hover:underline">ping JSON</a>
+  </div>
+
+</div>
+{% endblock %}
