@@ -97,10 +97,13 @@ class TestSaveClassificationResult:
 class TestClassifyUrl:
     """Tests for classify_url — orchestration of article lookup, AI call, and save."""
 
+    @patch("recap.tasks._build_category_list", return_value=["Technology", "AI"])
     @patch("recap.tasks.AiApiHelper")
     @patch("recap.tasks.Article")
     @patch("recap.tasks.db")
-    def test_happy_path_returns_classify_result(self, mock_db, mock_Article, mock_AiApiHelper, recap_app):
+    def test_happy_path_returns_classify_result(
+        self, mock_db, mock_Article, mock_AiApiHelper, mock_build_cats, recap_app
+    ):
         """classify_url finds article, calls ClassifyUrl, saves result, and returns it."""
         from recap.tasks import classify_url
 
@@ -122,12 +125,17 @@ class TestClassifyUrl:
 
         assert result == classify_result
         mock_Article.get_article_by_url_path.assert_called_once_with("https://example.com/article", 1)
-        mock_AiApiHelper.ClassifyUrl.assert_called_once_with("https://example.com/article", 1)
+        mock_AiApiHelper.ClassifyUrl.assert_called_once_with(
+            "https://example.com/article", 1, categories=["Technology", "AI"]
+        )
 
+    @patch("recap.tasks._build_category_list", return_value=["Technology"])
     @patch("recap.tasks.AiApiHelper")
     @patch("recap.tasks.Article")
     @patch("recap.tasks.db")
-    def test_happy_path_commits_article_to_db(self, mock_db, mock_Article, mock_AiApiHelper, recap_app):
+    def test_happy_path_commits_article_to_db(
+        self, mock_db, mock_Article, mock_AiApiHelper, mock_build_cats, recap_app
+    ):
         """After classification, article is added and committed to the DB session."""
         from recap.tasks import classify_url
 
