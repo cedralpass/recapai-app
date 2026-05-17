@@ -52,7 +52,7 @@ def fetch_article_content(url, max_chars=12000, timeout=18):
 
 class AiApiHelper:
     @staticmethod
-    def ClassifyUrl(url, reference):
+    def ClassifyUrl(url, reference, categories=None):
         current_app.logger.debug(
             "AiApiHelper: calling service to classify for url: %s and reference %s", url, reference
         )
@@ -65,6 +65,9 @@ class AiApiHelper:
         request_data = {"url": url, "ref_key": reference, "secret": "abc123"}
         if content:
             request_data["content"] = content
+        if categories:
+            request_data["categories"] = ", ".join(categories)
+            current_app.logger.debug("AiApiHelper: sending %d categories to classify", len(categories))
         try:
             r = httpx.post(ai_url, data=request_data, timeout=90)
             current_app.logger.debug("AiApiHelper: recieved results as %s", r)

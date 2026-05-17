@@ -159,6 +159,38 @@ class TestClassify:
         assert "Full article body here." in messages[1]["content"]
         assert "https://example.com/post" in messages[1]["content"]
 
+    def test_build_prompt_with_categories_prefers_existing(self, aiapi_client):
+        """When categories are provided they appear in the system prompt as preferred choices."""
+        from aiapi.classify import build_prompt
+
+        cats = ["Machine Learning", "DevOps", "Product Management"]
+        with aiapi_client.application.app_context():
+            messages = build_prompt("https://example.com/post", content="Some article text.", categories=cats)
+        system = messages[0]["content"]
+        assert "Machine Learning" in system
+        assert "DevOps" in system
+        assert "Product Management" in system
+        assert "genuinely covers that domain" in system
+
+    def test_build_prompt_no_categories_generic_instruction(self, aiapi_client):
+        """When no categories are provided the prompt uses a generic category instruction."""
+        from aiapi.classify import build_prompt
+
+        with aiapi_client.application.app_context():
+            messages = build_prompt("https://example.com/post", content="Some article text.", categories=None)
+        system = messages[0]["content"]
+        assert "Software Architecture" not in system
+        assert "Leadership" not in system
+        assert "category" in system.lower()
+
+    def test_build_prompt_empty_categories_generic_instruction(self, aiapi_client):
+        """An empty categories list falls back to the generic instruction."""
+        from aiapi.classify import build_prompt
+
+        with aiapi_client.application.app_context():
+            messages = build_prompt("https://example.com/post", content="Some text.", categories=[])
+        assert "genuinely covers that domain" not in messages[0]["content"]
+
     @patch("aiapi.classify.OpenAI")
     def test_classify_endpoint_with_content(self, mock_openai, aiapi_client):
         """Classify endpoint with content in request uses content in prompt."""

@@ -231,6 +231,72 @@ Sub-categories in the Consolidate context are capped at 4 per category (`build_r
 
 ---
 
+## Classification Category Selection
+
+When a new article is classified, the prompt includes a curated list of the user's existing categories so the model tends to reuse them rather than invent new ones. This happens in `recap/tasks.py:_build_category_list()` before the `AiApiHelper.ClassifyUrl()` call.
+
+### Three-tier logic
+
+| User state | Categories sent |
+|---|---|
+| New (0 categories) | Top 10 of the default broad set |
+| Sparse (< 8 categories) | User categories first, filled from defaults — capped at 10 |
+| Established (≥ 8 categories) | Top 10 by article count |
+
+The **cap of 10** is deliberate. Passing the full taxonomy (e.g. 18+ categories) causes the model to anchor too strongly to existing names and stretches poor-fit categories rather than creating a new specific one. Sweep testing across 0 / 6 / 8 / 10 / 12 / all categories showed top-10 as the sweet spot: clear matches are reused, genuinely different domains get a fresh category.
+
+### Default category set (`SPARSE_THRESHOLD = 8`, `CATEGORY_CAP = 10`)
+
+New and sparse users receive a broad starter set ordered to fill up to the cap:
+
+```
+Technology, Software Engineering, Artificial Intelligence, Business Strategy,
+Leadership & Management, Science, Design, Health & Wellness,
+Finance & Economics, Culture & Society, History & Politics, Philosophy
+```
+
+These are ordered to cover the most common reading domains without being so narrow that they bias classification.
+
+### Prompt framing (`aiapi/classify.py:_category_instruction`)
+
+The category list is injected into the system prompt with this framing:
+
+> "First, identify the primary domain of the article (e.g. consumer electronics, nutrition, software engineering). Then check whether any of these existing categories genuinely covers that domain: {categories}. Reuse an existing category only if the match is clear and direct. If no existing category fits without stretching its meaning, invent a concise new one (2–4 words)."
+
+The "identify domain first" instruction is load-bearing — without it the model jumps straight to finding the least-bad existing category, which causes stretching (e.g. a mirrorless camera review landing in "Customer Experience & Engagement").
+
+### Tuning levers
+
+| What to change | Where | Effect |
+|---|---|---|
+| Category cap | `CATEGORY_CAP` in `recap/tasks.py` | Lower = model creates more new categories; higher = more anchoring to existing taxonomy |
+| Sparse threshold | `SPARSE_THRESHOLD` in `recap/tasks.py` | Lower = defaults kick in for more users |
+| Default category set | `DEFAULT_CATEGORIES` in `recap/tasks.py` | Controls granularity signal for new users |
+| Prompt framing | `_category_instruction()` in `aiapi/classify.py` | Adjust how strongly the model prefers reuse vs. creation |
+
+### Eval script
+
+`scripts/eval_classify_categories.py` tests classification behaviour with a fixed set of probe articles across clear-match, borderline, and no-match cases.
+
+```bash
+# Single run with current settings
+.venv/bin/python scripts/eval_classify_categories.py
+
+# Sweep top-N sizes side by side (0 / 6 / 8 / 10 / 12 / all)
+.venv/bin/python scripts/eval_classify_categories.py --sweep
+
+# Run each case 3 times to check consistency
+.venv/bin/python scripts/eval_classify_categories.py --runs 3
+
+# Test with a specific cap
+.venv/bin/python scripts/eval_classify_categories.py --top 8
+
+# Baseline: no categories passed at all
+.venv/bin/python scripts/eval_classify_categories.py --no-categories
+```
+
+---
+
 ## Files at a Glance
 
 | File | Role |
@@ -244,3 +310,6 @@ Sub-categories in the Consolidate context are capped at 4 per category (`build_r
 | `tests/aiapi/unit/test_task_processor.py` | Unit tests: prompt structure, max_tokens guard, truncation handling |
 | `tests/recap/integration/test_profile.py` | Integration tests for all four taxonomy routes |
 | `tests/fixtures/organize_taxonomy_large_response.json` | 21-category fixture used in regression test |
+| `recap/tasks.py` | `_build_category_list()` — three-tier category selection for classification |
+| `aiapi/classify.py` | `_category_instruction()`, `build_prompt()` — classification prompt with dynamic categories |
+| `scripts/eval_classify_categories.py` | Eval script for tuning classification category behaviour |

@@ -132,6 +132,9 @@ def classify_url():
     else:
         content = None
 
+    categories_raw = request.form.get("categories")
+    categories = [c.strip() for c in categories_raw.split(",")] if categories_raw else []
+
     # If content was not passed in the form, try to fetch and extract it here (fallback)
     if not content and url:
         current_app.logger.debug("classify: no content in request, fetching url for fallback: %s", url)
@@ -151,7 +154,7 @@ def classify_url():
     # make OpenAI Call
     response = client.chat.completions.create(
         model=AIAPIConfig.AI_OPEN_AI_MODEL,
-        messages=build_prompt(url, content=content),
+        messages=build_prompt(url, content=content, categories=categories),
         response_format={"type": "json_object"},
         temperature=0.25,
         max_tokens=512,
@@ -190,12 +193,24 @@ def extract_from_request(key):
     return value
 
 
-def build_prompt(url, content=None):
+def _category_instruction(categories):
+    if categories:
+        cat_str = ", ".join(categories)
+        return (
+            "First, identify the primary domain of the article (e.g. consumer electronics, nutrition, software engineering). "
+            f"Then check whether any of these existing categories genuinely covers that domain: {cat_str}. "
+            "Reuse an existing category only if the match is clear and direct. "
+            "If no existing category fits without stretching its meaning, invent a concise new one (2–4 words)."
+        )
+    return "Choose the most appropriate category for this content. Create a specific, descriptive category name."
+
+
+def build_prompt(url, content=None, categories=None):
+    category_instruction = _category_instruction(categories)
     if content:
         system_content = (
             "You are given the URL and the full article text below. Classify the article based only on the provided text. "
-            "Using these content categories as examples: Software Architecture, Leadership, Business Strategy, and Artificial Intelligence. "
-            "If the content does not fit a category, recommend a new category. "
+            f"{category_instruction} "
             "Base your summary, key_topics, sub_categories, author, and title only on the provided text; do not invent information. "
             "Respond with: category, url of blog, blog title, author, a short summary, "
             "three key topics as bullet points, and three sub categories as bullet points. "
@@ -205,8 +220,7 @@ def build_prompt(url, content=None):
     else:
         system_content = (
             "You are given ONLY the URL of a blog post; the article text is not provided. "
-            "Using these content categories as examples: Software Architecture, Leadership, Business Strategy, and Artificial Intelligence. "
-            "If the content does not fit a category, recommend a new category. "
+            f"{category_instruction} "
             "Do NOT invent or assume acronym meanings, author, title, or details. "
             "If you cannot infer something from the URL alone, use a neutral placeholder (e.g. 'Unknown' or 'From URL only'). "
             "Respond with: category, url of blog, blog title, author, a short summary (based only on what the URL suggests; do not invent content), "

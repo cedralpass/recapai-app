@@ -17,6 +17,42 @@ app = create_app()
 app.app_context().push()
 app.config["SERVER_NAME"] = Config.TASK_SERVER_NAME
 
+SPARSE_THRESHOLD = 8
+CATEGORY_CAP = 10
+DEFAULT_CATEGORIES = [
+    "Technology",
+    "Software Engineering",
+    "Artificial Intelligence",
+    "Business Strategy",
+    "Leadership & Management",
+    "Science",
+    "Design",
+    "Health & Wellness",
+    "Finance & Economics",
+    "Culture & Society",
+    "History & Politics",
+    "Philosophy",
+]
+
+
+def _build_category_list(user_id):
+    # Order by article count so the cap keeps the most-used categories.
+    rows = db.session.execute(
+        sa.select(Article.category, sa.func.count(Article.id).label("cnt"))
+        .where(Article.user_id == user_id)
+        .where(Article.category.isnot(None))
+        .group_by(Article.category)
+        .order_by(sa.func.count(Article.id).desc())
+    ).all()
+    user_categories = [cat for cat, _cnt in rows if cat]
+    if len(user_categories) < SPARSE_THRESHOLD:
+        merged = list(user_categories)
+        for cat in DEFAULT_CATEGORIES:
+            if cat not in merged:
+                merged.append(cat)
+        return merged[:CATEGORY_CAP]
+    return user_categories[:CATEGORY_CAP]
+
 
 # sample task
 def example(seconds=20):
@@ -48,8 +84,9 @@ def classify_url(url, user_id):
         article = Article.get_article_by_url_path(url, user_id)
         print(article)
         # classify artitle using  AiAPIHelper
+        categories = _build_category_list(user_id)
         classify_result = AiApiHelper.ClassifyUrl(
-            url, user_id
+            url, user_id, categories=categories
         )  # TODO : should be the article id, but using user-id for now
         # save resutls to article found
         app.logger.debug("saving results to article")
