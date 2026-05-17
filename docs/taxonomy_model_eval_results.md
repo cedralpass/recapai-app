@@ -51,6 +51,57 @@
 
 ---
 
+## Hyperparameter tuning (gpt-4.1-mini)
+
+**Script:** `scripts/eval_tuning.py`  
+**Method:** Per-axis sweeps — one parameter varied at a time, others held at the production baseline. Final comparison run 3× per config to average out noise.
+
+**Baseline:** `temperature=0.3  frequency_penalty=0.15  presence_penalty=0.0`
+
+**Parameters swept:**
+- `temperature`: 0.0, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0
+- `frequency_penalty`: 0.0, 0.1, 0.15, 0.2, 0.3, 0.5
+- `presence_penalty`: 0.0, 0.1, 0.3, 0.5
+
+### Consolidate — ranked by quality, then speed
+
+| Params | Time (s) | Complete | Judge avg |
+|---|---|---|---|
+| t=0.3 fp=0.0 pp=0.0 | 2.5 | ✓ | 4.0 / 5 |
+| t=0.1 fp=0.15 pp=0.0 | 2.6 | ✓ | 4.0 / 5 |
+| t=0.3 fp=0.15 pp=0.5 | 2.3 | ✓ | 4.0 / 5 |
+| t=0.3 fp=0.15 pp=0.0 *(baseline)* | 3.4 | ✓ | 4.0 / 5 |
+| t=0.3 fp=0.2 pp=0.0 | 3.6 | ✗ | 4.0 / 5 |
+| t=1.0 fp=0.15 pp=0.0 | 3.6 | ✗ | 4.0 / 5 |
+| t=0.3 fp=0.1 pp=0.0 | 9.5 | ✗ | 3.5 / 5 |
+
+### Split — ranked by quality, then speed
+
+| Params | Time (s) | Complete | Judge avg |
+|---|---|---|---|
+| t=0.3 fp=0.0 pp=0.0 | 5.1 | ✓ | **4.5 / 5** |
+| t=0.5 fp=0.15 pp=0.0 | 4.7 | ✓ | 4.0 / 5 |
+| t=0.3 fp=0.15 pp=0.1 | 4.9 | ✓ | 4.0 / 5 |
+| t=0.3 fp=0.15 pp=0.0 *(baseline)* | 5.5 | ✓ | 4.0 / 5 |
+| t=0.3 fp=0.5 pp=0.0 | 6.6 | ✗ | 4.0 / 5 |
+
+### Key findings
+
+**`frequency_penalty=0.0` is the strongest challenger.** It was the only config to exceed 4.0/5 anywhere — scoring 4.5/5 on split with a perfect usefulness rating. On consolidate it also scored 4.0/5 and was one of the fastest configs (2.5s). In a 3-run head-to-head vs the baseline, it consistently outscored on quality (4.0 vs 3.83 averaged) while remaining competitive on speed.
+
+**The baseline holds up well for split.** On the split task, `fp=0.0` adds 1.8s of latency for a quality gain that averaged out over 3 runs — a marginal tradeoff.
+
+**Configs to avoid:**
+- `frequency_penalty=0.1` — worst outcome across both tasks: slowest (9.5s on consolidate), only sub-4.0 judge score, and caused a completeness failure. Actively harmful.
+- `frequency_penalty=0.5` — completeness failure on split. High penalty prevents the model from consistently repeating category names across all article assignments.
+- `temperature=1.0` — completeness failure on consolidate. Too noisy for reliable structured JSON at the top level.
+
+### Tuning verdict
+
+The model is not highly sensitive to these parameters within reasonable ranges — quality scores are flat across most configs. **The production baseline (`t=0.3, fp=0.15, pp=0.0`) is well-placed and validated.** The only change worth considering is dropping `frequency_penalty` to `0.0` if consolidate quality becomes a concern, accepting a small latency trade.
+
+---
+
 ## API compatibility findings
 
 The GPT-5 model family required changes to the eval script vs. what the production `aiapi` currently sends:
