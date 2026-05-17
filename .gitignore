@@ -19,6 +19,9 @@ flasker/.env
 #redis dump file
 dump.rdb
 
+# Local database dumps — never commit to git
+devops/db_dumps/
+
 # CDK asset staging directory
 .cdk.staging
 cdk.out

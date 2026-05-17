@@ -39,8 +39,56 @@ Ensure postgres is listening to connections on any port:
 
 #listen_addresses = 'localhost'
  
-Login withing container: 
+Login within container:
  psql -U dev_user -d recap
+
+
+-------------------------------------------------------------------
+Upgrading to pgvector (for vector search / embeddings) — 2026-05-16
+-------------------------------------------------------------------
+
+The standard postgres:16.2-alpine image does not include pgvector.
+We upgraded to pgvector/pgvector:pg16 (Debian-based, Postgres 16)
+which has pgvector pre-installed.
+
+Because we used a named Docker volume (postgres_data), the data
+survived the container swap with no dump/restore needed.
+
+Steps taken:
+
+1. Dump data first as a precaution (stored in devops/db_dumps/, gitignored):
+
+   docker exec local-dev-postgres-16.2 pg_dump -U dev_user recap > devops/db_dumps/recap_backup_20260516.sql
+
+2. Stop and remove the old container (volume is untouched):
+
+   docker stop local-dev-postgres-16.2
+   docker rm local-dev-postgres-16.2
+
+3. Start a new container with the pgvector image using the same volume:
+
+   docker run --name local-dev-postgres-16.2 \
+     --env-file ./devops/.env.postgres.dev \
+     -p 5432:5432 \
+     -v postgres_data:/var/lib/postgresql/data \
+     -d pgvector/pgvector:pg16
+
+4. Verify data survived:
+
+   docker exec local-dev-postgres-16.2 psql -U dev_user -d recap -c "\dt"
+
+5. Run the Alembic migration to add the embedding column + HNSW index:
+
+   FLASK_APP=recap .venv/bin/flask db upgrade
+
+NOTE: If a local Homebrew Postgres is also running on port 5432, it
+will intercept connections before Docker. Check with:
+
+   lsof -i :5432 | grep LISTEN
+
+Stop any conflicting local Postgres before running migrations:
+
+   brew services stop postgresql@18   # or @16, whichever is running
 
 
 

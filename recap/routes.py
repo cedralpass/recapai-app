@@ -7,6 +7,7 @@ from rq import Queue, Worker
 from rq.worker_registration import clean_worker_registry
 
 from recap import db, maybe_ping_aiapi
+from recap.aiapi_helper import AiApiHelper
 from recap.auth.email import send_password_reset_email
 from recap.auth.forms import RegistrationForm
 from recap.config import Config
@@ -338,6 +339,27 @@ def health():
         queue_name=queue.name,
         queued_jobs=queue.count,
         ping=ping_data,
+    )
+
+
+@bp.route("/search")
+@login_required
+def search():
+    q = request.args.get("q", "").strip()
+    category = request.args.get("category", "").strip() or None
+    results = []
+
+    if q:
+        query_vec = AiApiHelper.EmbedText(q)
+        if query_vec:
+            results = current_user.search_articles(query_vec, limit=20, category=category)
+
+    return render_template(
+        "search.html",
+        query=q,
+        results=results,
+        active_category=category,
+        categories=current_user.get_categories(),
     )
 
 
