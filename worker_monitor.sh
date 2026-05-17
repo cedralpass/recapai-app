@@ -10,10 +10,12 @@ NUM_WORKERS="${NUM_WORKERS:-3}"
 REDIS_URL="${RECAP_REDIS_URL}"
 CHECK_INTERVAL="${CHECK_INTERVAL:-10}"  # seconds between checks
 
-# Use container hostname as worker name prefix so names are unique per container
-# instance. This prevents "worker name already exists" conflicts during rolling
-# deploys when the old container's workers are still registered in Redis.
-WORKER_PREFIX="${HOSTNAME:-worker}"
+# Use hostname + startup timestamp so worker names are unique per container start.
+# Hostname alone isn't sufficient because Render reuses hostnames across deploys —
+# if the old container is killed before its workers deregister, new workers with the
+# same hostname-based names fail to start. The timestamp makes each start unique.
+STARTUP_TS=$(date +%s)
+WORKER_PREFIX="${HOSTNAME:-worker}-${STARTUP_TS}"
 
 # Array to store worker PIDs
 declare -a WORKER_PIDS
