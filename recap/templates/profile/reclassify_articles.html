@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block main_class %}min-h-screen bg-gray-50 py-10{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4">
+
+  <!-- Back link -->
+  <a href="{{ url_for('profile.user', username=current_user.username) }}"
+     class="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 mb-5">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+    </svg>
+    Back to profile
+  </a>
+
+  <!-- Icon + heading -->
+  <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center gap-4">
+      <div class="w-12 h-12 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-indigo-500">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-xl font-extrabold text-gray-900">Reclassify Articles</h1>
+        <p class="text-xs text-gray-500">Select articles to re-run AI classification on. Useful after prompt or model updates.</p>
+      </div>
+    </div>
+
+    <!-- Sort toggle -->
+    <div class="flex items-center gap-2 text-sm">
+      <a href="{{ url_for('profile.reclassify_articles', sort='oldest', page=1) }}"
+         class="{{ 'font-semibold text-indigo-600' if sort == 'oldest' else 'text-gray-500 hover:text-gray-700' }}">
+        Oldest first
+      </a>
+      <span class="text-gray-300">|</span>
+      <a href="{{ url_for('profile.reclassify_articles', sort='newest', page=1) }}"
+         class="{{ 'font-semibold text-indigo-600' if sort == 'newest' else 'text-gray-500 hover:text-gray-700' }}">
+        Newest first
+      </a>
+    </div>
+  </div>
+
+  {% if pagination.total == 0 %}
+  <!-- Empty state -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 px-6 py-12 text-center">
+    <p class="text-gray-400 text-sm">No articles yet. Add some from the home page.</p>
+  </div>
+  {% else %}
+
+  <form method="POST" action="{{ url_for('profile.reclassify_articles_post') }}">
+
+    <!-- Table -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-4">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 border-b border-gray-100">
+          <tr>
+            <th class="w-10 px-4 py-3">
+              <input type="checkbox" id="select-all"
+                     class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+            </th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Title</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-40">Category</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-32">Classified</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for article in pagination.items %}
+          <tr class="hover:bg-gray-50 transition-colors">
+            <td class="px-4 py-3">
+              <input
+                type="checkbox"
+                name="article_ids"
+                value="{{ article.id }}"
+                class="article-checkbox rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              >
+            </td>
+            <td class="px-4 py-3">
+              <a href="{{ url_for('routes.show', id=article.id) }}"
+                 class="text-gray-800 hover:text-indigo-600 font-medium line-clamp-1"
+                 title="{{ article.title or article.url_path }}">
+                {{ article.title or article.url_path }}
+              </a>
+            </td>
+            <td class="px-4 py-3">
+              {% if article.category %}
+                <span class="inline-flex items-center bg-indigo-50 border border-indigo-200 rounded-full px-2 py-0.5 text-xs text-indigo-700">
+                  {{ article.category }}
+                </span>
+              {% else %}
+                <span class="text-gray-400 italic text-xs">Uncategorised</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-xs text-gray-500">
+              {% if article.classified %}
+                {{ article.classified.strftime('%d %b %Y') }}
+              {% else %}
+                <span class="text-gray-400 italic">Never</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if pagination.pages > 1 %}
+    <div class="flex items-center justify-center gap-1 mb-4 text-sm">
+      {% if pagination.has_prev %}
+        <a href="{{ url_for('profile.reclassify_articles', page=pagination.prev_num, sort=sort) }}"
+           class="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
+          &laquo; Prev
+        </a>
+      {% endif %}
+
+      {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+        {% if p %}
+          <a href="{{ url_for('profile.reclassify_articles', page=p, sort=sort) }}"
+             class="px-3 py-1.5 rounded-lg border transition-colors
+                    {{ 'bg-indigo-600 border-indigo-600 text-white font-semibold' if p == pagination.page else 'border-gray-200 text-gray-600 hover:bg-gray-50' }}">
+            {{ p }}
+          </a>
+        {% else %}
+          <span class="px-2 text-gray-400">…</span>
+        {% endif %}
+      {% endfor %}
+
+      {% if pagination.has_next %}
+        <a href="{{ url_for('profile.reclassify_articles', page=pagination.next_num, sort=sort) }}"
+           class="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
+          Next &raquo;
+        </a>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Footer bar -->
+    <div class="flex items-center justify-between bg-white rounded-xl shadow-sm border border-gray-100 px-5 py-3">
+      <span id="selected-count" class="text-sm text-gray-500">0 selected</span>
+      <button type="submit" id="submit-btn" disabled
+              class="px-5 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold
+                     hover:bg-indigo-700 transition-colors
+                     disabled:opacity-40 disabled:cursor-not-allowed">
+        Reclassify Selected
+      </button>
+    </div>
+
+  </form>
+  {% endif %}
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const selectAll = document.getElementById('select-all');
+  const submitBtn = document.getElementById('submit-btn');
+
+  function updateCount() {
+    const n = document.querySelectorAll('.article-checkbox:checked').length;
+    document.getElementById('selected-count').textContent = n + ' selected';
+    submitBtn.disabled = n === 0;
+  }
+
+  if (selectAll) {
+    selectAll.addEventListener('change', function () {
+      document.querySelectorAll('.article-checkbox').forEach(cb => cb.checked = this.checked);
+      updateCount();
+    });
+  }
+
+  document.querySelectorAll('.article-checkbox').forEach(cb =>
+    cb.addEventListener('change', function () {
+      if (selectAll && !this.checked) selectAll.checked = false;
+      updateCount();
+    })
+  );
+});
+</script>
+{% endblock %}

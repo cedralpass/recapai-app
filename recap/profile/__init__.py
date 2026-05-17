@@ -346,3 +346,55 @@ def api_token():
 
     token = current_user.get_or_create_api_token()
     return render_template("profile/api_token.html", title="API Token", token=token)
+
+
+@bp.route("/settings/reclassify", methods=["GET"])
+@login_required
+def reclassify_articles():
+    page = request.args.get("page", 1, type=int)
+    sort = request.args.get("sort", "oldest")
+    stmt = (
+        sa.select(Article)
+        .where(Article.user_id == current_user.id)
+        .order_by(
+            Article.classified.asc().nulls_first() if sort == "oldest" else Article.classified.desc().nulls_first()
+        )
+    )
+    pagination = db.paginate(stmt, page=page, per_page=20, error_out=False)
+    return render_template(
+        "profile/reclassify_articles.html",
+        pagination=pagination,
+        sort=sort,
+    )
+
+
+@bp.route("/settings/reclassify", methods=["POST"])
+@login_required
+def reclassify_articles_post():
+    article_ids = request.form.getlist("article_ids")
+    if not article_ids:
+        flash("No articles selected.", "error")
+        return redirect(url_for("profile.reclassify_articles"))
+
+    queued = 0
+    for raw_id in article_ids:
+        try:
+            article_id = int(raw_id)
+        except ValueError:
+            continue
+        article = db.session.get(Article, article_id)
+        if not article or article.user_id != current_user.id:
+            continue
+        current_app.task_queue.enqueue(
+            "recap.tasks.classify_url",
+            article.url_path,
+            current_user.id,
+            job_timeout=120,
+        )
+        queued += 1
+
+    flash(
+        f"{queued} article{'s' if queued != 1 else ''} queued for reclassification. "
+        "Results will appear in your article list shortly."
+    )
+    return redirect(url_for("profile.reclassify_articles"))

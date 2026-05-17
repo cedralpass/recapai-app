@@ -1023,3 +1023,71 @@ class TestTaxonomyPreferencesInjection:
 
         context = mock_ai.PerformTask.call_args[0][0]
         assert "User preferences:" not in context
+
+
+# ---------------------------------------------------------------------------
+# Reclassify Articles route
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+@pytest.mark.recap
+class TestReclassifyArticlesRoute:
+    def test_reclassify_articles_get(self, seeded_authenticated_client, seeded_user, recap_app):
+        """GET /settings/reclassify returns 200 with a paginated article table."""
+        response = seeded_authenticated_client.get("/settings/reclassify")
+        assert response.status_code == 200
+        assert b"Reclassify Articles" in response.data
+        assert b"article_ids" in response.data
+
+    def test_reclassify_articles_post_queues_jobs(self, authenticated_client, recap_app, test_user, mocker):
+        """POST with selected IDs enqueues one classify_url job per article."""
+        with recap_app.app_context():
+            a1 = Article(url_path="https://example.com/r1", user_id=test_user.id)
+            a2 = Article(url_path="https://example.com/r2", user_id=test_user.id)
+            db.session.add_all([a1, a2])
+            db.session.commit()
+            ids = [a1.id, a2.id]
+
+        mock_enqueue = mocker.patch.object(recap_app.task_queue, "enqueue")
+
+        response = authenticated_client.post(
+            "/settings/reclassify",
+            data={"article_ids": [str(i) for i in ids]},
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+        assert mock_enqueue.call_count == 2
+        assert mock_enqueue.call_args_list[0][0][0] == "recap.tasks.classify_url"
+        assert b"queued for reclassification" in response.data
+
+    def test_reclassify_articles_post_ownership(self, authenticated_client, recap_app, test_user, mocker):
+        """POST with an article owned by another user skips it — nothing is queued."""
+        with recap_app.app_context():
+            other = User(username="other", email="other@example.com")
+            other.set_password("pass")
+            db.session.add(other)
+            db.session.flush()
+            article = Article(url_path="https://example.com/other", user_id=other.id)
+            db.session.add(article)
+            db.session.commit()
+            article_id = article.id
+
+        mock_enqueue = mocker.patch.object(recap_app.task_queue, "enqueue")
+
+        authenticated_client.post(
+            "/settings/reclassify",
+            data={"article_ids": [str(article_id)]},
+            follow_redirects=True,
+        )
+        mock_enqueue.assert_not_called()
+
+    def test_reclassify_articles_post_no_selection(self, authenticated_client):
+        """POST with no article_ids flashes an error and redirects back."""
+        response = authenticated_client.post(
+            "/settings/reclassify",
+            data={},
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+        assert b"No articles selected" in response.data
