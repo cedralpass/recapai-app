@@ -4,6 +4,7 @@ import sqlalchemy as sa
 from flask import Blueprint, current_app, flash, g, jsonify, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 from rq import Queue, Worker
+from rq.worker_registration import clean_worker_registry
 
 from recap import db, maybe_ping_aiapi
 from recap.auth.email import send_password_reset_email
@@ -265,8 +266,10 @@ def ping_status():
 @login_required
 def health_workers():
     conn = current_app.redis
-    workers = Worker.all(connection=conn)
     queue = Queue(current_app.task_queue.name, connection=conn)
+    if request.args.get("clean") == "true":
+        clean_worker_registry(queue)
+    workers = Worker.all(connection=conn)
 
     worker_data = [
         {
