@@ -16,11 +16,11 @@ flask --app recap db upgrade
 
 
 # startup workers using monitoring script (auto-restarts workers if they crash)
-# 1 RQ worker keeps memory well under the 512MB Render limit (6 processes was OOM-killing)
+# 2 RQ workers: idle ~300MB, dual-active peak ~380MB — within 512MB Render limit
 export RQ_QUEUE_NAME="RECAP2-Classify"
-export NUM_WORKERS=1
+export NUM_WORKERS=2
 /app/worker_monitor.sh &
 
 # launch webserver in foreground (don't daemonize so container stays alive)
-# 2 gunicorn workers + 1 RQ worker ≈ 3 processes, well within 512MB
+# 2 gunicorn workers + 2 RQ workers ≈ 4 processes, within 512MB
 gunicorn -w 2 -b 0.0.0.0:8000 app --log-level info --timeout 90

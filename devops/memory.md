@@ -11,16 +11,17 @@ Every Python process (gunicorn worker or RQ worker) uses roughly 80–120 MB at 
 | Configuration | Processes | Estimated peak |
 |---|---|---|
 | 3 gunicorn + 3 RQ (original) | 6 | ~540 MB — **OOM** |
-| 2 gunicorn + 1 RQ (current) | 3 | ~270 MB — safe |
+| 2 gunicorn + 1 RQ (previous) | 3 | ~270 MB — safe |
+| 2 gunicorn + 2 RQ (current) | 4 | ~380 MB peak — safe |
 
 ## Current settings (`initialize_render_run.sh`)
 
 ```
 gunicorn -w 2   # 2 web workers
-NUM_WORKERS=1   # 1 RQ classification worker
+NUM_WORKERS=2   # 2 RQ classification workers
 ```
 
-2 gunicorn workers is sufficient for a low-traffic personal app. Classification jobs are infrequent and a single RQ worker handles them without queuing delay.
+2 gunicorn workers is sufficient for a low-traffic personal app. 2 RQ workers allow parallel classification; idle baseline ~300 MB, dual-active peak ~380 MB.
 
 ## If memory pressure returns
 
