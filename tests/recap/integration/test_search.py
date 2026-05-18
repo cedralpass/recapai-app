@@ -130,3 +130,17 @@ class TestSearchRoute:
         response = recap_client.get("/")
         assert response.status_code == 200
         assert b'placeholder="Search articles..."' not in response.data
+
+    def test_query_prefilled_when_arriving_from_article_link(self, recap_app, seeded_user):
+        """Arriving via a sub-category/key-topic link pre-fills the search input."""
+        client = recap_app.test_client()
+        _login(client)
+
+        with (
+            patch("recap.routes.AiApiHelper.EmbedText", return_value=FAKE_VEC),
+            patch("recap.models.User.search_articles", return_value=[]),
+        ):
+            response = client.get("/search?q=Conflict+resolution")
+
+        assert response.status_code == 200
+        assert b"Conflict resolution" in response.data

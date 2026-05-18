@@ -65,8 +65,8 @@ class TestShowRoute:
                 summary=kwargs.get("summary", "A summary."),
                 author_name=kwargs.get("author_name", "Author"),
                 category=kwargs.get("category", "Tech"),
-                key_topics='["topic1"]',
-                sub_categories='["sub1"]',
+                key_topics=kwargs.get("key_topics", '["topic1"]'),
+                sub_categories=kwargs.get("sub_categories", '["sub1"]'),
                 user_id=user_id,
             )
             db.session.add(article)
@@ -104,6 +104,34 @@ class TestShowRoute:
         response = recap_client.get(f"/{article_id}/show")
         assert response.status_code == 302
         assert "/auth/login" in response.headers["Location"]
+
+    def test_sub_categories_rendered_as_search_links(self, authenticated_client, recap_app, test_user):
+        """Sub-category items link to /search?q=<term>."""
+        article_id = self._create_article(
+            recap_app,
+            test_user.id,
+            url_path="https://example.com/sub-cat-test",
+            title="Sub-cat Test",
+            sub_categories='["Interpersonal communication", "Negotiation strategies"]',
+        )
+        response = authenticated_client.get(f"/{article_id}/show")
+        assert response.status_code == 200
+        assert b"/search?q=Interpersonal+communication" in response.data
+        assert b"/search?q=Negotiation+strategies" in response.data
+
+    def test_key_topics_rendered_as_search_links(self, authenticated_client, recap_app, test_user):
+        """Key topic items link to /search?q=<term>."""
+        article_id = self._create_article(
+            recap_app,
+            test_user.id,
+            url_path="https://example.com/key-topics-test",
+            title="Key Topics Test",
+            key_topics='["Conflict resolution", "Effective communication"]',
+        )
+        response = authenticated_client.get(f"/{article_id}/show")
+        assert response.status_code == 200
+        assert b"/search?q=Conflict+resolution" in response.data
+        assert b"/search?q=Effective+communication" in response.data
 
 
 @pytest.mark.integration

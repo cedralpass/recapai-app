@@ -106,7 +106,7 @@
             <div class="font-bold text-xs text-gray-900 mb-2.5 uppercase tracking-wide">Sub-Categories</div>
             <ul class="space-y-1">
                 {% for category in article.get_sub_categories_json() %}
-                <li class="break-words px-2 py-1.5 text-xs odd:bg-white even:bg-gray-100 rounded">{{ category }}</li>
+                <li class="break-words px-2 py-1.5 text-xs odd:bg-white even:bg-gray-100 rounded"><a href="{{ url_for('routes.search', q=category) }}" class="hover:underline">{{ category }}</a></li>
                 {% endfor %}
             </ul>
         </div>
@@ -117,7 +117,7 @@
             <div class="font-bold text-xs text-gray-900 mb-2.5 uppercase tracking-wide">Key Topics</div>
             <ul class="space-y-1">
                 {% for topic in article.get_key_topics_json() %}
-                <li class="break-words px-2 py-1.5 text-xs odd:bg-white even:bg-gray-100 rounded">{{ topic }}</li>
+                <li class="break-words px-2 py-1.5 text-xs odd:bg-white even:bg-gray-100 rounded"><a href="{{ url_for('routes.search', q=topic) }}" class="hover:underline">{{ topic }}</a></li>
                 {% endfor %}
             </ul>
         </div>
