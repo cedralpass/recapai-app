@@ -187,6 +187,257 @@ class TestClassifyUrl:
         assert result is None
         mock_AiApiHelper.ClassifyUrl.assert_not_called()
 
+    @patch("recap.tasks._build_category_list", return_value=["Technology"])
+    @patch("recap.tasks.AiApiHelper")
+    @patch("recap.tasks.Article")
+    @patch("recap.tasks.db")
+    def test_site_down_preserves_existing_classification(
+        self, mock_db, mock_Article, mock_AiApiHelper, mock_build_cats, recap_app
+    ):
+        """When site is down and article is already classified, save is skipped.
+
+        This models the real cq2.co case: the site returns a DNS ConnectError, so
+        fetch_article_content returns False, ClassifyUrl adds site_down=True, and
+        the task must not overwrite the good existing classification with a URL-only guess.
+        """
+        from datetime import datetime, timezone
+
+        from recap import tasks
+        from recap.tasks import classify_url
+
+        mock_article = MagicMock()
+        mock_article.classified = datetime(2025, 1, 1, tzinfo=timezone.utc)  # already classified
+        mock_Article.get_article_by_url_path.return_value = mock_article
+
+        mock_AiApiHelper.ClassifyUrl.return_value = {
+            "site_down": True,
+            "summary": "Site Down – Classifying by URL Only",
+            "blog_title": "Unknown",
+            "author": "Unknown",
+            "category": "Technology",
+            "key_topics": [],
+            "sub_categories": [],
+        }
+
+        mock_redis = MagicMock()
+        with patch.object(tasks.app, "redis", mock_redis):
+            with recap_app.app_context():
+                result = classify_url("https://cq2.co/blog/the-best-way-to-have-complex-discussions", 42)
+
+        assert result is None
+        mock_db.session.commit.assert_not_called()
+        # Article fields must NOT be overwritten
+        assert mock_article.summary != "Site Down – Classifying by URL Only"
+        assert mock_article.classified == datetime(2025, 1, 1, tzinfo=timezone.utc)
+
+    @patch("recap.tasks._build_category_list", return_value=["Technology"])
+    @patch("recap.tasks.AiApiHelper")
+    @patch("recap.tasks.Article")
+    @patch("recap.tasks.db")
+    def test_site_down_stores_redis_flash_for_user(
+        self, mock_db, mock_Article, mock_AiApiHelper, mock_build_cats, recap_app
+    ):
+        """When site is down and article is classified, a flash message is stored in Redis."""
+        from datetime import datetime, timezone
+
+        from recap import tasks
+        from recap.tasks import classify_url
+
+        mock_article = MagicMock()
+        mock_article.classified = datetime(2025, 1, 1, tzinfo=timezone.utc)
+        mock_Article.get_article_by_url_path.return_value = mock_article
+
+        mock_AiApiHelper.ClassifyUrl.return_value = {
+            "site_down": True,
+            "summary": "Site Down – Classifying by URL Only",
+            "blog_title": "Unknown",
+            "author": "Unknown",
+            "category": "Technology",
+            "key_topics": [],
+            "sub_categories": [],
+        }
+
+        mock_redis = MagicMock()
+        with patch.object(tasks.app, "redis", mock_redis):
+            with recap_app.app_context():
+                classify_url("https://cq2.co/blog/the-best-way-to-have-complex-discussions", 42)
+
+        mock_redis.setex.assert_called_once()
+        key, ttl, message = mock_redis.setex.call_args[0]
+        assert key == "user_flash:42"
+        assert ttl == 300
+        assert "cq2.co" in message
+        assert "down" in message.lower()
+
+    @patch("recap.tasks._build_category_list", return_value=["Technology"])
+    @patch("recap.tasks.AiApiHelper")
+    @patch("recap.tasks.Article")
+    @patch("recap.tasks.db")
+    def test_site_down_proceeds_for_unclassified_article(
+        self, mock_db, mock_Article, mock_AiApiHelper, mock_build_cats, recap_app
+    ):
+        """When site is down but article has never been classified, classification still runs.
+
+        A brand-new article with no prior data is better off with a URL-only classification
+        than no classification at all.
+        """
+        from recap import tasks
+        from recap.tasks import classify_url
+
+        mock_article = MagicMock()
+        mock_article.classified = None  # not yet classified
+        mock_Article.get_article_by_url_path.return_value = mock_article
+
+        classify_result = {
+            "site_down": True,
+            "summary": "Site Down – Classifying by URL Only",
+            "blog_title": "Complex Discussions",
+            "author": "Unknown",
+            "category": "Technology",
+            "key_topics": [],
+            "sub_categories": [],
+        }
+        mock_AiApiHelper.ClassifyUrl.return_value = classify_result
+
+        mock_redis = MagicMock()
+        with patch.object(tasks.app, "redis", mock_redis):
+            with recap_app.app_context():
+                classify_url("https://cq2.co/blog/the-best-way-to-have-complex-discussions", 7)
+
+        # Classification should proceed (save + commit called)
+        mock_db.session.commit.assert_called_once()
+        mock_redis.setex.assert_not_called()  # no flash for a new article
+        assert mock_article.summary == "Site Down – Classifying by URL Only"
+
+    @patch("recap.tasks._build_category_list", return_value=["Technology"])
+    @patch("recap.tasks.AiApiHelper")
+    @patch("recap.tasks.Article")
+    @patch("recap.tasks.db")
+    def test_bot_blocked_preserves_existing_classification(
+        self, mock_db, mock_Article, mock_AiApiHelper, mock_build_cats, recap_app
+    ):
+        """When site returns 403 and article is already classified, existing data is kept.
+
+        Models the Medium bot-blocking case: site_blocked=True on reclassify of an
+        article that already has good data — we preserve it and flash the user.
+        """
+        from datetime import datetime, timezone
+
+        from recap import tasks
+        from recap.tasks import classify_url
+
+        mock_article = MagicMock()
+        mock_article.classified = datetime(2025, 3, 1, tzinfo=timezone.utc)
+        mock_article.title = "Improve Retrieval Using MMR"
+        mock_Article.get_article_by_url_path.return_value = mock_article
+
+        mock_AiApiHelper.ClassifyUrl.return_value = {
+            "site_blocked": True,
+            "summary": "Bot Blocked – Classifying by URL Only",
+            "blog_title": "Unknown",
+            "author": "Unknown",
+            "category": "Technology",
+            "key_topics": [],
+            "sub_categories": [],
+        }
+
+        mock_redis = MagicMock()
+        with patch.object(tasks.app, "redis", mock_redis):
+            with recap_app.app_context():
+                result = classify_url(
+                    "https://kaustavmukherjee-66179.medium.com/improve-retrieval-of-documents-from-vectordb-using-maximum-marginal-relevance-mmr-for-balancing-f6ae56fb9512",
+                    99,
+                )
+
+        assert result is None
+        mock_db.session.commit.assert_not_called()
+        assert mock_article.title == "Improve Retrieval Using MMR"  # unchanged
+
+    @patch("recap.tasks._build_category_list", return_value=["Technology"])
+    @patch("recap.tasks.AiApiHelper")
+    @patch("recap.tasks.Article")
+    @patch("recap.tasks.db")
+    def test_bot_blocked_stores_redis_flash_distinct_from_site_down(
+        self, mock_db, mock_Article, mock_AiApiHelper, mock_build_cats, recap_app
+    ):
+        """Bot-blocked flash message mentions 'blocking' (different wording from site-down)."""
+        from datetime import datetime, timezone
+
+        from recap import tasks
+        from recap.tasks import classify_url
+
+        mock_article = MagicMock()
+        mock_article.classified = datetime(2025, 3, 1, tzinfo=timezone.utc)
+        mock_Article.get_article_by_url_path.return_value = mock_article
+
+        mock_AiApiHelper.ClassifyUrl.return_value = {
+            "site_blocked": True,
+            "summary": "S",
+            "blog_title": "T",
+            "author": "A",
+            "category": "C",
+            "key_topics": [],
+            "sub_categories": [],
+        }
+
+        mock_redis = MagicMock()
+        with patch.object(tasks.app, "redis", mock_redis):
+            with recap_app.app_context():
+                classify_url("https://medium.com/some-article", 5)
+
+        mock_redis.setex.assert_called_once()
+        _key, _ttl, message = mock_redis.setex.call_args[0]
+        assert "blocking" in message.lower() or "blocked" in message.lower()
+        assert "down" not in message.lower()  # distinct from site-down wording
+
+    @patch("recap.tasks._build_category_list", return_value=["Technology"])
+    @patch("recap.tasks.AiApiHelper")
+    @patch("recap.tasks.Article")
+    @patch("recap.tasks.db")
+    def test_bot_blocked_sets_blocked_title_for_new_article(
+        self, mock_db, mock_Article, mock_AiApiHelper, mock_build_cats, recap_app
+    ):
+        """For a brand-new article blocked by Medium, title is set to 'Medium Blocked – <url>'.
+
+        The article is classified from the URL slug, but the title is overridden so the
+        user immediately sees that the content was inaccessible due to bot detection.
+        """
+        from recap import tasks
+        from recap.tasks import classify_url
+
+        url = "https://kaustavmukherjee-66179.medium.com/improve-retrieval-of-documents-from-vectordb-using-maximum-marginal-relevance-mmr-for-balancing-f6ae56fb9512"
+
+        mock_article = MagicMock()
+        mock_article.classified = None  # never classified
+        mock_Article.get_article_by_url_path.return_value = mock_article
+
+        mock_AiApiHelper.ClassifyUrl.return_value = {
+            "site_blocked": True,
+            "summary": "Bot Blocked – Classifying by URL Only",
+            "blog_title": "AI-guessed title",
+            "author": "Unknown",
+            "category": "Artificial Intelligence",
+            "key_topics": [],
+            "sub_categories": [],
+        }
+
+        mock_redis = MagicMock()
+        with patch.object(tasks.app, "redis", mock_redis):
+            with recap_app.app_context():
+                classify_url(url, 3)
+
+        # Classification should proceed (commit called)
+        mock_db.session.commit.assert_called_once()
+        mock_redis.setex.assert_not_called()  # no flash for a new article
+
+        # Title must reflect the block, not the AI guess
+        saved_title = mock_article.title
+        assert "Medium" in saved_title
+        assert "Blocked" in saved_title
+        assert url in saved_title
+        # Summary must also reflect the block reason
+        assert mock_article.summary == "Bot Blocked – Classifying by URL Only"
+
 
 @pytest.mark.unit
 @pytest.mark.recap

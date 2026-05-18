@@ -222,7 +222,7 @@ def build_prompt(url, content=None, categories=None):
             "You are given ONLY the URL of a blog post; the article text is not provided. "
             f"{category_instruction} "
             "Do NOT invent or assume acronym meanings, author, title, or details. "
-            "If you cannot infer something from the URL alone, use a neutral placeholder (e.g. 'Unknown' or 'From URL only'). "
+            "If you cannot infer something from the URL alone, use 'Unknown' for fields you cannot determine. "
             "Respond with: category, url of blog, blog title, author, a short summary (based only on what the URL suggests; do not invent content), "
             "three key topics as bullet points, and three sub categories as bullet points. "
             "Respond in a structured JSON with keys: author, blog_title, category, summary, key_topics, sub_categories, url."

@@ -38,18 +38,127 @@ class TestFetchArticleContent:
         assert len(result) <= 12000
 
     @patch("recap.aiapi_helper._HAS_READABILITY", True)
-    @patch("recap.aiapi_helper.httpx")
-    def test_returns_none_when_http_fails(self, mock_httpx, recap_app):
-        """When httpx.get raises, return None."""
+    def test_returns_none_when_http_fails(self, recap_app):
+        """Generic httpx.RequestError (not a ConnectError/Timeout) falls through to None.
+
+        Only specific subclasses (ConnectError, TimeoutException, HTTPStatusError) return False.
+        A bare RequestError (e.g. TooManyRedirects) returns None because it's ambiguous.
+        """
         import httpx
 
-        mock_httpx.get.side_effect = httpx.RequestError("connection failed")
+        with patch("recap.aiapi_helper.httpx.get", side_effect=httpx.RequestError("connection failed")):
+            with recap_app.app_context():
+                from recap.aiapi_helper import fetch_article_content
 
-        with recap_app.app_context():
-            from recap.aiapi_helper import fetch_article_content
-
-            result = fetch_article_content("https://example.com/article")
+                result = fetch_article_content("https://example.com/article")
         assert result is None
+
+    @patch("recap.aiapi_helper._HAS_READABILITY", True)
+    def test_returns_false_for_connect_error_modeling_cq2co_dns_failure(self, recap_app):
+        """ConnectError (DNS lookup failure, as observed with cq2.co) returns False.
+
+        False distinguishes "site is unreachable" from None ("fetch succeeded but no text"),
+        allowing the task layer to protect an already-classified article from being overwritten.
+        """
+        import httpx
+
+        with patch(
+            "recap.aiapi_helper.httpx.get",
+            side_effect=httpx.ConnectError("[Errno 8] nodename nor servname provided, or not known"),
+        ):
+            with recap_app.app_context():
+                from recap.aiapi_helper import fetch_article_content
+
+                result = fetch_article_content("https://cq2.co/blog/the-best-way-to-have-complex-discussions")
+
+        assert result is False
+
+    @patch("recap.aiapi_helper._HAS_READABILITY", True)
+    def test_returns_false_for_timeout(self, recap_app):
+        """TimeoutException returns False (site treated as unreachable)."""
+        import httpx
+
+        with patch("recap.aiapi_helper.httpx.get", side_effect=httpx.TimeoutException("timed out")):
+            with recap_app.app_context():
+                from recap.aiapi_helper import fetch_article_content
+
+                result = fetch_article_content("https://example.com/slow")
+
+        assert result is False
+
+    @patch("recap.aiapi_helper._HAS_READABILITY", True)
+    def test_returns_false_for_http_status_error(self, recap_app):
+        """Non-403 HTTPStatusError (e.g. 404, 5xx) returns False (page gone / server error)."""
+        import httpx
+
+        mock_response = MagicMock()
+        req = httpx.Request("GET", "https://example.com/gone")
+        resp = httpx.Response(404, request=req)
+        mock_response.raise_for_status.side_effect = httpx.HTTPStatusError("Not Found", request=req, response=resp)
+
+        with patch("recap.aiapi_helper.httpx.get", return_value=mock_response):
+            with recap_app.app_context():
+                from recap.aiapi_helper import fetch_article_content
+
+                result = fetch_article_content("https://example.com/gone")
+
+        assert result is False
+
+    @patch("recap.aiapi_helper._HAS_READABILITY", True)
+    def test_returns_site_blocked_for_403_modeling_medium_bot_block(self, recap_app):
+        """A 403 response returns SITE_BLOCKED (not False), modelling Medium's bot detection.
+
+        SITE_BLOCKED is a falsy sentinel distinct from False ("site down"), so the task
+        layer can classify the article from its URL while marking the title as blocked.
+        """
+        import httpx
+
+        mock_response = MagicMock()
+        req = httpx.Request(
+            "GET",
+            "https://kaustavmukherjee-66179.medium.com/improve-retrieval-of-documents-from-vectordb-using-maximum-marginal-relevance-mmr-for-balancing-f6ae56fb9512",
+        )
+        resp = httpx.Response(403, request=req)
+        mock_response.raise_for_status.side_effect = httpx.HTTPStatusError("Forbidden", request=req, response=resp)
+
+        with patch("recap.aiapi_helper.httpx.get", return_value=mock_response):
+            with recap_app.app_context():
+                from recap.aiapi_helper import SITE_BLOCKED, fetch_article_content
+
+                result = fetch_article_content(
+                    "https://kaustavmukherjee-66179.medium.com/improve-retrieval-of-documents-from-vectordb-using-maximum-marginal-relevance-mmr-for-balancing-f6ae56fb9512"
+                )
+
+        assert result is SITE_BLOCKED
+        assert not result  # falsy — won't be sent as article content to the AI
+
+    @patch("recap.aiapi_helper._HAS_READABILITY", True)
+    def test_site_blocked_is_distinct_from_site_down(self, recap_app):
+        """SITE_BLOCKED and False are different objects so identity checks are unambiguous."""
+        import httpx
+
+        req = httpx.Request("GET", "https://example.com")
+        blocked_resp = httpx.Response(403, request=req)
+        mock_blocked = MagicMock()
+        mock_blocked.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "Forbidden", request=req, response=blocked_resp
+        )
+
+        with patch("recap.aiapi_helper.httpx.get", return_value=mock_blocked):
+            with recap_app.app_context():
+                from recap.aiapi_helper import SITE_BLOCKED, fetch_article_content
+
+                blocked_result = fetch_article_content("https://example.com")
+
+        with patch("recap.aiapi_helper.httpx.get", side_effect=httpx.ConnectError("DNS fail")):
+            with recap_app.app_context():
+                from recap.aiapi_helper import fetch_article_content
+
+                down_result = fetch_article_content("https://example.com")
+
+        assert blocked_result is SITE_BLOCKED
+        assert down_result is False
+        assert blocked_result is not down_result
 
     @patch("recap.aiapi_helper._HAS_READABILITY", True)
     @patch("recap.aiapi_helper.lxml_html")
@@ -116,7 +225,7 @@ class TestClassifyUrlWithContent:
         mock_response = MagicMock()
         mock_response.json.return_value = {
             "author": "Unknown",
-            "blog_title": "From URL only",
+            "blog_title": "Unknown",
             "category": "Other",
             "summary": "No content",
             "key_topics": [],
@@ -341,3 +450,112 @@ class TestClassifyUrlErrorHandlers:
             result = AiApiHelper.ClassifyUrl("https://example.com", "ref-1")
 
         assert result == {}
+
+
+@pytest.mark.unit
+@pytest.mark.recap
+class TestClassifyUrlSiteDown:
+    """Tests that ClassifyUrl propagates site_down=True when fetch_article_content returns False.
+
+    False (vs None) means the site was unreachable (ConnectError, Timeout, HTTP error),
+    which is distinct from the site being up but content being un-extractable.
+    """
+
+    _AI_RESULT = {
+        "author": "Unknown",
+        "blog_title": "Unknown",
+        "category": "Technology",
+        "summary": "Could not fetch content.",
+        "key_topics": [],
+        "sub_categories": [],
+        "url": "https://cq2.co/blog/the-best-way-to-have-complex-discussions",
+    }
+
+    @patch("recap.aiapi_helper.httpx.post")
+    @patch("recap.aiapi_helper.fetch_article_content", return_value=False)
+    def test_sets_site_down_true_when_fetch_returns_false(self, mock_fetch, mock_post, recap_app):
+        """When fetch_article_content returns False (site unreachable), result includes site_down=True."""
+        mock_post.return_value.json.return_value = dict(self._AI_RESULT)
+
+        with recap_app.app_context():
+            from recap.aiapi_helper import AiApiHelper
+
+            result = AiApiHelper.ClassifyUrl("https://cq2.co/blog/the-best-way-to-have-complex-discussions", "ref-1")
+
+        assert result.get("site_down") is True
+
+    @patch("recap.aiapi_helper.httpx.post")
+    @patch("recap.aiapi_helper.fetch_article_content", return_value=False)
+    def test_still_calls_ai_api_when_site_down(self, mock_fetch, mock_post, recap_app):
+        """Even when site is down, ClassifyUrl still calls the AI API (URL-only prompt for new articles)."""
+        mock_post.return_value.json.return_value = dict(self._AI_RESULT)
+
+        with recap_app.app_context():
+            from recap.aiapi_helper import AiApiHelper
+
+            AiApiHelper.ClassifyUrl("https://cq2.co/blog/the-best-way-to-have-complex-discussions", "ref-1")
+
+        mock_post.assert_called_once()
+        data = mock_post.call_args[1]["data"]
+        assert "content" not in data  # no content sent because fetch failed
+
+    @patch("recap.aiapi_helper.httpx.post")
+    @patch("recap.aiapi_helper.fetch_article_content", return_value=None)
+    def test_does_not_set_site_down_when_fetch_returns_none(self, mock_fetch, mock_post, recap_app):
+        """When fetch returns None (site up but no text), site_down is NOT set."""
+        mock_post.return_value.json.return_value = dict(self._AI_RESULT)
+
+        with recap_app.app_context():
+            from recap.aiapi_helper import AiApiHelper
+
+            result = AiApiHelper.ClassifyUrl("https://example.com", "ref-1")
+
+        assert "site_down" not in result
+
+    @patch("recap.aiapi_helper.httpx.post")
+    @patch("recap.aiapi_helper.fetch_article_content", return_value="Full article text here.")
+    def test_does_not_set_site_down_when_fetch_returns_text(self, mock_fetch, mock_post, recap_app):
+        """When fetch returns text (site up), site_down is NOT set."""
+        mock_post.return_value.json.return_value = dict(self._AI_RESULT)
+
+        with recap_app.app_context():
+            from recap.aiapi_helper import AiApiHelper
+
+            result = AiApiHelper.ClassifyUrl("https://example.com", "ref-1")
+
+        assert "site_down" not in result
+
+    @patch("recap.aiapi_helper.httpx.post")
+    def test_sets_site_blocked_true_when_fetch_returns_site_blocked(self, mock_post, recap_app):
+        """When fetch returns SITE_BLOCKED (403), result includes site_blocked=True but NOT site_down."""
+        mock_post.return_value.json.return_value = dict(self._AI_RESULT)
+
+        with recap_app.app_context():
+            from unittest.mock import patch as _patch
+
+            from recap.aiapi_helper import SITE_BLOCKED, AiApiHelper
+
+            with _patch("recap.aiapi_helper.fetch_article_content", return_value=SITE_BLOCKED):
+                result = AiApiHelper.ClassifyUrl(
+                    "https://kaustavmukherjee-66179.medium.com/improve-retrieval-of-documents-from-vectordb-using-maximum-marginal-relevance-mmr-for-balancing-f6ae56fb9512",
+                    "ref-1",
+                )
+
+        assert result.get("site_blocked") is True
+        assert "site_down" not in result
+
+    @patch("recap.aiapi_helper.httpx.post")
+    def test_blocked_content_not_sent_to_ai_api(self, mock_post, recap_app):
+        """When fetch returns SITE_BLOCKED, the sentinel is NOT forwarded as article content."""
+        mock_post.return_value.json.return_value = dict(self._AI_RESULT)
+
+        with recap_app.app_context():
+            from unittest.mock import patch as _patch
+
+            from recap.aiapi_helper import SITE_BLOCKED, AiApiHelper
+
+            with _patch("recap.aiapi_helper.fetch_article_content", return_value=SITE_BLOCKED):
+                AiApiHelper.ClassifyUrl("https://medium.com/some-article", "ref-1")
+
+        data = mock_post.call_args[1]["data"]
+        assert "content" not in data

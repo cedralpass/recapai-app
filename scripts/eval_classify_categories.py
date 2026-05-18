@@ -170,7 +170,7 @@ def build_prompt(url, content=None, categories=None):
             "You are given ONLY the URL of a blog post; the article text is not provided. "
             f"{instruction} "
             "Do NOT invent or assume acronym meanings, author, title, or details. "
-            "If you cannot infer something from the URL alone, use a neutral placeholder (e.g. 'Unknown' or 'From URL only'). "
+            "If you cannot infer something from the URL alone, use 'Unknown' for fields you cannot determine. "
             "Respond in a structured JSON with keys: author, blog_title, category, summary, key_topics, sub_categories, url."
         )
         user = "please classify this blog post: " + str(url)

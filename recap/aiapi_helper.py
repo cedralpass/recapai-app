@@ -1,4 +1,5 @@
 import re
+from urllib.parse import urlparse
 
 import httpx
 from environs import Env
@@ -16,10 +17,42 @@ except ImportError:
     _HAS_READABILITY = False
 
 
+class _Sentinel:
+    """Falsy singleton used to signal a specific fetch outcome without being mistaken for content."""
+
+    def __init__(self, name):
+        self._name = name
+
+    def __bool__(self):
+        return False
+
+    def __repr__(self):
+        return f"<{self._name}>"
+
+
+# Returned by fetch_article_content when the site actively blocks our bot (HTTP 403).
+# Distinct from False ("site is down") so the task layer can treat it differently.
+SITE_BLOCKED = _Sentinel("SITE_BLOCKED")
+
+
+def _site_name_from_url(url):
+    """Extract a human-readable site name from a URL (e.g. 'Medium' from medium.com)."""
+    try:
+        parts = urlparse(url).netloc.split(".")
+        return parts[-2].capitalize() if len(parts) >= 2 else urlparse(url).netloc
+    except Exception:
+        return "Site"
+
+
 def fetch_article_content(url, max_chars=12000, timeout=18):
     """
     Fetch a URL and extract main article text using readability-lxml.
-    Returns plain text truncated to max_chars, or None on any failure.
+
+    Returns:
+      str   — extracted text (success)
+      None  — fetch succeeded but text could not be extracted
+      False — site is unreachable (connection error, timeout, 5xx)
+      SITE_BLOCKED — site returned 403 (bot/access blocked)
     """
     if not _HAS_READABILITY:
         current_app.logger.debug("fetch_article_content: readability not available, skipping fetch")
@@ -32,6 +65,20 @@ def fetch_article_content(url, max_chars=12000, timeout=18):
             headers={"User-Agent": "Recap/1.0 (article bookmarking service)"},
         )
         response.raise_for_status()
+    except (httpx.ConnectError, httpx.TimeoutException, httpx.RemoteProtocolError) as e:
+        current_app.logger.debug("fetch_article_content: connection error for %s: %s", url, e)
+        return False  # Site is unreachable
+    except httpx.HTTPStatusError as e:
+        status = e.response.status_code
+        if status == 403:
+            current_app.logger.debug("fetch_article_content: 403 bot-blocked for %s", url)
+            return SITE_BLOCKED
+        current_app.logger.debug("fetch_article_content: HTTP %s for %s: %s", status, url, e)
+        return False  # Other HTTP errors (404, 5xx, etc.) — treat as unreachable
+    except Exception as e:
+        current_app.logger.debug("fetch_article_content failed for %s: %s", url, e)
+        return None
+    try:
         doc = Document(response.text)
         summary_html = doc.summary()
         if not summary_html or not summary_html.strip():
@@ -46,7 +93,7 @@ def fetch_article_content(url, max_chars=12000, timeout=18):
             text = text[:max_chars]
         return text
     except Exception as e:
-        current_app.logger.debug("fetch_article_content failed for %s: %s", url, e)
+        current_app.logger.debug("fetch_article_content: content extraction failed for %s: %s", url, e)
         return None
 
 
@@ -62,8 +109,10 @@ class AiApiHelper:
         current_app.logger.debug("AiApiHelper: calling post to %s", ai_url)
         results_json = {}
         content = fetch_article_content(url)
+        site_down = content is False  # connection error / timeout / 5xx
+        site_blocked = content is SITE_BLOCKED  # 403 bot-blocked
         request_data = {"url": url, "ref_key": reference, "secret": "abc123"}
-        if content:
+        if content:  # only truthy strings (real text) reach here; sentinels are falsy
             request_data["content"] = content
         if categories:
             request_data["categories"] = ", ".join(categories)
@@ -85,6 +134,10 @@ class AiApiHelper:
             current_app.logger.error(f"JSON decoding failed: {value_err}")
         except Exception as err:
             current_app.logger.error(f"An unexpected error occurred: {err}")
+        if site_down:
+            results_json["site_down"] = True
+        if site_blocked:
+            results_json["site_blocked"] = True
         return results_json
 
     @staticmethod

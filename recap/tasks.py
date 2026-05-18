@@ -88,7 +88,32 @@ def classify_url(url, user_id):
         classify_result = AiApiHelper.ClassifyUrl(
             url, user_id, categories=categories
         )  # TODO : should be the article id, but using user-id for now
-        # save resutls to article found
+        site_down = classify_result.get("site_down")
+        site_blocked = classify_result.get("site_blocked")
+        # If the site is unreachable or blocking us and the article is already classified,
+        # keep the existing data rather than overwriting with a URL-only guess.
+        if (site_down or site_blocked) and article.classified is not None:
+            if site_blocked:
+                msg = f"The site at {url} is blocking our bot — your existing classification has been kept."
+            else:
+                msg = f"The site at {url} appears to be down — your existing classification has been kept."
+            app.logger.warning(
+                "classify_url: %s for already-classified article %s",
+                "bot-blocked" if site_blocked else "site down",
+                article.id,
+            )
+            app.redis.setex(f"user_flash:{user_id}", 300, msg)
+            return None
+        # For new articles where content couldn't be fetched, set a descriptive summary
+        # and (for bot-blocked) a marked title so users understand the classification is URL-only.
+        if site_down:
+            classify_result["summary"] = "Site Down – Classifying by URL Only"
+        elif site_blocked:
+            from recap.aiapi_helper import _site_name_from_url
+
+            classify_result["summary"] = "Bot Blocked – Classifying by URL Only"
+            classify_result["blog_title"] = f"{_site_name_from_url(url)} Blocked – {url}"
+        # save results to article found
         app.logger.debug("saving results to article")
         app.logger.debug(classify_result["summary"])
         save_classification_result(classify_result, article)

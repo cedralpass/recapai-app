@@ -21,6 +21,11 @@ bp = Blueprint("routes", __name__)
 @bp.route("/index", methods=["GET", "POST"])
 def index():
     maybe_ping_aiapi()
+    if current_user.is_authenticated:
+        pending_flash = current_app.redis.get(f"user_flash:{current_user.id}")
+        if pending_flash:
+            flash(pending_flash.decode("utf-8"), "error")
+            current_app.redis.delete(f"user_flash:{current_user.id}")
     form = ArticleForm()
     if form.validate_on_submit():
         # TODO: Validate that the form.url_path is a valid url
