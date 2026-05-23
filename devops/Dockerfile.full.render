@@ -1,17 +1,16 @@
-# Set base image (host OS)
-# need to build with --platform=linux/amd64 to get around /usr/local/bin/gunicorn Exec format error
-# https://stackoverflow.com/questions/75996884/usr-local-bin-gunicorn-exec-format-error-apple-m1-chip
+# $BUILDPLATFORM = native platform of the build machine (arm64 locally, amd64 in CI).
+# CI workflow pins platforms: linux/amd64, so the pushed image is always amd64 for Render.
+# slim-bookworm ships prebuilt manylinux wheels for scikit-learn/numpy — much faster than Alpine/musl.
 
-FROM --platform=linux/amd64 python:3.11-alpine 
+FROM --platform=$BUILDPLATFORM python:3.11-slim-bookworm
 
 # By default, listen on port 8000
 EXPOSE 8000/tcp
 
-# curl for health checks; bash/procps for worker_monitor.sh; libxml2/libxslt and build deps for lxml (readability-lxml)
-RUN apk --no-cache add bash curl procps libxml2-dev libxslt-dev gcc g++ musl-dev
-
-#not using redis locally with render
-#RUN apk --update --no-cache add redis
+# curl for health checks; bash/procps for worker_monitor.sh; libxml2/libxslt and build deps for lxml (readability-lxml); libgomp1 for scikit-learn parallelism
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash curl procps libxml2-dev libxslt-dev gcc libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory in the container
 WORKDIR /app
@@ -43,4 +42,4 @@ RUN chmod 66 /app/instance
 RUN chmod +x /app/initialize_render_run.sh
 RUN chmod +x /app/worker_monitor.sh
 
-CMD sh /app/initialize_render_run.sh
+CMD ["/bin/sh", "/app/initialize_render_run.sh"]

@@ -1,14 +1,15 @@
-# Set base image (host OS)
-# need to build with --platform=linux/amd64 to get around /usr/local/bin/gunicorn Exec format error
-# https://stackoverflow.com/questions/75996884/usr-local-bin-gunicorn-exec-format-error-apple-m1-chip
+# $BUILDPLATFORM = native platform of the build machine (arm64 locally, amd64 in CI).
+# CI workflow pins platforms: linux/amd64, so the pushed image is always amd64 for Render.
 
-FROM --platform=linux/amd64 python:3.11-alpine 
+FROM --platform=$BUILDPLATFORM python:3.11-slim-bookworm
 
 # By default, listen on port 8000
 EXPOSE 8000/tcp
 
 # curl for health checks; libxml2/libxslt and build deps for lxml (readability-lxml)
-RUN apk --no-cache add curl libxml2-dev libxslt-dev gcc musl-dev
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl libxml2-dev libxslt-dev gcc \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory in the container
 WORKDIR /app
