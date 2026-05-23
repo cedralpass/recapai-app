@@ -20,9 +20,9 @@ COPY ./requirements.txt /app
 
 # Install any dependencies
 # Use --upgrade to ensure all dependencies are resolved to compatible versions
-RUN pip install --upgrade pip
-RUN pip install --upgrade -r requirements.txt
-RUN pip install gunicorn
+RUN pip install --upgrade pip \
+    && pip install --upgrade -r requirements.txt \
+    && pip install gunicorn
 
 # Copy the content of the local src directory to the working directory
 COPY recap recap
