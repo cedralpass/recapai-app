@@ -1,4 +1,15 @@
 {
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add*)",
+      "Bash(.venv/bin/pytest*)",
+      "Bash(cd /Users/geoffreysmalling/development/recapai-app && git*)"
+    ]
+  },
   "hooks": {
     "SessionStart": [
       {

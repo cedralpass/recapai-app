@@ -266,6 +266,80 @@ def suggest_splits_task(user_id, threshold=12):
     app.redis.setex(f"taxonomy:splits:{job.id}", 3600, json.dumps(suggestions))
 
 
+def weekly_digest_task(user_id: int, send_email_flag: bool = False):
+    from datetime import timedelta
+
+    from langgraph.checkpoint.memory import MemorySaver
+
+    from aiapi.agents.synthesis.graph import build_synthesis_graph
+    from recap.models import DigestRun
+
+    user = db.session.get(User, user_id)
+    if not user or not user.email:
+        return
+
+    now = datetime.now(timezone.utc)
+    week_start = (now - timedelta(days=7)).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    job = get_current_job()
+    run = DigestRun(
+        user_id=user_id,
+        week_start=week_start,
+        week_end=now,
+        status="running",
+        job_id=job.id if job else None,
+    )
+    db.session.add(run)
+    db.session.commit()
+
+    initial_state = {
+        "user_id": user_id,
+        "user_email": user.email,
+        "user_name": user.username,
+        "week_start": week_start,
+        "week_end": now,
+        "articles": [],
+        "clusters": [],
+        "clustering_strategy": "category",
+        "skip_reason": None,
+        "retry_count": 0,
+        "quality_verdict": "",
+        "quality_notes": "",
+        "digest_html": "",
+        "digest_text": "",
+        "sent": False,
+        "sent_at": None,
+        "send_email_flag": send_email_flag,
+        "run_id": run.id,
+    }
+
+    try:
+        checkpointer = MemorySaver()
+        graph = build_synthesis_graph(checkpointer=checkpointer)
+        thread = {"configurable": {"thread_id": f"digest:{user_id}:{week_start.date()}"}}
+        final_state = graph.invoke(initial_state, config=thread)
+
+        run.status = "completed" if final_state.get("digest_html") else "skipped"
+        run.article_count = len(final_state.get("articles", []))
+        run.clustering_strategy = final_state.get("clustering_strategy")
+        run.skip_reason = final_state.get("skip_reason")
+        run.retry_count = final_state.get("retry_count", 0)
+        run.quality_verdict = final_state.get("quality_verdict")
+        run.quality_notes = final_state.get("quality_notes")
+        run.digest_html = final_state.get("digest_html")
+        run.digest_text = final_state.get("digest_text")
+        run.sent = final_state.get("sent", False)
+        run.completed_at = datetime.now(timezone.utc)
+        db.session.commit()
+    except Exception:
+        run.status = "failed"
+        run.completed_at = datetime.now(timezone.utc)
+        db.session.commit()
+        raise
+
+    app.logger.info("weekly_digest_task: completed for user_id=%s run_id=%s", user_id, run.id)
+
+
 def ping_aiapi():
     import urllib.request
 

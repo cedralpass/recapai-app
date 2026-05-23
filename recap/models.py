@@ -27,6 +27,7 @@ class User(UserMixin, db.Model):
     taxonomy_preferences: so.Mapped[Optional[str]] = so.mapped_column(sa.Text(), nullable=True)
 
     articles: so.WriteOnlyMapped["Article"] = so.relationship(back_populates="user")
+    digest_runs: so.WriteOnlyMapped["DigestRun"] = so.relationship(back_populates="user")
 
     def __repr__(self):
         return "<User {}>".format(self.username)
@@ -141,6 +142,31 @@ class Article(db.Model):
         if self.key_topics is not None:
             key_topics_json = json.loads(self.key_topics)
         return key_topics_json
+
+
+class DigestRun(db.Model):
+    id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey(User.id), index=True)
+    job_id: so.Mapped[Optional[str]] = so.mapped_column(sa.String(64), nullable=True)
+    created_at: so.Mapped[datetime] = so.mapped_column(index=True, default=lambda: datetime.now(timezone.utc))
+    completed_at: so.Mapped[Optional[datetime]] = so.mapped_column(sa.DateTime(timezone=True), nullable=True)
+    week_start: so.Mapped[datetime] = so.mapped_column(sa.DateTime(timezone=True))
+    week_end: so.Mapped[datetime] = so.mapped_column(sa.DateTime(timezone=True))
+    status: so.Mapped[str] = so.mapped_column(sa.String(16), default="running")
+    article_count: so.Mapped[Optional[int]] = so.mapped_column(sa.Integer(), nullable=True)
+    clustering_strategy: so.Mapped[Optional[str]] = so.mapped_column(sa.String(16), nullable=True)
+    skip_reason: so.Mapped[Optional[str]] = so.mapped_column(sa.Text(), nullable=True)
+    retry_count: so.Mapped[int] = so.mapped_column(sa.Integer(), default=0)
+    quality_verdict: so.Mapped[Optional[str]] = so.mapped_column(sa.String(16), nullable=True)
+    quality_notes: so.Mapped[Optional[str]] = so.mapped_column(sa.Text(), nullable=True)
+    digest_html: so.Mapped[Optional[str]] = so.mapped_column(sa.Text(), nullable=True)
+    digest_text: so.Mapped[Optional[str]] = so.mapped_column(sa.Text(), nullable=True)
+    sent: so.Mapped[bool] = so.mapped_column(sa.Boolean(), default=False)
+
+    user: so.Mapped[User] = so.relationship(back_populates="digest_runs")
+
+    def __repr__(self):
+        return f"<DigestRun {self.id} user={self.user_id} status={self.status}>"
 
 
 class Topic(db.Model):

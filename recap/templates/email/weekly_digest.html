@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Your Recap — Week of {{ week_start.strftime('%B %d, %Y') }}</title>
+</head>
+<body style="margin:0;padding:0;background:#f9fafb;font-family:Georgia,serif;color:#1a1a1a;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;">
+
+          <!-- Header -->
+          <tr>
+            <td style="padding:32px 40px 24px;border-bottom:2px solid #1a1a1a;">
+              <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#6b7280;margin-bottom:10px;">Recap Weekly</div>
+              <h1 style="margin:0 0 8px;font-size:26px;font-weight:700;line-height:1.2;color:#1a1a1a;">Week of {{ week_start.strftime('%B %d, %Y') }}</h1>
+              <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;color:#6b7280;">
+                {{ article_count }} article{{ 's' if article_count != 1 else '' }} saved this week
+              </div>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:32px 40px;">
+
+              {% for cluster in clusters %}
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
+                <tr>
+                  <td>
+                    <!-- Category label -->
+                    <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#2563eb;margin-bottom:8px;">{{ cluster.label }}</div>
+
+                    <!-- Narrative -->
+                    {% if cluster.narrative %}
+                    <p style="margin:0 0 16px;font-size:16px;line-height:1.75;color:#1a1a1a;">{{ cluster.narrative }}</p>
+                    {% endif %}
+
+                    <!-- Article list -->
+                    {% for article in cluster.articles %}
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;">
+                      <tr>
+                        <td style="border-left:3px solid #e5e7eb;padding-left:12px;">
+                          <a href="{{ article.url_path }}" style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;color:#1a1a1a;text-decoration:none;">{{ article.title }}</a>
+                          {% if article.is_read %}
+                          <span style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:11px;color:#9ca3af;margin-left:6px;">Read</span>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    </table>
+                    {% endfor %}
+                  </td>
+                </tr>
+              </table>
+              {% endfor %}
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 40px;border-top:1px solid #e5e7eb;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#9ca3af;">
+              You're receiving this because you use Recap.
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

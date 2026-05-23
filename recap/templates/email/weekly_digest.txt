@@ -1,0 +1,20 @@
+Your Recap — Week of {{ week_start.strftime('%B %d, %Y') }}
+{{ '=' * 50 }}
+
+Hi {{ user_name }}, here's what you saved this week ({{ article_count }} article{{ 's' if article_count != 1 else '' }}).
+
+{% for cluster in clusters %}
+{{ cluster.label | upper }}
+{{ '-' * cluster.label | length }}
+{% if cluster.narrative %}
+{{ cluster.narrative }}
+
+{% endif %}
+{% for article in cluster.articles %}
+  - {{ article.title }}{% if article.is_read %} [Read]{% endif %}
+    {{ article.url_path }}
+{% endfor %}
+
+{% endfor %}
+---
+You're receiving this because you use Recap.

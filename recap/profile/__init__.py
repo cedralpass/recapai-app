@@ -314,6 +314,28 @@ def apply_splits():
     return redirect(url_for("profile.user", username=current_user.username))
 
 
+@bp.route("/settings/digest-runs")
+@login_required
+def digest_runs():
+    from recap.models import DigestRun
+
+    page = request.args.get("page", 1, type=int)
+    stmt = sa.select(DigestRun).where(DigestRun.user_id == current_user.id).order_by(DigestRun.created_at.desc())
+    pagination = db.paginate(stmt, page=page, per_page=10, error_out=False)
+    return render_template("profile/digest_runs.html", title="Digest Runs", pagination=pagination)
+
+
+@bp.route("/settings/digest-runs/<int:run_id>")
+@login_required
+def digest_run_detail(run_id):
+    from recap.models import DigestRun
+
+    run = db.first_or_404(
+        sa.select(DigestRun).where(DigestRun.id == run_id).where(DigestRun.user_id == current_user.id)
+    )
+    return render_template("profile/digest_run_detail.html", title="Digest Run", run=run)
+
+
 def create_category_mapping(mappings):
     """
     Convert a list of category mappings to a dictionary where keys are old categories
@@ -330,6 +352,23 @@ def create_category_mapping(mappings):
         for mapping in mappings
         if "old_category" in mapping and "new_category" in mapping
     }
+
+
+@bp.route("/user/<username>/weekly-digest", methods=["POST"])
+@login_required
+def trigger_weekly_digest(username):
+    if current_user.username != username:
+        from flask import abort
+
+        abort(403)
+    current_app.task_queue.enqueue(
+        "recap.tasks.weekly_digest_task",
+        current_user.id,
+        False,  # send_email_flag — False for manual/debug runs
+        job_timeout=600,
+    )
+    flash("Digest run queued — it will appear below once complete.")
+    return redirect(url_for("profile.digest_runs"))
 
 
 @bp.route("/settings/api-token", methods=["GET", "POST"])

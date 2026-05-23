@@ -133,6 +133,18 @@ session diff UI — all code is on `main` and pushed.
 
 ---
 
+## Commit Checklist
+
+Before committing, run these in order:
+
+1. **`/update-docs`** — reviews what changed and updates any affected docs (`docs/`, `CLAUDE.md`, `tech_design/`, `BUGS.md`, `docs/vision.md`). Run this first so doc changes are included in the same commit.
+2. **`ruff check .`** — enforced via pre-commit hook, will block the commit if it fails.
+3. **`.venv/bin/pytest tests/ -v`** — confirm tests still pass.
+
+The ruff hook runs automatically on `git commit`. The other two steps are manual.
+
+---
+
 ## Code Style
 
 **Ruff** is enforced via a pre-commit hook. All code must pass `ruff check .` and `ruff format .` before committing. The hook runs automatically — do not write code with unused imports, bare `except:`, or `== None` comparisons. See [docs/development.md](docs/development.md) for setup and manual usage.
@@ -227,20 +239,31 @@ Pages covered: unauthenticated homepage, login, register, forgot/reset password,
 ```
 recap/              ← Main Flask app (web UI)
   __init__.py       ← App factory, blueprint registration, CORS, RQ setup
-  models.py         ← SQLAlchemy models (User, Article)
+  models.py         ← SQLAlchemy models (User, Article, DigestRun)
   api_v1.py         ← REST API blueprint: POST /api/v1/articles (Bearer token auth)
   profile/          ← Profile/settings blueprint (incl. /settings/api-token)
-    __init__.py     ← Taxonomy routes: organize_taxonomy, apply_taxonomy,
-                       suggest_splits, apply_splits (see docs/taxonomy_organnization.md)
-  tasks.py          ← RQ task: classify_url (calls OpenAI)
+    __init__.py     ← Taxonomy routes + digest run routes (/settings/digest-runs)
+                       (see docs/taxonomy_organnization.md and tech_design/weekly-synthesis-agent.md)
+  tasks.py          ← RQ tasks: classify_url, weekly_digest_task, taxonomy tasks
   templates/        ← Jinja2 templates
+    email/          ← weekly_digest.html + .txt (digest email templates)
   static/css/       ← Tailwind output.css (rebuilt by tailwind server)
 
 aiapi/              ← Separate AI API Flask app
   task_processor.py ← build_prompt(), OpenAI call (temp=0.3, max_tokens=4096, timeout=180s)
+  agents/           ← LangGraph agents
+    synthesis/      ← Weekly digest agent
+      state.py      ← SynthesisState TypedDict
+      nodes.py      ← 7 graph node functions (gather, assess, cluster, synthesise, compose,
+                       quality_check, send_email_node)
+      graph.py      ← build_synthesis_graph() — StateGraph assembly + routing functions
+
 chrome-extension/   ← Manifest V3 Chrome Extension (no build step)
 tests/              ← pytest: unit + integration
+  aiapi/unit/       ← test_synthesis_nodes.py (36 tests, all node functions mocked)
 migrations/         ← Alembic migrations
+tech_design/        ← Technical design docs for major features
+BUGS.md             ← Known bugs tracked here (open issues not yet scheduled)
 ```
 
 ### Taxonomy AI features

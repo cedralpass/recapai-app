@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block main_class %}min-h-screen bg-gray-50 py-10{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4">
+
+  <!-- Back link -->
+  <a href="{{ url_for('profile.digest_runs') }}"
+     class="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 mb-6">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+    </svg>
+    Digest Runs
+  </a>
+
+  <!-- Header -->
+  <div class="flex items-start justify-between mb-6">
+    <div>
+      <h1 class="text-xl font-extrabold text-gray-900">
+        Week of {{ run.week_start.strftime('%B %d, %Y') }}
+      </h1>
+      <p class="text-xs text-gray-500 mt-0.5">
+        {{ run.week_start.strftime('%b %d') }} – {{ run.week_end.strftime('%b %d, %Y') }}
+        · Run #{{ run.id }}
+        {% if run.job_id %}· Job {{ run.job_id[:8] }}{% endif %}
+      </p>
+    </div>
+
+    {% if run.status == 'completed' %}
+      <span class="inline-flex items-center bg-green-50 border border-green-200 rounded-full px-3 py-1 text-xs font-semibold text-green-700">Completed</span>
+    {% elif run.status == 'running' %}
+      <span class="inline-flex items-center bg-yellow-50 border border-yellow-200 rounded-full px-3 py-1 text-xs font-semibold text-yellow-700">Running</span>
+    {% elif run.status == 'skipped' %}
+      <span class="inline-flex items-center bg-gray-100 border border-gray-200 rounded-full px-3 py-1 text-xs font-semibold text-gray-500">Skipped</span>
+    {% elif run.status == 'failed' %}
+      <span class="inline-flex items-center bg-red-50 border border-red-200 rounded-full px-3 py-1 text-xs font-semibold text-red-700">Failed</span>
+    {% endif %}
+  </div>
+
+  <!-- Stats row -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3">
+      <div class="text-xs text-gray-400 font-medium uppercase tracking-wider mb-1">Articles</div>
+      <div class="text-lg font-extrabold text-gray-900">{{ run.article_count if run.article_count is not none else '—' }}</div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3">
+      <div class="text-xs text-gray-400 font-medium uppercase tracking-wider mb-1">Strategy</div>
+      <div class="text-sm font-semibold text-gray-700 capitalize">{{ run.clustering_strategy or '—' }}</div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3">
+      <div class="text-xs text-gray-400 font-medium uppercase tracking-wider mb-1">Quality</div>
+      <div class="text-sm font-semibold
+        {% if run.quality_verdict == 'approved' %}text-green-600
+        {% elif run.quality_verdict == 'best_effort' %}text-yellow-600
+        {% else %}text-gray-700{% endif %}">
+        {% if run.quality_verdict == 'approved' %}Approved
+        {% elif run.quality_verdict == 'best_effort' %}Best effort
+        {% else %}{{ run.quality_verdict or '—' }}{% endif %}
+      </div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3">
+      <div class="text-xs text-gray-400 font-medium uppercase tracking-wider mb-1">Retries</div>
+      <div class="text-lg font-extrabold text-gray-900">{{ run.retry_count }}</div>
+    </div>
+  </div>
+
+  <!-- Skip reason -->
+  {% if run.skip_reason %}
+  <div class="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3 mb-4 text-sm text-yellow-800">
+    <span class="font-semibold">Skipped:</span> {{ run.skip_reason }}
+  </div>
+  {% endif %}
+
+  <!-- Quality notes -->
+  {% if run.quality_notes %}
+  <div class="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mb-4 text-sm text-gray-700">
+    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Quality notes</div>
+    {{ run.quality_notes }}
+  </div>
+  {% endif %}
+
+  {% if run.digest_html %}
+  <!-- Digest preview -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-4">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50">
+      <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Digest Preview</span>
+      <button id="toggle-plain"
+              onclick="document.getElementById('html-preview').classList.toggle('hidden'); document.getElementById('plain-preview').classList.toggle('hidden'); this.textContent = this.textContent.trim() === 'Plain text' ? 'HTML' : 'Plain text'"
+              class="text-xs text-blue-600 hover:text-blue-800 font-medium">Plain text</button>
+    </div>
+
+    <!-- HTML view -->
+    <div id="html-preview" class="p-6">
+      {{ run.digest_html | safe }}
+    </div>
+
+    <!-- Plain text view (hidden by default) -->
+    <div id="plain-preview" class="hidden p-6">
+      <pre class="text-xs text-gray-700 whitespace-pre-wrap font-mono leading-relaxed">{{ run.digest_text }}</pre>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Timing footer -->
+  {% if run.completed_at %}
+  <p class="text-xs text-gray-400 text-center">
+    Completed {{ run.completed_at.strftime('%B %d, %Y at %H:%M UTC') }}
+  </p>
+  {% endif %}
+
+</div>
+{% endblock %}

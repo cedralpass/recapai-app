@@ -62,6 +62,33 @@ In the Render dashboard, filter logs for `WORKER_MONITOR:` to see worker start/r
 
 ---
 
+## Job Types
+
+| Task function | Queue | Trigger | What it does |
+|---|---|---|---|
+| `classify_url` | `RECAP2-Classify` | Article saved (web/extension) | Fetches article, calls OpenAI, stores classification + embedding |
+| `organize_taxonomy_task` | `RECAP2-Classify` | User clicks "Consolidate" | AI consolidates categories into a cleaner taxonomy |
+| `suggest_splits_task` | `RECAP2-Classify` | User clicks "Split" | AI suggests sub-groups for large categories |
+| `weekly_digest_task` | `RECAP2-Classify` | Manual trigger (UI) or future cron | LangGraph agent clusters articles, synthesises narratives, composes digest email |
+| `ping_aiapi` | `RECAP2-Classify` | Internal keep-alive | Wakes the aiapi Render service to prevent cold starts |
+
+### `weekly_digest_task`
+
+The most complex job — a multi-step LangGraph agent. It creates a `DigestRun` DB record before
+starting and updates it with the final state (digest HTML, quality verdict, status) when complete.
+
+- **Manual trigger:** "Trigger New Run" button at `/settings/digest-runs` — runs with
+  `send_email_flag=False` (stores digest output, does not send email)
+- **Scheduled trigger (not yet built):** will run with `send_email_flag=True` for all users
+  on Sunday mornings via a Render Cron Job hitting `/internal/cron/weekly-digest`
+- **Timeout:** jobs can take 30–90 seconds depending on article count (multiple OpenAI calls per cluster)
+- **Viewing results:** `/settings/digest-runs` shows all runs; click "View" for the rendered digest preview
+
+See [`tech_design/weekly-synthesis-agent.md`](../tech_design/weekly-synthesis-agent.md) for full
+architecture details.
+
+---
+
 ## Worker Pool (rq 2.x)
 
 rq 2.x deprecates `RoundRobinWorker` / `RandomWorker` classes in favour of a CLI flag:
