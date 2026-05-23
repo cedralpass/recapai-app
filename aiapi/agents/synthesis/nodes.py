@@ -54,6 +54,11 @@ def _cluster_by_category(articles: list) -> list[Cluster]:
 
 
 def _label_cluster(articles: list) -> str:
+    # Single-article clusters: use the existing category rather than asking the
+    # model to infer a theme from one title — it hallucinates unrelated labels.
+    if len(articles) == 1 and articles[0].get("category"):
+        return articles[0]["category"]
+
     from recap.aiapi_helper import AiApiHelper
 
     titles = "\n".join(f"- {a['title']}" for a in articles[:10])
@@ -75,7 +80,9 @@ def _cluster_by_embedding(articles: list) -> list[Cluster]:
         return _cluster_by_category(articles)
 
     embeddings = np.array([a["embedding"] for a in embedded])
-    n_clusters = min(5, len(embedded))
+    # Target ~2 articles per cluster so labels have enough context to be meaningful.
+    # min(5) caps visual clusters; max(1) avoids n_clusters=0 for tiny sets.
+    n_clusters = min(5, max(1, len(embedded) // 2))
     labels = AgglomerativeClustering(n_clusters=n_clusters).fit_predict(embeddings)
 
     groups: dict[int, list] = {}

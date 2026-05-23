@@ -2,23 +2,27 @@
 
 ## Weekly Digest — Cluster Labeling
 
-**Status:** Open  
-**Priority:** Low — cosmetic, does not affect digest generation  
+**Status:** Fixed  
+**Fixed in:** `aiapi/agents/synthesis/nodes.py`
 
 ### Description
 
-When clustering by embedding (`_cluster_by_embedding` in `aiapi/agents/synthesis/nodes.py`), the AI-generated cluster label can be completely wrong. In testing, an article titled "When to Use LangGraph" (clearly an AI Framework article) was placed in a single-article cluster and labelled "Renewable Energy Innovations".
+When clustering by embedding, single-article clusters caused `_label_cluster` to hallucinate
+unrelated labels. Confirmed example: "When to Use LangGraph" was labelled "Renewable Energy
+Innovations" because only the article title was sent with no category or topic context.
 
-### Root cause (hypothesis)
+### Fix applied
 
-`_label_cluster` sends only the article titles to the AI with no prior category or topic context. With a single-article cluster and a short title, the model appears to hallucinate an unrelated label rather than deriving one from the content.
+Two changes in `_cluster_by_embedding` / `_label_cluster`:
 
-### Reproduction
+1. **Smaller n_clusters**: formula changed from `min(5, len(embedded))` to
+   `min(5, max(1, len(embedded) // 2))`, targeting ~2 articles per cluster and preventing
+   single-article clusters in most cases.
 
-Run `weekly_digest_task` for a user with articles that produce single-article embedding clusters. The label for that cluster will sometimes be nonsensical.
+2. **Category fallback**: `_label_cluster` now returns the article's existing `category` field
+   directly when a single-article cluster still occurs, rather than sending a bare title to the AI.
 
-### Possible fixes (not yet investigated)
+### Regression coverage
 
-- Fall back to the article's existing `category` field when a cluster has only one article
-- Include article summaries and key topics in the label prompt (currently only titles are sent, capped at 10)
-- Add a sanity check: if the generated label shares no semantic overlap with the article titles, re-prompt or use the category fallback
+`tests/aiapi/unit/test_synthesis_nodes.py` — `TestLabelCluster`, `TestClusterByEmbedding` (8 tests)  
+`tests/aiapi/eval/test_clustering_eval.py` — AI eval using the exact title that triggered the bug

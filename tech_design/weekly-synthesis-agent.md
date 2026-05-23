@@ -174,8 +174,11 @@ embedding stored; falls back to category clustering otherwise.
 
 **Category strategy**: groups by `article.category`. Fast, no AI call.
 
-**Embedding strategy**: `sklearn.cluster.AgglomerativeClustering` on stored pgvector embeddings,
-capped at 5 clusters. Labels each cluster with a 2–4 word name via a lightweight aiapi call.
+**Embedding strategy**: `sklearn.cluster.AgglomerativeClustering` on stored pgvector embeddings.
+Cluster count: `min(5, max(1, len(embedded) // 2))` — targets ~2 articles per cluster to give the
+label model enough context. Single-article clusters fall back to the article's `category` field
+instead of an AI call (prevents hallucinated labels). Multi-article clusters are labelled with a
+2–4 word name via a lightweight aiapi call.
 
 ### `synthesise`
 

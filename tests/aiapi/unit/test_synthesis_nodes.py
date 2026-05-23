@@ -12,6 +12,8 @@ import pytest
 from aiapi.agents.synthesis.nodes import (
     _build_cluster_context,
     _cluster_by_category,
+    _cluster_by_embedding,
+    _label_cluster,
     _render_plain_text,
     assess,
     gather,
@@ -138,6 +140,83 @@ class TestClusterByCategory:
         article = _make_article(1, category="")
         clusters = _cluster_by_category([article])
         assert clusters[0]["label"] == "Uncategorised"
+
+
+# ── _label_cluster ────────────────────────────────────────────────────────────
+
+
+@pytest.mark.unit
+class TestLabelCluster:
+    def test_single_article_uses_category_fallback(self):
+        """Regression: single-article clusters must not ask the AI to label — it hallucinates.
+        'When to Use LangGraph' was labelled 'Renewable Energy Innovations' before this fix."""
+        article = _make_article(1, title="When to Use LangGraph", category="AI Infrastructure & Deployment")
+        label = _label_cluster([article])
+        assert label == "AI Infrastructure & Deployment"
+
+    def test_single_article_without_category_falls_to_mixed(self):
+        """No category set — falls through to AI call, which we mock."""
+        article = _make_article(1, title="When to Use LangGraph", category="")
+        with patch("recap.aiapi_helper.AiApiHelper.PerformTask", return_value=None):
+            label = _label_cluster([article])
+        assert label == "Mixed Topics"
+
+    def test_multi_article_cluster_calls_ai(self):
+        articles = [_make_article(i, title=f"AI Article {i}") for i in range(3)]
+        with patch("recap.aiapi_helper.AiApiHelper.PerformTask", return_value={"label": "AI Frameworks"}) as mock_task:
+            label = _label_cluster(articles)
+        mock_task.assert_called_once()
+        assert label == "AI Frameworks"
+
+
+# ── _cluster_by_embedding ─────────────────────────────────────────────────────
+
+
+@pytest.mark.unit
+class TestClusterByEmbedding:
+    """Verify the n_clusters fix: small article sets must not produce single-article clusters."""
+
+    def _ai_articles(self, n):
+        """n articles with embeddings clustered around [1, 0, 0, 0]."""
+        return [_make_article(i, title=f"AI Article {i}", embedding=[1.0, 0.0, 0.0, 0.0]) for i in range(n)]
+
+    def _other_articles(self, n, offset=10):
+        """n articles with embeddings clustered around [0, 1, 0, 0]."""
+        return [_make_article(offset + i, title=f"Other Article {i}", embedding=[0.0, 1.0, 0.0, 0.0]) for i in range(n)]
+
+    def test_five_articles_produces_at_most_two_clusters(self):
+        """Old formula: min(5, 5) = 5 single-article clusters. New formula: min(5, 5//2) = 2."""
+        articles = self._ai_articles(3) + self._other_articles(2)
+        with patch("recap.aiapi_helper.AiApiHelper.PerformTask", return_value={"label": "Theme"}):
+            clusters = _cluster_by_embedding(articles)
+        assert len(clusters) <= 2
+
+    def test_no_single_article_clusters_for_five_articles(self):
+        """Every cluster must have at least 2 articles when there are 5 inputs."""
+        articles = self._ai_articles(3) + self._other_articles(2)
+        with patch("recap.aiapi_helper.AiApiHelper.PerformTask", return_value={"label": "Theme"}):
+            clusters = _cluster_by_embedding(articles)
+        for c in clusters:
+            assert len(c["articles"]) >= 2, f"Single-article cluster found: {c}"
+
+    def test_ten_articles_produces_at_most_five_clusters(self):
+        articles = self._ai_articles(6) + self._other_articles(4)
+        with patch("recap.aiapi_helper.AiApiHelper.PerformTask", return_value={"label": "Theme"}):
+            clusters = _cluster_by_embedding(articles)
+        assert len(clusters) <= 5
+
+    def test_falls_back_to_category_when_fewer_than_two_embedded(self):
+        articles = [_make_article(1, category="AI", embedding=[1.0, 0.0])]
+        clusters = _cluster_by_embedding(articles)
+        assert clusters[0]["label"] == "AI"
+
+    def test_unembedded_articles_appended_to_first_cluster(self):
+        embedded = self._ai_articles(4)
+        unembedded = [_make_article(99, title="No Embedding", category="Other", embedding=None)]
+        with patch("recap.aiapi_helper.AiApiHelper.PerformTask", return_value={"label": "Theme"}):
+            clusters = _cluster_by_embedding(embedded + unembedded)
+        total_articles = sum(len(c["articles"]) for c in clusters)
+        assert total_articles == 5
 
 
 # ── _build_cluster_context ────────────────────────────────────────────────────
