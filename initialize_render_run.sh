@@ -28,9 +28,16 @@ export NUM_WORKERS=2
 # fire a second time that day — the resulting DigestRun will status=skipped (benign).
 (
   DIGEST_LAST_RUN_DATE=""
+  DIGEST_LAST_HEARTBEAT_HOUR=""
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] daily-digest-scheduler: started — will trigger at 4pm PT daily"
   while true; do
     NOW_HOUR=$(TZ=America/Los_Angeles date +%H)
     NOW_DATE=$(TZ=America/Los_Angeles date +%Y-%m-%d)
+    # Hourly heartbeat so the loop is visible in Render logs
+    if [ "$NOW_HOUR" != "$DIGEST_LAST_HEARTBEAT_HOUR" ]; then
+      echo "[$(date '+%Y-%m-%d %H:%M:%S')] daily-digest-scheduler: heartbeat — PT hour=$NOW_HOUR waiting for 16"
+      DIGEST_LAST_HEARTBEAT_HOUR="$NOW_HOUR"
+    fi
     if [ "$NOW_HOUR" = "16" ] && [ "$NOW_DATE" != "$DIGEST_LAST_RUN_DATE" ]; then
       echo "[$(date '+%Y-%m-%d %H:%M:%S')] daily-digest-scheduler: triggering coordinator"
       flask --app recap digest run-now
