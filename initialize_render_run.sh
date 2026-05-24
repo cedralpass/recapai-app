@@ -10,6 +10,7 @@ if [ -z "$CURRENT" ]; then
     flask --app recap db stamp 66e1c054e7e8
 fi
 flask --app recap db upgrade
+flask --app recap digest schedule-check
 
 #start redis server as daemon
 #redis-server --daemonize yes

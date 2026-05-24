@@ -61,6 +61,14 @@
       {% endfor %}
     </div>
 
+    <div class="mb-6 flex items-start gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100">
+      {{ form.digest_enabled(class_="mt-0.5 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 shrink-0") }}
+      <div>
+        {{ form.digest_enabled.label(class_="text-sm font-medium text-gray-700") }}
+        <p class="text-xs text-gray-500 mt-0.5">Receive a daily AI-generated summary of your saved articles.</p>
+      </div>
+    </div>
+
     <div class="flex gap-3">
       <a href="{{ url_for('profile.user', username=current_user.username) }}"
          class="flex-1 text-center py-2.5 rounded-lg border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">

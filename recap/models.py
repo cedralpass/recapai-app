@@ -25,6 +25,7 @@ class User(UserMixin, db.Model):
     phone: so.Mapped[str] = so.mapped_column(sa.String(15), nullable=True)
     api_token: so.Mapped[Optional[str]] = so.mapped_column(sa.String(64), nullable=True, unique=True, index=True)
     taxonomy_preferences: so.Mapped[Optional[str]] = so.mapped_column(sa.Text(), nullable=True)
+    digest_enabled: so.Mapped[bool] = so.mapped_column(sa.Boolean, default=True, server_default="true", nullable=False)
 
     articles: so.WriteOnlyMapped["Article"] = so.relationship(back_populates="user")
     digest_runs: so.WriteOnlyMapped["DigestRun"] = so.relationship(back_populates="user")

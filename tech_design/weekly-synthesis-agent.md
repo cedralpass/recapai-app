@@ -36,7 +36,7 @@ production context without requiring a new Render service.
 | Reuse existing infrastructure | Done — Redis, Postgres, Flask-Mail, aiapi, RQ worker |
 | No new Render service (v1) | Done — graph runs inside RQ job |
 | Management UI for debugging | Done — `/settings/digest-runs` list + detail pages |
-| Scheduled sends | **Not yet built** — see Scheduling section |
+| Scheduled sends | **Done** — RQ built-in scheduler + self-rescheduling coordinator task |
 
 ---
 
@@ -315,50 +315,39 @@ def weekly_digest_task(user_id: int, send_email_flag: bool = False):
 
 ## Scheduling
 
-### Current: Manual trigger (built)
+### Manual triggers (built)
 
-The "Trigger New Run" button on `/settings/digest-runs` enqueues `weekly_digest_task` with
-`send_email_flag=False`. Output is stored in `DigestRun` and viewable in-app.
+The `/settings/digest-runs` page has two trigger buttons:
 
-The profile page `/user/<username>` links to the runs management page rather than triggering
-directly — the trigger button lives on the management page.
+- **Test Run** — `POST /user/<username>/weekly-digest` — enqueues with `send_email_flag=False`;
+  stores output in `DigestRun` but does not send email. Use for previewing the digest.
+- **Send for Real** — `POST /user/<username>/weekly-digest-send` — enqueues with
+  `send_email_flag=True`; runs the full agent and sends the email. Prompts for confirmation.
 
-### Next: Scheduled sends (not yet built)
+### Scheduled sends (built)
 
-The simplest Render-native approach:
+Uses RQ 2.8.0's built-in deferred job support (`queue.enqueue_at()`). No separate process or
+Render service required.
 
-**Option A — Render Cron Job** (recommended)
+**Architecture:**
 
-Add a Render Cron Job service that runs every Sunday at 08:00 UTC, calling an internal endpoint:
+- `schedule_weekly_digests_task()` in `recap/tasks.py` — coordinator job that:
+  1. Queries all `User` rows where `digest_enabled=True`
+  2. Enqueues `weekly_digest_task(user_id, send_email_flag=True)` for each
+  3. Self-reschedules via `queue.enqueue_at(tomorrow_08_utc, "recap.tasks.schedule_weekly_digests_task")`
 
-```python
-# recap/routes.py (or a new internal blueprint)
-@bp.route("/internal/cron/weekly-digest", methods=["POST"])
-def cron_weekly_digest():
-    secret = request.headers.get("X-Cron-Secret")
-    if secret != Config.INTERNAL_CRON_SECRET:
-        abort(403)
-    users = db.session.execute(sa.select(User)).scalars().all()
-    for user in users:
-        current_app.task_queue.enqueue(
-            "recap.tasks.weekly_digest_task", user.id, send_email_flag=True
-        )
-    return jsonify({"enqueued": len(users)})
-```
+- `flask digest schedule-check` (Flask CLI, `recap/cli.py`) — idempotent bootstrap command that
+  checks `ScheduledJobRegistry` for an existing coordinator job and creates one if absent. Run on
+  every deploy from `initialize_render_run.sh`.
 
-Render cron config (dashboard):
-```
-Schedule:  0 8 * * 0        (08:00 UTC every Sunday)
-Command:   curl -X POST https://recapai.onrender.com/internal/cron/weekly-digest \
-                -H "X-Cron-Secret: $INTERNAL_CRON_SECRET"
-```
+- Workers must be started with `--with-scheduler` (added to `worker_monitor.sh`) so one worker
+  polls the deferred-job sorted set and promotes jobs when their time arrives.
 
-Add `INTERNAL_CRON_SECRET` to Render environment variables.
+**Current cadence:** daily at 08:00 UTC (1-day `timedelta`). To switch to weekly, change
+`timedelta(days=1)` → `timedelta(days=7)` in `schedule_weekly_digests_task()` and `schedule_check()`.
 
-**Option B — User opt-in flag**
-
-Before the cron iterates users, consider adding `digest_enabled: bool` to the `User` model so
-users can opt out. Default `True` for new accounts.
+**User opt-out:** `digest_enabled: bool` column on `User` (default `True`). Toggle in Edit Profile
+(`/edit_profile`). Migration: `6061b85db393_add_digest_enabled_to_user.py`.
 
 ---
 
@@ -375,24 +364,36 @@ aiapi/
       graph.py          ← build_synthesis_graph(), routing functions
 
 recap/
-  models.py             ← DigestRun model added
-  tasks.py              ← weekly_digest_task added
-  profile/__init__.py   ← digest_runs, digest_run_detail routes added
+  models.py             ← DigestRun model added; digest_enabled field on User
+  tasks.py              ← weekly_digest_task + schedule_weekly_digests_task
+  cli.py                ← Flask CLI: `flask digest schedule-check`
+  profile/__init__.py   ← digest_runs, digest_run_detail, trigger_weekly_digest,
+                           trigger_weekly_digest_send routes
+  profile/forms.py      ← digest_enabled BooleanField on EditProfileForm
   templates/
     email/
       weekly_digest.html    ← HTML digest email template
       weekly_digest.txt     ← plain text fallback
     profile/
-      digest_runs.html      ← management list page
+      digest_runs.html      ← management list page (Test Run + Send for Real buttons)
       digest_run_detail.html ← run detail + digest preview page
+      edit_profile.html     ← digest_enabled toggle checkbox
+
+initialize_render_run.sh  ← calls `flask digest schedule-check` after db upgrade
+worker_monitor.sh         ← `rq worker ... --with-scheduler` on all workers
 
 migrations/versions/
   0dbf2a19c462_add_digest_run_table.py
+  6061b85db393_add_digest_enabled_to_user.py
 
 tests/
   aiapi/
     unit/
       test_synthesis_nodes.py   ← 36 unit tests (all passing)
+  recap/
+    unit/
+      test_schedule_weekly_digests_task.py  ← 6 unit tests for coordinator
+      test_digest_cli.py                    ← 5 unit tests for schedule-check CLI
 ```
 
 ---
@@ -460,6 +461,7 @@ trigger via the management UI.
 - [x] DigestRun model + migration — `0dbf2a19c462_add_digest_run_table.py`
 - [x] Management UI — `/settings/digest-runs` list + detail pages
 - [x] Profile page updated — Weekly Digest button → link to management page
+- [x] Scheduled sends — `schedule_weekly_digests_task` coordinator + `flask digest schedule-check` bootstrap
+- [x] User opt-out flag — `digest_enabled` on `User`; migration `6061b85db393`; Edit Profile toggle
+- [x] "Send for Real" button — `/user/<username>/weekly-digest-send` with `send_email_flag=True`
 - [ ] LangSmith tracing — env vars to add; not yet configured
-- [ ] Render Cron Job — internal endpoint + Render cron service for scheduled sends
-- [ ] User opt-in flag — `digest_enabled` on User model; filter in cron endpoint

@@ -340,6 +340,40 @@ def weekly_digest_task(user_id: int, send_email_flag: bool = False):
     app.logger.info("weekly_digest_task: completed for user_id=%s run_id=%s", user_id, run.id)
 
 
+def schedule_weekly_digests_task():
+    """Coordinator: enqueue weekly_digest_task for all opted-in users, then reschedule itself."""
+    from datetime import timedelta
+
+    import sqlalchemy as sa
+
+    from recap.models import User
+
+    app.logger.info("schedule_weekly_digests_task: starting coordinator run")
+
+    users = db.session.scalars(
+        sa.select(User).where(User.digest_enabled == True)  # noqa: E712
+    ).all()
+
+    app.logger.info("schedule_weekly_digests_task: enqueuing digest for %d users", len(users))
+    for user in users:
+        app.task_queue.enqueue(
+            "recap.tasks.weekly_digest_task",
+            user.id,
+            True,  # send_email_flag
+            job_timeout=600,
+        )
+
+    # Self-reschedule for tomorrow 08:00 UTC (change timedelta days=1 → 7 to switch to weekly)
+    now = datetime.now(timezone.utc)
+    next_run = (now + timedelta(days=1)).replace(hour=8, minute=0, second=0, microsecond=0)
+    app.task_queue.enqueue_at(
+        next_run,
+        "recap.tasks.schedule_weekly_digests_task",
+        job_timeout=60,
+    )
+    app.logger.info("schedule_weekly_digests_task: rescheduled coordinator for %s", next_run.isoformat())
+
+
 def ping_aiapi():
     import urllib.request
 

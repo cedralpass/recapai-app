@@ -31,6 +31,7 @@ def edit_profile():
         current_user.phone = form.phone.data
         current_user.email = form.email.data
         current_user.taxonomy_preferences = form.taxonomy_preferences.data or None
+        current_user.digest_enabled = form.digest_enabled.data
         db.session.commit()
         flash("Your changes have been saved.")
         return redirect(url_for("profile.edit_profile"))
@@ -39,6 +40,7 @@ def edit_profile():
         form.phone.data = current_user.phone
         form.email.data = current_user.email
         form.taxonomy_preferences.data = current_user.taxonomy_preferences
+        form.digest_enabled.data = current_user.digest_enabled
     return render_template("profile/edit_profile.html", title="Edit Profile", form=form)
 
 
@@ -368,6 +370,23 @@ def trigger_weekly_digest(username):
         job_timeout=600,
     )
     flash("Digest run queued — it will appear below once complete.")
+    return redirect(url_for("profile.digest_runs"))
+
+
+@bp.route("/user/<username>/weekly-digest-send", methods=["POST"])
+@login_required
+def trigger_weekly_digest_send(username):
+    if current_user.username != username:
+        from flask import abort
+
+        abort(403)
+    current_app.task_queue.enqueue(
+        "recap.tasks.weekly_digest_task",
+        current_user.id,
+        True,  # send_email_flag — True: sends the real email
+        job_timeout=600,
+    )
+    flash("Digest run queued — email will be sent once complete.")
     return redirect(url_for("profile.digest_runs"))
 
 

@@ -244,7 +244,8 @@ recap/              ← Main Flask app (web UI)
   profile/          ← Profile/settings blueprint (incl. /settings/api-token)
     __init__.py     ← Taxonomy routes + digest run routes (/settings/digest-runs)
                        (see docs/taxonomy_organnization.md and tech_design/weekly-synthesis-agent.md)
-  tasks.py          ← RQ tasks: classify_url, weekly_digest_task, taxonomy tasks
+  tasks.py          ← RQ tasks: classify_url, weekly_digest_task, schedule_weekly_digests_task, taxonomy tasks
+  cli.py            ← Flask CLI: `flask digest schedule-check` (bootstraps scheduled sends on deploy)
   templates/        ← Jinja2 templates
     email/          ← weekly_digest.html + .txt (digest email templates)
   static/css/       ← Tailwind output.css (rebuilt by tailwind server)

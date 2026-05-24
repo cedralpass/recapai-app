@@ -57,9 +57,9 @@ start_worker() {
     log "Starting $worker_name..."
     
     if [ -n "$REDIS_URL" ]; then
-        rq worker --url "$REDIS_URL" "$QUEUE_NAME" --name "$worker_name" &
+        rq worker --url "$REDIS_URL" "$QUEUE_NAME" --name "$worker_name" --with-scheduler &
     else
-        rq worker "$QUEUE_NAME" --name "$worker_name" &
+        rq worker "$QUEUE_NAME" --name "$worker_name" --with-scheduler &
     fi
     
     pid=$!

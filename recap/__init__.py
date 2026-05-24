@@ -81,6 +81,10 @@ def create_app(env="dev"):
     app.register_blueprint(api_v1_bp)
     CORS(app, resources={r"/api/v1/*": {"origins": "*"}})
 
+    from recap.cli import digest_cli
+
+    app.cli.add_command(digest_cli)
+
     return app
 
 

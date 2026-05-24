@@ -12,6 +12,7 @@ class EditProfileForm(FlaskForm):
     phone = StringField("Phone", validators=[Length(min=10, max=10)])
     email = StringField("Email", validators=[DataRequired(), Email()])
     taxonomy_preferences = TextAreaField("Taxonomy preferences", validators=[Length(max=2000)])
+    digest_enabled = BooleanField("Weekly Digest Emails")
     submit = SubmitField("Submit")
 
     def __init__(self, original_username, *args, **kwargs):
