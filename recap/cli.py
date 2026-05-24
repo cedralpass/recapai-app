@@ -55,3 +55,13 @@ def schedule_check():
             job_timeout=60,
         )
         click.echo(f"schedule-check: coordinator scheduled for {next_run.isoformat()} PT.")
+
+
+@digest_cli.command("run-now")
+def run_now():
+    """Immediately enqueue the digest coordinator (bypasses scheduled queue)."""
+    job = current_app.task_queue.enqueue(
+        "recap.tasks.schedule_weekly_digests_task",
+        job_timeout=60,
+    )
+    click.echo(f"run-now: coordinator enqueued immediately (job_id={job.id}).")
