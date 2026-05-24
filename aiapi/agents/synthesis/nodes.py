@@ -31,7 +31,7 @@ def _recap_detail_url(article_id: int) -> str:
 
     host = Config.TASK_SERVER_NAME
     scheme = "http" if host.startswith("localhost") or host.startswith("127.") else "https"
-    return f"{scheme}://{host}/{article_id}/show"
+    return f"{scheme}://{host}/{article_id}/show?utm_source=recap&utm_medium=email&utm_campaign=weekly_digest"
 
 
 def _to_article_data(article) -> ArticleData:
