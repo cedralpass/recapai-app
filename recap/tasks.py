@@ -363,11 +363,15 @@ def schedule_weekly_digests_task():
             job_timeout=600,
         )
 
-    # Self-reschedule for tomorrow 08:00 UTC (change timedelta days=1 → 7 to switch to weekly)
+    # Self-reschedule for tomorrow 4pm Pacific (handles DST automatically via zoneinfo)
+    from zoneinfo import ZoneInfo
+
+    PACIFIC = ZoneInfo("America/Los_Angeles")
     now = datetime.now(timezone.utc)
-    next_run = (now + timedelta(days=1)).replace(hour=8, minute=0, second=0, microsecond=0)
+    now_pacific = now.astimezone(PACIFIC)
+    next_run = (now_pacific + timedelta(days=1)).replace(hour=16, minute=0, second=0, microsecond=0)
     app.task_queue.enqueue_at(
-        next_run,
+        next_run.astimezone(timezone.utc),
         "recap.tasks.schedule_weekly_digests_task",
         job_timeout=60,
     )

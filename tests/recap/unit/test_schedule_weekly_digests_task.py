@@ -89,8 +89,11 @@ class TestScheduleWeeklyDigestsTask:
         assert isinstance(at_dt, datetime)
 
     @patch("recap.tasks.db")
-    def test_reschedule_datetime_is_tomorrow_08_utc(self, mock_db, recap_app):
-        """The rescheduled datetime is tomorrow at 08:00 UTC."""
+    def test_reschedule_datetime_is_tomorrow_4pm_pacific(self, mock_db, recap_app):
+        """The rescheduled datetime is tomorrow at 4pm Pacific time."""
+        from datetime import timedelta
+        from zoneinfo import ZoneInfo
+
         from recap import tasks
 
         mock_db.session.scalars.return_value.all.return_value = []
@@ -102,13 +105,12 @@ class TestScheduleWeeklyDigestsTask:
                 tasks.schedule_weekly_digests_task()
 
         at_dt = mock_queue.enqueue_at.call_args[0][0]
-        assert at_dt.hour == 8
-        assert at_dt.minute == 0
-        assert at_dt.second == 0
+        pacific = ZoneInfo("America/Los_Angeles")
+        at_dt_pacific = at_dt.astimezone(pacific)
+        assert at_dt_pacific.hour == 16
+        assert at_dt_pacific.minute == 0
+        assert at_dt_pacific.second == 0
         assert at_dt > now
-        # Should be roughly 24 hours from now (allow generous window for test timing)
-        from datetime import timedelta
-
         assert at_dt < now + timedelta(days=2)
 
     @patch("recap.tasks.db")
