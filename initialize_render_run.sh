@@ -27,7 +27,6 @@ export NUM_WORKERS=2
 # Edge case: if the container restarts between 16:00–16:59 PT the coordinator may
 # fire a second time that day — the resulting DigestRun will status=skipped (benign).
 (
-  DIGEST_LAST_RUN=""   # tracks "YYYY-MM-DD-HH" of last trigger to allow 2 runs/day
   DIGEST_LAST_HEARTBEAT_HOUR=""
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] daily-digest-scheduler: started — will trigger at 8am and 4pm PT daily"
   while true; do
@@ -39,11 +38,33 @@ export NUM_WORKERS=2
       echo "[$(date '+%Y-%m-%d %H:%M:%S')] daily-digest-scheduler: heartbeat — PT hour=$NOW_HOUR"
       DIGEST_LAST_HEARTBEAT_HOUR="$NOW_HOUR"
     fi
-    # Fire at 8am PT and 4pm PT; key includes the hour so both slots fire independently
-    if { [ "$NOW_HOUR" = "08" ] || [ "$NOW_HOUR" = "16" ]; } && [ "$NOW_KEY" != "$DIGEST_LAST_RUN" ]; then
-      echo "[$(date '+%Y-%m-%d %H:%M:%S')] daily-digest-scheduler: triggering coordinator (PT hour=$NOW_HOUR)"
-      flask --app recap digest run-now
-      DIGEST_LAST_RUN="$NOW_KEY"
+    # Fire at 8am PT and 4pm PT.
+    # Dedup key stored in Redis (TTL 4h) so container restarts during the trigger
+    # hour don't cause a second send.
+    if [ "$NOW_HOUR" = "08" ] || [ "$NOW_HOUR" = "16" ]; then
+      REDIS_KEY="digest:scheduler:${NOW_KEY}"
+      ALREADY_RAN=$(python -c "
+import os, redis, sys
+try:
+    r = redis.from_url(os.environ.get('RECAP_REDIS_URL', 'redis://localhost:6379'))
+    print('1' if r.get(sys.argv[1]) else '')
+except Exception:
+    print('')
+" "$REDIS_KEY" 2>/dev/null)
+      if [ -z "$ALREADY_RAN" ]; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] daily-digest-scheduler: triggering coordinator (PT hour=$NOW_HOUR)"
+        flask --app recap digest run-now
+        python -c "
+import os, redis, sys
+try:
+    r = redis.from_url(os.environ.get('RECAP_REDIS_URL', 'redis://localhost:6379'))
+    r.set(sys.argv[1], '1', ex=14400)  # TTL 4 hours
+except Exception:
+    pass
+" "$REDIS_KEY" 2>/dev/null || true
+      else
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] daily-digest-scheduler: already ran for ${NOW_KEY}, skipping"
+      fi
     fi
     sleep 60
   done
