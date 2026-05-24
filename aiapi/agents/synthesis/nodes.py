@@ -194,7 +194,7 @@ def synthesise(state: SynthesisState) -> SynthesisState:
 
 
 def compose(state: SynthesisState) -> SynthesisState:
-    from flask import render_template
+    from flask import current_app, render_template
 
     state["digest_html"] = render_template(
         "email/weekly_digest.html",
@@ -202,6 +202,7 @@ def compose(state: SynthesisState) -> SynthesisState:
         week_start=state["week_start"],
         clusters=state["clusters"],
         article_count=len(state["articles"]),
+        app_url=current_app.config.get("APP_URL", "https://dev.recaprai.com/"),
     )
     state["digest_text"] = _render_plain_text(
         state["user_name"],
