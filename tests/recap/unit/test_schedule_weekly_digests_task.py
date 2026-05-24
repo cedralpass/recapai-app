@@ -57,8 +57,8 @@ class TestScheduleWeeklyDigestsTask:
         assert send_flag is True
 
     @patch("recap.tasks.db")
-    def test_empty_user_list_still_reschedules(self, mock_db, recap_app):
-        """Zero eligible users — coordinator must still self-reschedule."""
+    def test_empty_user_list_enqueues_nothing(self, mock_db, recap_app):
+        """Zero eligible users — coordinator completes without enqueuing anything."""
         from recap import tasks
 
         mock_db.session.scalars.return_value.all.return_value = []
@@ -69,11 +69,11 @@ class TestScheduleWeeklyDigestsTask:
                 tasks.schedule_weekly_digests_task()
 
         mock_queue.enqueue.assert_not_called()
-        mock_queue.enqueue_at.assert_called_once()
 
     @patch("recap.tasks.db")
-    def test_self_reschedules_via_enqueue_at(self, mock_db, recap_app):
-        """After enqueuing per-user digests, coordinator schedules itself via enqueue_at."""
+    def test_coordinator_does_not_self_reschedule(self, mock_db, recap_app):
+        """Coordinator must NOT call enqueue_at — rescheduling is handled by the
+        bash daily-digest-scheduler loop in initialize_render_run.sh."""
         from recap import tasks
 
         mock_db.session.scalars.return_value.all.return_value = [_make_user(3)]
@@ -83,47 +83,4 @@ class TestScheduleWeeklyDigestsTask:
             with recap_app.app_context():
                 tasks.schedule_weekly_digests_task()
 
-        mock_queue.enqueue_at.assert_called_once()
-        at_dt, func_name = mock_queue.enqueue_at.call_args[0][:2]
-        assert func_name == "recap.tasks.schedule_weekly_digests_task"
-        assert isinstance(at_dt, datetime)
-
-    @patch("recap.tasks.db")
-    def test_reschedule_datetime_is_tomorrow_4pm_pacific(self, mock_db, recap_app):
-        """The rescheduled datetime is tomorrow at 4pm Pacific time."""
-        from datetime import timedelta
-        from zoneinfo import ZoneInfo
-
-        from recap import tasks
-
-        mock_db.session.scalars.return_value.all.return_value = []
-
-        mock_queue = MagicMock()
-        now = datetime.now(timezone.utc)
-        with patch.object(tasks.app, "task_queue", mock_queue):
-            with recap_app.app_context():
-                tasks.schedule_weekly_digests_task()
-
-        at_dt = mock_queue.enqueue_at.call_args[0][0]
-        pacific = ZoneInfo("America/Los_Angeles")
-        at_dt_pacific = at_dt.astimezone(pacific)
-        assert at_dt_pacific.hour == 16
-        assert at_dt_pacific.minute == 0
-        assert at_dt_pacific.second == 0
-        assert at_dt > now
-        assert at_dt < now + timedelta(days=2)
-
-    @patch("recap.tasks.db")
-    def test_reschedule_datetime_is_timezone_aware(self, mock_db, recap_app):
-        """The enqueue_at datetime must be timezone-aware (RQ 2.x requirement)."""
-        from recap import tasks
-
-        mock_db.session.scalars.return_value.all.return_value = []
-
-        mock_queue = MagicMock()
-        with patch.object(tasks.app, "task_queue", mock_queue):
-            with recap_app.app_context():
-                tasks.schedule_weekly_digests_task()
-
-        at_dt = mock_queue.enqueue_at.call_args[0][0]
-        assert at_dt.tzinfo is not None
+        mock_queue.enqueue_at.assert_not_called()

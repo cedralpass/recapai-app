@@ -341,9 +341,13 @@ def weekly_digest_task(user_id: int, send_email_flag: bool = False):
 
 
 def schedule_weekly_digests_task():
-    """Coordinator: enqueue weekly_digest_task for all opted-in users, then reschedule itself."""
-    from datetime import timedelta
+    """Coordinator: enqueue weekly_digest_task for all opted-in users.
 
+    Triggered daily by the bash scheduler loop in initialize_render_run.sh
+    (or manually via `flask digest run-now`).  Does NOT self-reschedule — the
+    bash loop is the sole scheduling mechanism, which avoids dependence on
+    RQ's --with-scheduler flag and its Redis lock-acquisition quirks.
+    """
     import sqlalchemy as sa
 
     from recap.models import User
@@ -362,20 +366,7 @@ def schedule_weekly_digests_task():
             True,  # send_email_flag
             job_timeout=600,
         )
-
-    # Self-reschedule for tomorrow 4pm Pacific (handles DST automatically via zoneinfo)
-    from zoneinfo import ZoneInfo
-
-    PACIFIC = ZoneInfo("America/Los_Angeles")
-    now = datetime.now(timezone.utc)
-    now_pacific = now.astimezone(PACIFIC)
-    next_run = (now_pacific + timedelta(days=1)).replace(hour=16, minute=0, second=0, microsecond=0)
-    app.task_queue.enqueue_at(
-        next_run.astimezone(timezone.utc),
-        "recap.tasks.schedule_weekly_digests_task",
-        job_timeout=60,
-    )
-    app.logger.info("schedule_weekly_digests_task: rescheduled coordinator for %s", next_run.isoformat())
+    app.logger.info("schedule_weekly_digests_task: completed coordinator run for %d users", len(users))
 
 
 def ping_aiapi():

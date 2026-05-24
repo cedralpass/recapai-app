@@ -10,7 +10,6 @@ if [ -z "$CURRENT" ]; then
     flask --app recap db stamp 66e1c054e7e8
 fi
 flask --app recap db upgrade
-flask --app recap digest schedule-check
 
 #start redis server as daemon
 #redis-server --daemonize yes
@@ -21,6 +20,25 @@ flask --app recap digest schedule-check
 export RQ_QUEUE_NAME="RECAP2-Classify"
 export NUM_WORKERS=2
 /app/worker_monitor.sh &
+
+# Daily digest scheduler: fire coordinator at 4pm Pacific Time.
+# Checks every 60 s; triggers once per calendar day (PT) during the 16:xx hour.
+# Does NOT rely on RQ's --with-scheduler / enqueue_at machinery.
+# Edge case: if the container restarts between 16:00–16:59 PT the coordinator may
+# fire a second time that day — the resulting DigestRun will status=skipped (benign).
+(
+  DIGEST_LAST_RUN_DATE=""
+  while true; do
+    NOW_HOUR=$(TZ=America/Los_Angeles date +%H)
+    NOW_DATE=$(TZ=America/Los_Angeles date +%Y-%m-%d)
+    if [ "$NOW_HOUR" = "16" ] && [ "$NOW_DATE" != "$DIGEST_LAST_RUN_DATE" ]; then
+      echo "[$(date '+%Y-%m-%d %H:%M:%S')] daily-digest-scheduler: triggering coordinator"
+      flask --app recap digest run-now
+      DIGEST_LAST_RUN_DATE="$NOW_DATE"
+    fi
+    sleep 60
+  done
+) &
 
 # launch webserver in foreground (don't daemonize so container stays alive)
 # 2 gunicorn workers + 2 RQ workers ≈ 4 processes, within 512MB
