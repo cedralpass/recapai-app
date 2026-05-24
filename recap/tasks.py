@@ -367,9 +367,8 @@ def schedule_weekly_digests_task():
             job_timeout=600,
         )
         app.logger.info(
-            "schedule_weekly_digests_task: enqueued user_id=%s email=%s job_id=%s",
+            "schedule_weekly_digests_task: enqueued user_id=%s job_id=%s",
             user.id,
-            user.email,
             job.id,
         )
     app.logger.info("schedule_weekly_digests_task: completed coordinator run for %d users", len(users))
