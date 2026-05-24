@@ -12,7 +12,7 @@ Hi {{ user_name }}, here's what you saved this week ({{ article_count }} article
 {% endif %}
 {% for article in cluster.articles %}
   - {{ article.title }}{% if article.is_read %} [Read]{% endif %}
-    {{ article.url_path }}
+    {{ article.recap_url }}
 {% endfor %}
 
 {% endfor %}

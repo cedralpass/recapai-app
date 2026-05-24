@@ -9,6 +9,7 @@ class ArticleData(TypedDict):
     category: str
     key_topics: list[str]
     url_path: str
+    recap_url: str
     is_read: bool
     embedding: Optional[list]
 
