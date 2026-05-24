@@ -61,7 +61,7 @@ def _make_article(id=1, title="Test Article", category="Technology", **kwargs):
         "category": category,
         "key_topics": ["topic1", "topic2"],
         "url_path": f"https://example.com/{id}",
-        "recap_url": f"http://localhost/{id}/show",
+        "recap_url": f"http://localhost/{id}/show?utm_source=recap&utm_medium=email&utm_campaign=weekly_digest",
         "is_read": False,
         "embedding": None,
         **kwargs,
