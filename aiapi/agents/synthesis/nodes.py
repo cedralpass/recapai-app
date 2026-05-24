@@ -26,6 +26,14 @@ LABEL_PROMPT = "Give this group of articles a concise thematic label (2-4 words)
 LABEL_FORMAT = 'Respond with JSON: {"label": "short theme name"}'
 
 
+def _recap_detail_url(article_id: int) -> str:
+    from recap.config import Config
+
+    host = Config.TASK_SERVER_NAME
+    scheme = "http" if host.startswith("localhost") or host.startswith("127.") else "https"
+    return f"{scheme}://{host}/{article_id}/show"
+
+
 def _to_article_data(article) -> ArticleData:
     key_topics = []
     if article.key_topics:
@@ -40,6 +48,7 @@ def _to_article_data(article) -> ArticleData:
         "category": article.category or "",
         "key_topics": key_topics,
         "url_path": article.url_path,
+        "recap_url": _recap_detail_url(article.id),
         "is_read": article.is_read,
         "embedding": [float(x) for x in article.embedding] if article.embedding is not None else None,
     }
@@ -124,7 +133,7 @@ def _render_plain_text(user_name: str, week_start, clusters: list, article_count
         lines.append("")
         for a in cluster["articles"]:
             lines.append(f"  - {a['title']}")
-            lines.append(f"    {a['url_path']}")
+            lines.append(f"    {a['recap_url']}")
         lines.append("")
     lines += ["---", "You're receiving this because you use Recap."]
     return "\n".join(lines)

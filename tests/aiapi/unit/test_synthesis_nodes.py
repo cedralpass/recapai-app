@@ -61,6 +61,7 @@ def _make_article(id=1, title="Test Article", category="Technology", **kwargs):
         "category": category,
         "key_topics": ["topic1", "topic2"],
         "url_path": f"https://example.com/{id}",
+        "recap_url": f"http://localhost/{id}/show",
         "is_read": False,
         "embedding": None,
         **kwargs,
@@ -466,5 +467,5 @@ class TestGatherNode:
             state = _base_state(user_id=seeded_user.id, week_start=week_start, week_end=week_end)
             result = gather(state)
             article = result["articles"][0]
-            for key in ("id", "title", "summary", "category", "key_topics", "url_path", "is_read"):
+            for key in ("id", "title", "summary", "category", "key_topics", "url_path", "recap_url", "is_read"):
                 assert key in article
