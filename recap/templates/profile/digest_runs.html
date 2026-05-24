@@ -15,7 +15,7 @@
   </a>
 
   <!-- Header -->
-  <div class="flex items-center justify-between mb-6">
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-orange-500">
@@ -53,8 +53,59 @@
   </div>
 
   {% if pagination.items %}
-  <!-- Runs table -->
-  <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+
+  <!-- Mobile card list -->
+  <div class="md:hidden bg-white rounded-xl shadow-sm border border-gray-100 divide-y divide-gray-100 mb-0">
+    {% for run in pagination.items %}
+    <div class="px-4 py-3 space-y-2">
+
+      <!-- Week + View link -->
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-sm font-medium text-gray-800">
+          {{ run.week_start.strftime('%b %d') }} – {{ run.week_end.strftime('%b %d, %Y') }}
+        </span>
+        {% if run.status in ('completed', 'skipped', 'failed') %}
+        <a href="{{ url_for('profile.digest_run_detail', run_id=run.id) }}"
+           class="text-xs font-semibold text-blue-600 hover:text-blue-800 shrink-0">View →</a>
+        {% endif %}
+      </div>
+
+      <!-- Status + Articles + Quality -->
+      <div class="flex flex-wrap items-center gap-2 text-xs">
+        {% if run.status == 'completed' %}
+          <span class="inline-flex items-center bg-green-50 border border-green-200 rounded-full px-2 py-0.5 text-xs text-green-700">Completed</span>
+        {% elif run.status == 'running' %}
+          <span class="inline-flex items-center bg-yellow-50 border border-yellow-200 rounded-full px-2 py-0.5 text-xs text-yellow-700">Running</span>
+        {% elif run.status == 'skipped' %}
+          <span class="inline-flex items-center bg-gray-50 border border-gray-200 rounded-full px-2 py-0.5 text-xs text-gray-500">Skipped</span>
+        {% elif run.status == 'failed' %}
+          <span class="inline-flex items-center bg-red-50 border border-red-200 rounded-full px-2 py-0.5 text-xs text-red-700">Failed</span>
+        {% else %}
+          <span class="inline-flex items-center bg-gray-50 border border-gray-200 rounded-full px-2 py-0.5 text-xs text-gray-500">{{ run.status }}</span>
+        {% endif %}
+
+        {% if run.article_count is not none %}
+        <span class="text-gray-500">{{ run.article_count }} articles</span>
+        {% endif %}
+
+        {% if run.quality_verdict == 'approved' %}
+          <span class="text-green-600 font-medium">Approved</span>
+        {% elif run.quality_verdict == 'best_effort' %}
+          <span class="text-yellow-600 font-medium">Best effort</span>
+        {% elif run.quality_verdict %}
+          <span class="text-gray-600">{{ run.quality_verdict }}</span>
+        {% endif %}
+      </div>
+
+      <!-- Created -->
+      <div class="text-xs text-gray-400">{{ run.created_at.strftime('%b %d, %H:%M') }}</div>
+
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Desktop table -->
+  <div class="hidden md:block bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
     <table class="w-full text-sm">
       <thead>
         <tr class="bg-gray-50 border-b border-gray-100">
@@ -125,26 +176,25 @@
         {% endfor %}
       </tbody>
     </table>
-
-    <!-- Pagination -->
-    {% if pagination.pages > 1 %}
-    <div class="px-5 py-3 border-t border-gray-100 flex items-center justify-center gap-1">
-      {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
-        {% if p %}
-          {% if p == pagination.page %}
-            <span class="px-3 py-1.5 rounded-lg bg-orange-500 text-white text-xs font-semibold">{{ p }}</span>
-          {% else %}
-            <a href="{{ url_for('profile.digest_runs', page=p) }}"
-               class="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-xs hover:bg-gray-50">{{ p }}</a>
-          {% endif %}
-        {% else %}
-          <span class="px-1 text-gray-400 text-xs">…</span>
-        {% endif %}
-      {% endfor %}
-    </div>
-    {% endif %}
-
   </div>
+
+  <!-- Pagination (shared) -->
+  {% if pagination.pages > 1 %}
+  <div class="mt-3 flex items-center justify-center gap-1">
+    {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+      {% if p %}
+        {% if p == pagination.page %}
+          <span class="px-3 py-1.5 rounded-lg bg-orange-500 text-white text-xs font-semibold">{{ p }}</span>
+        {% else %}
+          <a href="{{ url_for('profile.digest_runs', page=p) }}"
+             class="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-xs hover:bg-gray-50">{{ p }}</a>
+        {% endif %}
+      {% else %}
+        <span class="px-1 text-gray-400 text-xs">…</span>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
 
   {% else %}
   <!-- Empty state -->
