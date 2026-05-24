@@ -363,12 +363,16 @@ def trigger_weekly_digest(username):
         from flask import abort
 
         abort(403)
-    current_app.task_queue.enqueue(
+    job = current_app.task_queue.enqueue(
         "recap.tasks.weekly_digest_task",
         current_user.id,
         False,  # send_email_flag — False for manual/debug runs
         job_timeout=600,
     )
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        from flask import jsonify
+
+        return jsonify({"job_id": job.id})
     flash("Digest run queued — it will appear below once complete.")
     return redirect(url_for("profile.digest_runs"))
 
@@ -380,14 +384,47 @@ def trigger_weekly_digest_send(username):
         from flask import abort
 
         abort(403)
-    current_app.task_queue.enqueue(
+    job = current_app.task_queue.enqueue(
         "recap.tasks.weekly_digest_task",
         current_user.id,
         True,  # send_email_flag — True: sends the real email
         job_timeout=600,
     )
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        from flask import jsonify
+
+        return jsonify({"job_id": job.id})
     flash("Digest run queued — email will be sent once complete.")
     return redirect(url_for("profile.digest_runs"))
+
+
+@bp.route("/settings/digest-runs/poll/<job_id>")
+@login_required
+def digest_run_poll(job_id):
+    from flask import jsonify
+
+    from recap.models import DigestRun
+
+    run = db.session.execute(
+        sa.select(DigestRun).where(DigestRun.job_id == job_id).where(DigestRun.user_id == current_user.id)
+    ).scalar_one_or_none()
+    if run is None:
+        return jsonify({"status": "queued"})
+    view_url = None
+    if run.status in ("completed", "skipped", "failed"):
+        view_url = url_for("profile.digest_run_detail", run_id=run.id)
+    return jsonify(
+        {
+            "status": run.status,
+            "run_id": run.id,
+            "article_count": run.article_count,
+            "quality_verdict": run.quality_verdict,
+            "week_start": run.week_start.strftime("%b %d"),
+            "week_end": run.week_end.strftime("%b %d, %Y"),
+            "created_at": run.created_at.strftime("%b %d, %H:%M"),
+            "view_url": view_url,
+        }
+    )
 
 
 @bp.route("/settings/api-token", methods=["GET", "POST"])

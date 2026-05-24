@@ -30,184 +30,354 @@
 
     <!-- Trigger buttons -->
     <div class="flex items-center gap-2">
-      <form method="POST" action="{{ url_for('profile.trigger_weekly_digest', username=current_user.username) }}">
-        <button type="submit"
-                class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 transition-colors">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
-          </svg>
-          Test Run
-        </button>
-      </form>
-      <form method="POST" action="{{ url_for('profile.trigger_weekly_digest_send', username=current_user.username) }}"
-            onsubmit="return confirm('This will send a real email to {{ current_user.email }}. Continue?')">
-        <button type="submit"
-                class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
-          </svg>
-          Send for Real
-        </button>
-      </form>
+      <button type="button" id="btn-test"
+              onclick="triggerDigest('{{ url_for('profile.trigger_weekly_digest', username=current_user.username) }}', false)"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
+        </svg>
+        Test Run
+      </button>
+      <button type="button" id="btn-send"
+              data-email="{{ current_user.email }}"
+              onclick="triggerDigest('{{ url_for('profile.trigger_weekly_digest_send', username=current_user.username) }}', true)"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+        </svg>
+        Send for Real
+      </button>
     </div>
   </div>
 
-  {% if pagination.items %}
+  <!-- Table + mobile cards (always rendered, hidden when empty) -->
+  <div id="runs-wrapper" class="{{ '' if pagination.items else 'hidden' }}">
 
-  <!-- Mobile card list -->
-  <div class="md:hidden bg-white rounded-xl shadow-sm border border-gray-100 divide-y divide-gray-100 mb-0">
-    {% for run in pagination.items %}
-    <div class="px-4 py-3 space-y-2">
+    <!-- Mobile card list -->
+    <div id="runs-mobile" class="md:hidden bg-white rounded-xl shadow-sm border border-gray-100 divide-y divide-gray-100 mb-0">
+      {% for run in pagination.items %}
+      <div class="px-4 py-3 space-y-2" {% if run.status == 'running' and run.job_id %}data-job-id="{{ run.job_id }}"{% endif %}>
 
-      <!-- Week + View link -->
-      <div class="flex items-center justify-between gap-2">
-        <span class="text-sm font-medium text-gray-800">
-          {{ run.week_start.strftime('%b %d') }} – {{ run.week_end.strftime('%b %d, %Y') }}
-        </span>
-        {% if run.status in ('completed', 'skipped', 'failed') %}
-        <a href="{{ url_for('profile.digest_run_detail', run_id=run.id) }}"
-           class="text-xs font-semibold text-blue-600 hover:text-blue-800 shrink-0">View →</a>
-        {% endif %}
-      </div>
-
-      <!-- Status + Articles + Quality -->
-      <div class="flex flex-wrap items-center gap-2 text-xs">
-        {% if run.status == 'completed' %}
-          <span class="inline-flex items-center bg-green-50 border border-green-200 rounded-full px-2 py-0.5 text-xs text-green-700">Completed</span>
-        {% elif run.status == 'running' %}
-          <span class="inline-flex items-center bg-yellow-50 border border-yellow-200 rounded-full px-2 py-0.5 text-xs text-yellow-700">Running</span>
-        {% elif run.status == 'skipped' %}
-          <span class="inline-flex items-center bg-gray-50 border border-gray-200 rounded-full px-2 py-0.5 text-xs text-gray-500">Skipped</span>
-        {% elif run.status == 'failed' %}
-          <span class="inline-flex items-center bg-red-50 border border-red-200 rounded-full px-2 py-0.5 text-xs text-red-700">Failed</span>
-        {% else %}
-          <span class="inline-flex items-center bg-gray-50 border border-gray-200 rounded-full px-2 py-0.5 text-xs text-gray-500">{{ run.status }}</span>
-        {% endif %}
-
-        {% if run.article_count is not none %}
-        <span class="text-gray-500">{{ run.article_count }} articles</span>
-        {% endif %}
-
-        {% if run.quality_verdict == 'approved' %}
-          <span class="text-green-600 font-medium">Approved</span>
-        {% elif run.quality_verdict == 'best_effort' %}
-          <span class="text-yellow-600 font-medium">Best effort</span>
-        {% elif run.quality_verdict %}
-          <span class="text-gray-600">{{ run.quality_verdict }}</span>
-        {% endif %}
-      </div>
-
-      <!-- Created -->
-      <div class="text-xs text-gray-400">{{ run.created_at.strftime('%b %d, %H:%M') }}</div>
-
-    </div>
-    {% endfor %}
-  </div>
-
-  <!-- Desktop table -->
-  <div class="hidden md:block bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-    <table class="w-full text-sm">
-      <thead>
-        <tr class="bg-gray-50 border-b border-gray-100">
-          <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Week</th>
-          <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-          <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Articles</th>
-          <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Quality</th>
-          <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Created</th>
-          <th class="px-5 py-3"></th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-gray-50">
-        {% for run in pagination.items %}
-        <tr class="hover:bg-gray-50 transition-colors">
-
-          <!-- Week range -->
-          <td class="px-5 py-3 text-gray-700 font-medium">
+        <!-- Week + View link -->
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-sm font-medium text-gray-800">
             {{ run.week_start.strftime('%b %d') }} – {{ run.week_end.strftime('%b %d, %Y') }}
-          </td>
+          </span>
+          {% if run.status in ('completed', 'skipped', 'failed') %}
+          <a href="{{ url_for('profile.digest_run_detail', run_id=run.id) }}"
+             class="text-xs font-semibold text-blue-600 hover:text-blue-800 shrink-0">View →</a>
+          {% endif %}
+        </div>
 
-          <!-- Status badge -->
-          <td class="px-5 py-3">
-            {% if run.status == 'completed' %}
-              <span class="inline-flex items-center bg-green-50 border border-green-200 rounded-full px-2 py-0.5 text-xs text-green-700">Completed</span>
-            {% elif run.status == 'running' %}
-              <span class="inline-flex items-center bg-yellow-50 border border-yellow-200 rounded-full px-2 py-0.5 text-xs text-yellow-700">Running</span>
-            {% elif run.status == 'skipped' %}
-              <span class="inline-flex items-center bg-gray-50 border border-gray-200 rounded-full px-2 py-0.5 text-xs text-gray-500">Skipped</span>
-            {% elif run.status == 'failed' %}
-              <span class="inline-flex items-center bg-red-50 border border-red-200 rounded-full px-2 py-0.5 text-xs text-red-700">Failed</span>
-            {% else %}
-              <span class="inline-flex items-center bg-gray-50 border border-gray-200 rounded-full px-2 py-0.5 text-xs text-gray-500">{{ run.status }}</span>
-            {% endif %}
-          </td>
+        <!-- Status + Articles + Quality -->
+        <div class="flex flex-wrap items-center gap-2 text-xs">
+          {% if run.status == 'completed' %}
+            <span class="inline-flex items-center bg-green-50 border border-green-200 rounded-full px-2 py-0.5 text-xs text-green-700">Completed</span>
+          {% elif run.status == 'running' %}
+            <span class="inline-flex items-center gap-1.5 bg-yellow-50 border border-yellow-200 rounded-full px-2 py-0.5 text-xs text-yellow-700">
+              <svg class="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              Running
+            </span>
+          {% elif run.status == 'skipped' %}
+            <span class="inline-flex items-center bg-gray-50 border border-gray-200 rounded-full px-2 py-0.5 text-xs text-gray-500">Skipped</span>
+          {% elif run.status == 'failed' %}
+            <span class="inline-flex items-center bg-red-50 border border-red-200 rounded-full px-2 py-0.5 text-xs text-red-700">Failed</span>
+          {% else %}
+            <span class="inline-flex items-center bg-gray-50 border border-gray-200 rounded-full px-2 py-0.5 text-xs text-gray-500">{{ run.status }}</span>
+          {% endif %}
 
-          <!-- Article count -->
-          <td class="px-5 py-3 text-gray-600">
-            {{ run.article_count if run.article_count is not none else '—' }}
-          </td>
+          {% if run.article_count is not none %}
+          <span class="text-gray-500">{{ run.article_count }} articles</span>
+          {% endif %}
 
-          <!-- Quality verdict -->
-          <td class="px-5 py-3 text-gray-600">
-            {% if run.quality_verdict == 'approved' %}
-              <span class="text-green-600 font-medium">Approved</span>
-            {% elif run.quality_verdict == 'best_effort' %}
-              <span class="text-yellow-600 font-medium">Best effort</span>
-            {% elif run.quality_verdict %}
-              {{ run.quality_verdict }}
-            {% else %}
-              —
-            {% endif %}
-          </td>
+          {% if run.quality_verdict == 'approved' %}
+            <span class="text-green-600 font-medium">Approved</span>
+          {% elif run.quality_verdict == 'best_effort' %}
+            <span class="text-yellow-600 font-medium">Best effort</span>
+          {% elif run.quality_verdict %}
+            <span class="text-gray-600">{{ run.quality_verdict }}</span>
+          {% endif %}
+        </div>
 
-          <!-- Created at -->
-          <td class="px-5 py-3 text-gray-500 text-xs">
-            {{ run.created_at.strftime('%b %d, %H:%M') }}
-          </td>
+        <!-- Created -->
+        <div class="text-xs text-gray-400">{{ run.created_at.strftime('%b %d, %H:%M') }}</div>
 
-          <!-- View link -->
-          <td class="px-5 py-3 text-right">
-            {% if run.status in ('completed', 'skipped', 'failed') %}
-            <a href="{{ url_for('profile.digest_run_detail', run_id=run.id) }}"
-               class="text-xs font-semibold text-blue-600 hover:text-blue-800">View →</a>
-            {% endif %}
-          </td>
-
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Pagination (shared) -->
-  {% if pagination.pages > 1 %}
-  <div class="mt-3 flex items-center justify-center gap-1">
-    {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
-      {% if p %}
-        {% if p == pagination.page %}
-          <span class="px-3 py-1.5 rounded-lg bg-orange-500 text-white text-xs font-semibold">{{ p }}</span>
-        {% else %}
-          <a href="{{ url_for('profile.digest_runs', page=p) }}"
-             class="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-xs hover:bg-gray-50">{{ p }}</a>
-        {% endif %}
-      {% else %}
-        <span class="px-1 text-gray-400 text-xs">…</span>
-      {% endif %}
-    {% endfor %}
-  </div>
-  {% endif %}
-
-  {% else %}
-  <!-- Empty state -->
-  <div class="bg-white rounded-xl shadow-sm border border-gray-100 px-8 py-16 text-center">
-    <div class="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-4">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-orange-400">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
-      </svg>
+      </div>
+      {% endfor %}
     </div>
-    <p class="text-sm font-semibold text-gray-700 mb-1">No digest runs yet</p>
-    <p class="text-xs text-gray-400">Click "Trigger New Run" to generate your first digest.</p>
+
+    <!-- Desktop table -->
+    <div class="hidden md:block bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-gray-50 border-b border-gray-100">
+            <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Week</th>
+            <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+            <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Articles</th>
+            <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Quality</th>
+            <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Created</th>
+            <th class="px-5 py-3"></th>
+          </tr>
+        </thead>
+        <tbody id="runs-tbody" class="divide-y divide-gray-50">
+          {% for run in pagination.items %}
+          <tr class="hover:bg-gray-50 transition-colors" {% if run.status == 'running' and run.job_id %}data-job-id="{{ run.job_id }}"{% endif %}>
+
+            <!-- Week range -->
+            <td class="px-5 py-3 text-gray-700 font-medium">
+              {{ run.week_start.strftime('%b %d') }} – {{ run.week_end.strftime('%b %d, %Y') }}
+            </td>
+
+            <!-- Status badge -->
+            <td class="px-5 py-3">
+              {% if run.status == 'completed' %}
+                <span class="inline-flex items-center bg-green-50 border border-green-200 rounded-full px-2 py-0.5 text-xs text-green-700">Completed</span>
+              {% elif run.status == 'running' %}
+                <span class="inline-flex items-center gap-1.5 bg-yellow-50 border border-yellow-200 rounded-full px-2 py-0.5 text-xs text-yellow-700">
+                  <svg class="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  Running
+                </span>
+              {% elif run.status == 'skipped' %}
+                <span class="inline-flex items-center bg-gray-50 border border-gray-200 rounded-full px-2 py-0.5 text-xs text-gray-500">Skipped</span>
+              {% elif run.status == 'failed' %}
+                <span class="inline-flex items-center bg-red-50 border border-red-200 rounded-full px-2 py-0.5 text-xs text-red-700">Failed</span>
+              {% else %}
+                <span class="inline-flex items-center bg-gray-50 border border-gray-200 rounded-full px-2 py-0.5 text-xs text-gray-500">{{ run.status }}</span>
+              {% endif %}
+            </td>
+
+            <!-- Article count -->
+            <td class="px-5 py-3 text-gray-600">
+              {{ run.article_count if run.article_count is not none else '—' }}
+            </td>
+
+            <!-- Quality verdict -->
+            <td class="px-5 py-3 text-gray-600">
+              {% if run.quality_verdict == 'approved' %}
+                <span class="text-green-600 font-medium">Approved</span>
+              {% elif run.quality_verdict == 'best_effort' %}
+                <span class="text-yellow-600 font-medium">Best effort</span>
+              {% elif run.quality_verdict %}
+                {{ run.quality_verdict }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+
+            <!-- Created at -->
+            <td class="px-5 py-3 text-gray-500 text-xs">
+              {{ run.created_at.strftime('%b %d, %H:%M') }}
+            </td>
+
+            <!-- View link -->
+            <td class="px-5 py-3 text-right">
+              {% if run.status in ('completed', 'skipped', 'failed') %}
+              <a href="{{ url_for('profile.digest_run_detail', run_id=run.id) }}"
+                 class="text-xs font-semibold text-blue-600 hover:text-blue-800">View →</a>
+              {% endif %}
+            </td>
+
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination (shared) -->
+    {% if pagination.pages > 1 %}
+    <div class="mt-3 flex items-center justify-center gap-1">
+      {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+        {% if p %}
+          {% if p == pagination.page %}
+            <span class="px-3 py-1.5 rounded-lg bg-orange-500 text-white text-xs font-semibold">{{ p }}</span>
+          {% else %}
+            <a href="{{ url_for('profile.digest_runs', page=p) }}"
+               class="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-xs hover:bg-gray-50">{{ p }}</a>
+          {% endif %}
+        {% else %}
+          <span class="px-1 text-gray-400 text-xs">…</span>
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  </div><!-- end #runs-wrapper -->
+
+  <!-- Empty state (hidden once runs exist or a job is triggered) -->
+  <div id="empty-state" class="{{ 'hidden' if pagination.items else '' }}">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 px-8 py-16 text-center">
+      <div class="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-orange-400">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+        </svg>
+      </div>
+      <p class="text-sm font-semibold text-gray-700 mb-1">No digest runs yet</p>
+      <p class="text-xs text-gray-400">Click "Test Run" to generate your first digest.</p>
+    </div>
   </div>
-  {% endif %}
 
 </div>
+
+<script>
+const SPINNER_SVG = '<svg class="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+
+const activePolls = {};
+
+function statusBadge(status) {
+  if (status === 'completed')
+    return '<span class="inline-flex items-center bg-green-50 border border-green-200 rounded-full px-2 py-0.5 text-xs text-green-700">Completed</span>';
+  if (status === 'running' || status === 'queued')
+    return `<span class="inline-flex items-center gap-1.5 bg-yellow-50 border border-yellow-200 rounded-full px-2 py-0.5 text-xs text-yellow-700">${SPINNER_SVG}Running</span>`;
+  if (status === 'skipped')
+    return '<span class="inline-flex items-center bg-gray-50 border border-gray-200 rounded-full px-2 py-0.5 text-xs text-gray-500">Skipped</span>';
+  if (status === 'failed')
+    return '<span class="inline-flex items-center bg-red-50 border border-red-200 rounded-full px-2 py-0.5 text-xs text-red-700">Failed</span>';
+  return `<span class="inline-flex items-center bg-gray-50 border border-gray-200 rounded-full px-2 py-0.5 text-xs text-gray-500">${status}</span>`;
+}
+
+function qualityHtml(verdict) {
+  if (!verdict) return '—';
+  if (verdict === 'approved') return '<span class="text-green-600 font-medium">Approved</span>';
+  if (verdict === 'best_effort') return '<span class="text-yellow-600 font-medium">Best effort</span>';
+  return verdict;
+}
+
+function nowLabel() {
+  const d = new Date();
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${months[d.getMonth()]} ${d.getDate()}, ${hh}:${mm}`;
+}
+
+function desktopRowInner(data) {
+  const week = data.week_start ? `${data.week_start} – ${data.week_end}` : '—';
+  const articles = data.article_count != null ? data.article_count : '—';
+  const viewLink = data.view_url
+    ? `<a href="${data.view_url}" class="text-xs font-semibold text-blue-600 hover:text-blue-800">View →</a>`
+    : '';
+  return `
+    <td class="px-5 py-3 text-gray-700 font-medium">${week}</td>
+    <td class="px-5 py-3">${statusBadge(data.status)}</td>
+    <td class="px-5 py-3 text-gray-600">${articles}</td>
+    <td class="px-5 py-3 text-gray-600">${qualityHtml(data.quality_verdict)}</td>
+    <td class="px-5 py-3 text-gray-500 text-xs">${data.created_at || '—'}</td>
+    <td class="px-5 py-3 text-right">${viewLink}</td>
+  `;
+}
+
+function mobileCardInner(data) {
+  const week = data.week_start ? `${data.week_start} – ${data.week_end}` : '—';
+  const viewLink = data.view_url
+    ? `<a href="${data.view_url}" class="text-xs font-semibold text-blue-600 hover:text-blue-800 shrink-0">View →</a>`
+    : '';
+  const quality = qualityHtml(data.quality_verdict);
+  const qualitySpan = (quality && quality !== '—') ? quality : '';
+  const articleSpan = data.article_count != null
+    ? `<span class="text-gray-500">${data.article_count} articles</span>`
+    : '';
+  return `
+    <div class="flex items-center justify-between gap-2">
+      <span class="text-sm font-medium text-gray-800">${week}</span>
+      ${viewLink}
+    </div>
+    <div class="flex flex-wrap items-center gap-2 text-xs">
+      ${statusBadge(data.status)}
+      ${articleSpan}
+      ${qualitySpan}
+    </div>
+    <div class="text-xs text-gray-400">${data.created_at || '—'}</div>
+  `;
+}
+
+function setButtonsDisabled(disabled) {
+  ['btn-test', 'btn-send'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.disabled = disabled;
+  });
+}
+
+function updateRow(jobId, data) {
+  const tr = document.querySelector(`tr[data-job-id="${jobId}"]`);
+  if (tr) tr.innerHTML = desktopRowInner(data);
+
+  const card = document.querySelector(`#runs-mobile [data-job-id="${jobId}"]`);
+  if (card) card.innerHTML = mobileCardInner(data);
+}
+
+function startPolling(jobId) {
+  if (activePolls[jobId]) return;
+  activePolls[jobId] = setInterval(async () => {
+    try {
+      const res = await fetch(`/settings/digest-runs/poll/${jobId}`);
+      const data = await res.json();
+      if (data.status !== 'queued' && data.status !== 'running') {
+        clearInterval(activePolls[jobId]);
+        delete activePolls[jobId];
+        updateRow(jobId, data);
+        if (Object.keys(activePolls).length === 0) setButtonsDisabled(false);
+      }
+    } catch (_) { /* keep polling on transient errors */ }
+  }, 3000);
+}
+
+async function triggerDigest(triggerUrl, sendForReal) {
+  if (sendForReal) {
+    const email = document.getElementById('btn-send').dataset.email;
+    if (!confirm(`This will send a real email to ${email}. Continue?`)) return;
+  }
+
+  setButtonsDisabled(true);
+
+  let jobId;
+  try {
+    const res = await fetch(triggerUrl, {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    });
+    const data = await res.json();
+    jobId = data.job_id;
+  } catch (_) {
+    setButtonsDisabled(false);
+    return;
+  }
+
+  // Reveal table, hide empty state
+  document.getElementById('runs-wrapper').classList.remove('hidden');
+  document.getElementById('empty-state').classList.add('hidden');
+
+  const pendingData = { status: 'running', week_start: null, week_end: null, article_count: null, quality_verdict: null, created_at: nowLabel(), view_url: null };
+
+  // Prepend desktop row
+  const tbody = document.getElementById('runs-tbody');
+  if (tbody) {
+    const tr = document.createElement('tr');
+    tr.className = 'hover:bg-gray-50 transition-colors';
+    tr.dataset.jobId = jobId;
+    tr.innerHTML = desktopRowInner(pendingData);
+    tbody.prepend(tr);
+  }
+
+  // Prepend mobile card
+  const mobileList = document.getElementById('runs-mobile');
+  if (mobileList) {
+    const card = document.createElement('div');
+    card.className = 'px-4 py-3 space-y-2';
+    card.dataset.jobId = jobId;
+    card.innerHTML = mobileCardInner(pendingData);
+    mobileList.prepend(card);
+  }
+
+  startPolling(jobId);
+}
+
+// Auto-poll any running rows that were server-rendered
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('[data-job-id]').forEach(el => {
+    startPolling(el.dataset.jobId);
+    setButtonsDisabled(true);
+  });
+});
+</script>
+
 {% endblock %}
