@@ -360,11 +360,17 @@ def schedule_weekly_digests_task():
 
     app.logger.info("schedule_weekly_digests_task: enqueuing digest for %d users", len(users))
     for user in users:
-        app.task_queue.enqueue(
+        job = app.task_queue.enqueue(
             "recap.tasks.weekly_digest_task",
             user.id,
             True,  # send_email_flag
             job_timeout=600,
+        )
+        app.logger.info(
+            "schedule_weekly_digests_task: enqueued user_id=%s email=%s job_id=%s",
+            user.id,
+            user.email,
+            job.id,
         )
     app.logger.info("schedule_weekly_digests_task: completed coordinator run for %d users", len(users))
 
