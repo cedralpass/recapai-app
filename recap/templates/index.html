@@ -48,10 +48,7 @@
         </div>
         {% elif latest_digest %}
         <div id="digest-card" class="bg-slate-900 rounded-lg p-4 mb-5 text-white">
-          <div class="text-[10px] font-bold tracking-[0.16em] uppercase text-amber-400 mb-2">This Week &middot; Recap</div>
-          <div class="font-serif text-lg font-bold leading-tight mb-1.5">
-            {{ latest_digest.article_count }} article{{ 's' if latest_digest.article_count != 1 else '' }}{% if latest_digest.cluster_count %}, {{ latest_digest.cluster_count }} topic{{ 's' if latest_digest.cluster_count != 1 else '' }}{% endif %}
-          </div>
+          <div class="font-serif text-base font-bold leading-tight mb-1.5">Your Weekly Digest</div>
           <div class="font-serif italic text-[13px] text-slate-500 leading-relaxed mb-3">Caught up — read it again anytime.</div>
           <a href="{{ url_for('routes.digest') }}"
              class="inline-block text-[13px] font-bold text-white no-underline border-b-2 border-amber-400 pb-0.5">
@@ -121,10 +118,7 @@
 {% elif latest_digest %}
 <div class="md:hidden mt-4">
   <div id="digest-card-mobile" class="bg-slate-900 rounded-lg p-4 text-white">
-    <div class="text-[10px] font-bold tracking-[0.16em] uppercase text-amber-400 mb-2">This Week &middot; Recap</div>
-    <div class="font-serif text-lg font-bold leading-tight mb-1.5">
-      {{ latest_digest.article_count }} article{{ 's' if latest_digest.article_count != 1 else '' }}{% if latest_digest.cluster_count %}, {{ latest_digest.cluster_count }} topic{{ 's' if latest_digest.cluster_count != 1 else '' }}{% endif %}
-    </div>
+    <div class="font-serif text-xl font-bold leading-tight tracking-tight mb-2">Your Weekly Digest</div>
     <div class="font-serif italic text-[13px] text-slate-500 leading-relaxed mb-3">Caught up — read it again anytime.</div>
     <a href="{{ url_for('routes.digest') }}"
        class="inline-block text-[13px] font-bold text-white no-underline border-b-2 border-amber-400 pb-0.5">
