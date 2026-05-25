@@ -19,7 +19,7 @@
 <body class="min-h-screen bg-gray-50">
     <nav class="flex flex-wrap items-center gap-y-1 bg-black text-slate-200 py-2 px-3">
         <div class="flex-1 min-w-0">
-            <a href="{{ url_for('routes.index') }}" class="text-slate-200 no-underline hover:no-underline">
+            <a href="{{ url_for('routes.index') }}" class="text-slate-200 no-underline hover:no-underline whitespace-nowrap">
                 <span class="text-lg font-black">Recap</span><span class="text-lg font-light opacity-70"> AI</span>
             </a>
         </div>
@@ -30,7 +30,14 @@
             <a href="{{ url_for('auth.register') }}"
                     class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded transition-colors">Create Account &rarr;</a>
             {% else %}
-            <form action="{{ url_for('routes.search') }}" method="get">
+            <button type="button" onclick="openSearchOverlay()"
+                    class="md:hidden text-slate-200 hover:text-white p-1"
+                    aria-label="Search">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                </svg>
+            </button>
+            <form action="{{ url_for('routes.search') }}" method="get" class="hidden md:block">
                 <input type="text" name="q" value="{{ request.args.get('q', '') }}"
                        placeholder="Search articles..."
                        class="w-48 rounded border-2 border-slate-300 bg-slate-700 px-2 py-1 text-sm placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-400" style="color: #f1f5f9;">
@@ -41,7 +48,7 @@
                     class="text-slate-200 underline hover:no-underline">Profile</a>
             <a class="relative inline-flex items-center gap-1.5 font-medium text-slate-200 underline hover:no-underline"
                href="{{ url_for('routes.digest') }}">
-              Weekly Digest
+              <span class="hidden sm:inline">Weekly </span>Digest
               {% if has_unread_digest %}
               <span class="w-1.5 h-1.5 rounded-full bg-amber-400 ring-2 ring-black" aria-label="New digest"></span>
               {% endif %}
@@ -51,6 +58,21 @@
             {% endif %}
         </div>
     </nav>
+    {% if not current_user.is_anonymous %}
+    <div id="mobile-search-overlay"
+         class="hidden fixed inset-x-0 top-0 z-50 bg-black py-2 px-3 flex items-center gap-2 md:hidden">
+        <form action="{{ url_for('routes.search') }}" method="get" class="flex-1">
+            <input id="mobile-search-input" type="text" name="q"
+                   value="{{ request.args.get('q', '') }}"
+                   placeholder="Search articles..."
+                   class="w-full rounded border-2 border-slate-300 bg-slate-700 px-2 py-1 text-sm placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                   style="color: #f1f5f9;">
+        </form>
+        <button type="button" onclick="closeSearchOverlay()"
+                class="text-slate-200 text-xl font-bold px-2 hover:text-white"
+                aria-label="Close search">&times;</button>
+    </div>
+    {% endif %}
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
     <div class="px-2 py-2 my-2 mx-2 text-base space-y-1" id="flash">
@@ -70,6 +92,15 @@
     <footer class="mt-auto py-4 text-center text-sm text-gray-600">
         <p>&copy; {{ current_year }} Recap AI. All rights reserved.</p>
     </footer>
+<script>
+function openSearchOverlay() {
+    document.getElementById('mobile-search-overlay').classList.remove('hidden');
+    document.getElementById('mobile-search-input').focus();
+}
+function closeSearchOverlay() {
+    document.getElementById('mobile-search-overlay').classList.add('hidden');
+}
+</script>
 </body>
 
 </html>

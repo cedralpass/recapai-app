@@ -10,12 +10,12 @@ class TestDigestNavLink:
     def test_nav_link_present_when_authenticated(self, seeded_authenticated_client):
         response = seeded_authenticated_client.get("/")
         assert response.status_code == 200
-        assert b"Weekly Digest" in response.data
+        assert b'href="/digest"' in response.data
 
     def test_nav_link_absent_when_anonymous(self, recap_client):
         response = recap_client.get("/")
         assert response.status_code == 200
-        assert b"Weekly Digest" not in response.data
+        assert b'href="/digest"' not in response.data
 
     def test_nav_link_href_correct(self, seeded_authenticated_client):
         response = seeded_authenticated_client.get("/")
