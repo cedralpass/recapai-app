@@ -329,6 +329,7 @@ def weekly_digest_task(user_id: int, send_email_flag: bool = False):
         run.digest_html = final_state.get("digest_html")
         run.digest_text = final_state.get("digest_text")
         run.sent = final_state.get("sent", False)
+        run.cluster_count = len(final_state.get("clusters", []))
         run.completed_at = datetime.now(timezone.utc)
         db.session.commit()
     except Exception:

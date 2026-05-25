@@ -216,6 +216,69 @@ def seeded_authenticated_client(recap_app, seeded_user):
 
 
 @pytest.fixture
+def completed_digest_run(recap_app, seeded_user):
+    """Completed DigestRun for seeded_user — completed_at = now, so no new bookmarks after it."""
+    from datetime import datetime, timedelta, timezone
+
+    from recap import db
+    from recap.models import DigestRun
+
+    with recap_app.app_context():
+        now = datetime.now(timezone.utc)
+        run = DigestRun(
+            user_id=seeded_user.id,
+            status="completed",
+            week_start=now - timedelta(days=7),
+            week_end=now,
+            completed_at=now,
+            article_count=12,
+            cluster_count=3,
+            digest_html="<p>Test digest</p>",
+            digest_text="Test digest",
+            sent=True,
+        )
+        recap_db.session.add(run)
+        recap_db.session.commit()
+        yield run
+
+
+@pytest.fixture
+def unread_digest_client(recap_app, seeded_user, completed_digest_run):
+    """Authenticated test client as seeded_user with an unread completed digest."""
+    client = recap_app.test_client()
+    client.post("/auth/login", data={"username": "seeduser", "password": "seedpass123"})
+    return client
+
+
+@pytest.fixture
+def opened_digest_run(recap_app, seeded_user):
+    """Completed DigestRun that has already been opened (opened_at is set)."""
+    from datetime import datetime, timedelta, timezone
+
+    from recap import db
+    from recap.models import DigestRun
+
+    with recap_app.app_context():
+        now = datetime.now(timezone.utc)
+        run = DigestRun(
+            user_id=seeded_user.id,
+            status="completed",
+            week_start=now - timedelta(days=7),
+            week_end=now,
+            completed_at=now,
+            opened_at=now,
+            article_count=12,
+            cluster_count=3,
+            digest_html="<p>Test digest</p>",
+            digest_text="Test digest",
+            sent=True,
+        )
+        recap_db.session.add(run)
+        recap_db.session.commit()
+        yield run
+
+
+@pytest.fixture
 def aiapi_app():
     """Create and configure a new aiapi app instance for each test."""
 

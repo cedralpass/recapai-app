@@ -238,15 +238,20 @@ Pages covered: unauthenticated homepage, login, register, forgot/reset password,
 
 ```
 recap/              ← Main Flask app (web UI)
-  __init__.py       ← App factory, blueprint registration, CORS, RQ setup
+  __init__.py       ← App factory, blueprint registration, CORS, RQ setup;
+                       inject_digest_state context processor (has_unread_digest, latest_digest)
   models.py         ← SQLAlchemy models (User, Article, DigestRun)
+                       DigestRun has opened_at (first-view timestamp) + cluster_count columns
   api_v1.py         ← REST API blueprint: POST /api/v1/articles (Bearer token auth)
   profile/          ← Profile/settings blueprint (incl. /settings/api-token)
     __init__.py     ← Taxonomy routes + digest run routes (/settings/digest-runs)
                        (see docs/taxonomy_organnization.md and tech_design/weekly-synthesis-agent.md)
   tasks.py          ← RQ tasks: classify_url, weekly_digest_task, schedule_weekly_digests_task, taxonomy tasks
   cli.py            ← Flask CLI: `flask digest schedule-check` (bootstraps scheduled sends on deploy)
+  routes.py         ← GET /digest, POST /digest/generate, POST /digest/<id>/regenerate,
+                       GET /digest/job/<job_id> (in-app digest viewer + on-demand generation)
   templates/        ← Jinja2 templates
+    digest.html     ← In-app digest viewer (extends base.html, renders digest_html, regenerate banner)
     email/          ← weekly_digest.html + .txt (digest email templates)
   static/css/       ← Tailwind output.css (rebuilt by tailwind server)
 

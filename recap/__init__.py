@@ -5,7 +5,7 @@ from logging.handlers import RotatingFileHandler
 import rq
 from flask import Flask, flash, redirect, render_template, url_for
 from flask_cors import CORS
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user
 from flask_mail import Mail
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
@@ -58,6 +58,24 @@ def create_app(env="dev"):
     @app.context_processor
     def inject_year():
         return {"current_year": datetime.now(timezone.utc).year}
+
+    @app.context_processor
+    def inject_digest_state():
+        if current_user.is_authenticated:
+            import sqlalchemy as sa
+
+            from recap.models import DigestRun
+
+            latest = db.session.scalar(
+                sa.select(DigestRun)
+                .where(DigestRun.user_id == current_user.id, DigestRun.status == "completed")
+                .order_by(DigestRun.created_at.desc())
+            )
+            return {
+                "has_unread_digest": latest is not None and latest.opened_at is None,
+                "latest_digest": latest,
+            }
+        return {"has_unread_digest": False, "latest_digest": None}
 
     from . import routes
 

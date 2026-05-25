@@ -29,6 +29,8 @@ class Config:
     # Sqllite DB
     # SQLALCHEMY_DATABASE_URI='sqlite:////Users/geoffreysmalling/development/instance/recap_sqla.sqlite'
 
+    DIGEST_REGENERATE_THRESHOLD = 3
+
     if "neon.tech" in POSTGRES_HOST:
         SQLALCHEMY_DATABASE_URI = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}?sslmode=require"
     else:

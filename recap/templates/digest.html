@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block main_class %}bg-stone-50 px-4 py-6{% endblock %}
+
+{% block content %}
+
+{% if show_regenerate_banner %}
+<div class="bg-amber-50 border border-amber-300 px-7 py-3.5 flex items-center justify-between gap-4 mb-6 rounded-lg max-w-2xl mx-auto">
+  <div class="flex items-center gap-2.5 min-w-0">
+    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-amber-700 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
+    </svg>
+    <div class="text-[13.5px] text-amber-900 leading-snug">
+      <b>{{ bookmarks_since_digest }} new bookmark{{ 's' if bookmarks_since_digest != 1 }}</b> since this digest was generated.
+      Regenerate to include them.
+    </div>
+  </div>
+  <button id="digest-regenerate-btn" data-digest-id="{{ digest_run.id }}"
+          class="bg-slate-900 text-white rounded-md py-2 px-3.5 font-bold text-[13px] inline-flex items-center gap-1.5 whitespace-nowrap shrink-0">
+    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+    </svg>
+    Regenerate
+  </button>
+</div>
+{% endif %}
+
+<div class="max-w-2xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
+  <div class="px-8 pt-8 pb-6 border-b border-slate-100">
+    <div class="text-[10px] font-bold tracking-[0.16em] uppercase text-amber-600 mb-2">
+      Recap &middot; Week of {{ digest_run.week_start.strftime('%B %-d') }}
+    </div>
+    <h1 class="font-serif text-2xl font-bold text-slate-900 leading-tight mb-2">
+      Your Weekly Recap
+    </h1>
+    <div class="text-sm text-slate-500">
+      {{ digest_run.article_count }} article{{ 's' if digest_run.article_count != 1 }}{% if digest_run.cluster_count %} &middot; {{ digest_run.cluster_count }} topics{% endif %}
+    </div>
+  </div>
+  <div class="px-8 py-6 digest-content">
+    {{ digest_run.digest_html | safe }}
+  </div>
+</div>
+
+{% if show_regenerate_banner %}
+<script>
+(function () {
+  const btn = document.getElementById('digest-regenerate-btn');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    btn.disabled = true;
+    btn.textContent = 'Regenerating…';
+    fetch('/digest/' + btn.dataset.digestId + '/regenerate', { method: 'POST' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        const jobId = data.job_id;
+        const poll = setInterval(function () {
+          fetch('/digest/job/' + jobId)
+            .then(function (r) { return r.json(); })
+            .then(function (s) {
+              if (s.status === 'finished') {
+                clearInterval(poll);
+                window.location.reload();
+              } else if (s.status === 'failed') {
+                clearInterval(poll);
+                btn.disabled = false;
+                btn.textContent = 'Regenerate (failed — try again)';
+              }
+            });
+        }, 500);
+      });
+  });
+})();
+</script>
+{% endif %}
+
+{% endblock %}

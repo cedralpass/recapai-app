@@ -34,6 +34,32 @@
         {% include '_article.html' %}
     </div>
     <aside class="hidden md:block w-56 shrink-0 sticky top-4 self-start">
+        {% if latest_digest and latest_digest.opened_at is none %}
+        <div id="digest-card" class="bg-slate-900 rounded-lg p-4 mb-5 text-white">
+          <div class="text-[10px] font-bold tracking-[0.16em] uppercase text-amber-400 mb-2">This Week &middot; Recap</div>
+          <div class="font-serif text-lg font-bold leading-tight mb-1.5">
+            {{ latest_digest.article_count }} articles{% if latest_digest.cluster_count %}, {{ latest_digest.cluster_count }} topics{% endif %}
+          </div>
+          <div class="font-serif italic text-[13px] text-slate-300 leading-relaxed mb-3">Your Monday digest is ready.</div>
+          <a href="{{ url_for('routes.digest') }}"
+             class="inline-block text-[13px] font-bold text-white no-underline border-b-2 border-amber-400 pb-0.5">
+            Read digest &rarr;
+          </a>
+        </div>
+        {% elif current_user.is_authenticated and not latest_digest %}
+        <div id="digest-card" class="bg-white rounded-lg p-4 mb-5 border border-dashed border-slate-300">
+          <div class="text-[10px] font-bold tracking-[0.16em] uppercase text-slate-500 mb-2">This Week &middot; Recap</div>
+          <div class="font-serif text-lg font-bold text-slate-900 leading-snug mb-1.5">No digest yet</div>
+          <div class="font-serif italic text-[13px] text-slate-600 leading-relaxed mb-3.5">
+            Mondays at 8am — or generate one now from your {{ recent_bookmark_count }} recent bookmarks.
+          </div>
+          <button type="button" id="digest-generate-btn"
+                  class="w-full bg-slate-900 text-white border-none rounded-md py-2.5 px-3 text-[13px] font-bold cursor-pointer flex items-center justify-center gap-1.5">
+            Generate recap now
+          </button>
+          <div class="text-[11px] text-slate-400 mt-2 text-center">Takes ~30 seconds</div>
+        </div>
+        {% endif %}
         <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 px-1">Filter by category</div>
         {% if groupings is not none %}
         <a href="{{ url_for('routes.index') }}"
@@ -50,6 +76,38 @@
         {% endif %}
     </aside>
 </div>
+
+<!-- Mobile digest card — below article list on small screens -->
+{% if latest_digest and latest_digest.opened_at is none %}
+<div class="md:hidden mt-4">
+  <div id="digest-card-mobile" class="bg-slate-900 rounded-lg p-4 text-white">
+    <div class="text-[10px] font-bold tracking-[0.16em] uppercase text-amber-400 mb-2">This Week &middot; Recap</div>
+    <div class="font-serif text-lg font-bold leading-tight mb-1.5">
+      {{ latest_digest.article_count }} articles{% if latest_digest.cluster_count %}, {{ latest_digest.cluster_count }} topics{% endif %}
+    </div>
+    <div class="font-serif italic text-[13px] text-slate-300 leading-relaxed mb-3">Your Monday digest is ready.</div>
+    <a href="{{ url_for('routes.digest') }}"
+       class="inline-block text-[13px] font-bold text-white no-underline border-b-2 border-amber-400 pb-0.5">
+      Read digest &rarr;
+    </a>
+  </div>
+</div>
+{% elif current_user.is_authenticated and not latest_digest %}
+<div class="md:hidden mt-4">
+  <div id="digest-card-mobile" class="bg-white rounded-lg p-4 border border-dashed border-slate-300">
+    <div class="text-[10px] font-bold tracking-[0.16em] uppercase text-slate-500 mb-2">This Week &middot; Recap</div>
+    <div class="font-serif text-lg font-bold text-slate-900 leading-snug mb-1.5">No digest yet</div>
+    <div class="font-serif italic text-[13px] text-slate-600 leading-relaxed mb-3.5">
+      Mondays at 8am — or generate one now from your {{ recent_bookmark_count }} recent bookmarks.
+    </div>
+    <button type="button" id="digest-generate-btn-mobile"
+            class="w-full bg-slate-900 text-white border-none rounded-md py-2.5 px-3 text-[13px] font-bold cursor-pointer flex items-center justify-center gap-1.5">
+      Generate recap now
+    </button>
+    <div class="text-[11px] text-slate-400 mt-2 text-center">Takes ~30 seconds</div>
+  </div>
+</div>
+{% endif %}
 
 <!-- Mobile bottom sheet backdrop -->
 <div id="sheet-backdrop" onclick="closeSheet()" class="md:hidden fixed inset-0 bg-black/40 z-40 hidden"></div>
@@ -92,6 +150,58 @@ function closeSheet() {
     sheet.classList.add('translate-y-full');
     backdrop.classList.add('hidden');
 }
+
+(function () {
+  const GENERATING_HTML =
+    '<div class="text-[10px] font-bold tracking-[0.16em] uppercase text-slate-500 mb-2">This Week · Recap</div>' +
+    '<div class="font-serif text-lg font-bold text-slate-900 leading-snug mb-1.5">Brewing your recap…</div>' +
+    '<div class="font-serif italic text-[13px] text-slate-600 leading-relaxed mb-3.5">Reading your bookmarks, finding the threads.</div>' +
+    '<div class="h-1.5 bg-slate-200 rounded-full overflow-hidden">' +
+    '  <div id="digest-progress-bar" class="h-full bg-slate-900" style="width:20%;transition:width 500ms ease"></div>' +
+    '</div>' +
+    '<div class="text-[11px] text-slate-400 mt-2 text-center">~30 seconds remaining</div>';
+
+  function startGenerate(cardId) {
+    const card = document.getElementById(cardId);
+    if (card) card.innerHTML = GENERATING_HTML;
+
+    let progress = 20;
+    const progressInterval = setInterval(function () {
+      progress = Math.min(progress + Math.random() * 8, 90);
+      const bar = document.getElementById('digest-progress-bar');
+      if (bar) bar.style.width = progress + '%';
+    }, 2000);
+
+    fetch('/digest/generate', { method: 'POST' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        const jobId = data.job_id;
+        const pollInterval = setInterval(function () {
+          fetch('/digest/job/' + jobId)
+            .then(function (r) { return r.json(); })
+            .then(function (s) {
+              if (s.status === 'finished') {
+                clearInterval(pollInterval);
+                clearInterval(progressInterval);
+                const bar = document.getElementById('digest-progress-bar');
+                if (bar) bar.style.width = '100%';
+                setTimeout(function () { window.location.href = s.view_url; }, 300);
+              } else if (s.status === 'failed') {
+                clearInterval(pollInterval);
+                clearInterval(progressInterval);
+                if (card) card.innerHTML = '<div class="text-red-600 text-sm p-1">Generation failed. Please try again.</div>';
+              }
+            });
+        }, 500);
+      });
+  }
+
+  const btn = document.getElementById('digest-generate-btn');
+  if (btn) btn.addEventListener('click', function () { startGenerate('digest-card'); });
+
+  const btnMobile = document.getElementById('digest-generate-btn-mobile');
+  if (btnMobile) btnMobile.addEventListener('click', function () { startGenerate('digest-card-mobile'); });
+})();
 </script>
 
 {% else %}

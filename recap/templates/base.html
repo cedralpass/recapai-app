@@ -39,6 +39,13 @@
                     class="text-slate-200 underline hover:no-underline">Home</a>
             <a href="{{ url_for('profile.user', username=current_user.username) }}"
                     class="text-slate-200 underline hover:no-underline">Profile</a>
+            <a class="relative inline-flex items-center gap-1.5 font-medium text-slate-200 underline hover:no-underline"
+               href="{{ url_for('routes.digest') }}">
+              Weekly Digest
+              {% if has_unread_digest %}
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-400 ring-2 ring-black" aria-label="New digest"></span>
+              {% endif %}
+            </a>
             <a href="{{ url_for('auth.logout') }}"
                     class="bg-blue-500 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded transition-colors">Logout</a>
             {% endif %}

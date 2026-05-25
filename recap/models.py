@@ -163,6 +163,8 @@ class DigestRun(db.Model):
     digest_html: so.Mapped[Optional[str]] = so.mapped_column(sa.Text(), nullable=True)
     digest_text: so.Mapped[Optional[str]] = so.mapped_column(sa.Text(), nullable=True)
     sent: so.Mapped[bool] = so.mapped_column(sa.Boolean(), default=False)
+    opened_at: so.Mapped[Optional[datetime]] = so.mapped_column(sa.DateTime(timezone=True), nullable=True)
+    cluster_count: so.Mapped[Optional[int]] = so.mapped_column(sa.Integer(), nullable=True)
 
     user: so.Mapped[User] = so.relationship(back_populates="digest_runs")
 

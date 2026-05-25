@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from urllib.parse import urlsplit
 
 import sqlalchemy as sa
@@ -12,7 +13,7 @@ from recap.auth.email import send_password_reset_email
 from recap.auth.forms import RegistrationForm
 from recap.config import Config
 from recap.forms import ArticleForm
-from recap.models import Article, User
+from recap.models import Article, DigestRun, User
 
 bp = Blueprint("routes", __name__)
 
@@ -79,6 +80,17 @@ def index():
         # list grouping of categories for article for the given user
         groupings = current_user.get_categories()
 
+        latest_completed = db.session.scalar(
+            sa.select(DigestRun)
+            .where(DigestRun.user_id == current_user.id, DigestRun.status == "completed")
+            .order_by(DigestRun.created_at.desc())
+        )
+        digest_card_state = "fresh" if (latest_completed and latest_completed.opened_at is None) else "empty"
+        recent_bookmark_count = min(
+            db.session.scalar(sa.select(sa.func.count(Article.id)).where(Article.user_id == current_user.id)) or 0,
+            25,
+        )
+
     cta_form = RegistrationForm() if current_user.is_anonymous else None
     return render_template(
         "index.html",
@@ -91,6 +103,8 @@ def index():
         active_category=category,
         hide_read=hide_read if current_user.is_authenticated else False,
         cta_form=cta_form,
+        digest_card_state=digest_card_state if current_user.is_authenticated else None,
+        recent_bookmark_count=recent_bookmark_count if current_user.is_authenticated else 0,
     )
 
 
@@ -366,6 +380,75 @@ def search():
         active_category=category,
         categories=current_user.get_categories(),
     )
+
+
+@bp.route("/digest")
+@login_required
+def digest():
+    digest_run = db.session.scalar(
+        sa.select(DigestRun)
+        .where(DigestRun.user_id == current_user.id, DigestRun.status == "completed")
+        .order_by(DigestRun.created_at.desc())
+    )
+    if digest_run is None:
+        flash("No digest yet — generate one from your home page.")
+        return redirect(url_for("routes.index"))
+    if digest_run.opened_at is None:
+        digest_run.opened_at = datetime.now(timezone.utc)
+        db.session.commit()
+    bookmarks_since_digest = (
+        db.session.scalar(
+            sa.select(sa.func.count(Article.id)).where(
+                Article.user_id == current_user.id,
+                Article.created > digest_run.completed_at,
+            )
+        )
+        or 0
+    )
+    show_regenerate_banner = bookmarks_since_digest >= Config.DIGEST_REGENERATE_THRESHOLD
+    return render_template(
+        "digest.html",
+        digest_run=digest_run,
+        show_regenerate_banner=show_regenerate_banner,
+        bookmarks_since_digest=bookmarks_since_digest,
+    )
+
+
+@bp.route("/digest/generate", methods=["POST"])
+@login_required
+def digest_generate():
+    job = current_app.task_queue.enqueue(
+        "recap.tasks.weekly_digest_task",
+        current_user.id,
+        False,
+        job_timeout=600,
+    )
+    return jsonify({"status": "queued", "job_id": job.id})
+
+
+@bp.route("/digest/<int:digest_id>/regenerate", methods=["POST"])
+@login_required
+def digest_regenerate(digest_id):
+    digest_run = db.session.get(DigestRun, digest_id)
+    if digest_run is None or digest_run.user_id != current_user.id:
+        return jsonify({"error": "not found"}), 404
+    job = current_app.task_queue.enqueue(
+        "recap.tasks.weekly_digest_task",
+        current_user.id,
+        False,
+        job_timeout=600,
+    )
+    return jsonify({"status": "queued", "job_id": job.id})
+
+
+@bp.route("/digest/job/<job_id>")
+@login_required
+def digest_job_status(job_id):
+    job = current_app.task_queue.fetch_job(job_id=job_id)
+    if job is None:
+        return jsonify({"status": "not_found"}), 404
+    status = str(job.get_status(refresh=True))
+    return jsonify({"status": status, "view_url": url_for("routes.digest")})
 
 
 # TODO - understand args and kwargs better for dynamic params

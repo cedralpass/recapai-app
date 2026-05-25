@@ -2,7 +2,7 @@
 
 ## Build Status
 
-**Not started** (as of May 2026)
+**Shipped** (May 2026)
 
 ---
 
@@ -23,14 +23,14 @@ the email digest inside the app shell.
 
 | Goal | Status |
 |---|---|
-| Nav link to weekly digest | Not started |
-| `/digest` page — in-app digest viewer | Not started |
-| Sidebar card — fresh state (unread digest) | Not started |
-| Sidebar card — empty state (no digest yet) | Not started |
-| Sidebar card — generating state (on-demand generation in flight) | Not started |
-| On-demand digest generation from sidebar | Not started |
-| Regenerate banner (≥3 new bookmarks since generation) | Not started |
-| Mobile treatment (card below article list) | Not started |
+| Nav link to weekly digest | Shipped |
+| `/digest` page — in-app digest viewer | Shipped |
+| Sidebar card — fresh state (unread digest) | Shipped |
+| Sidebar card — empty state (no digest yet) | Shipped |
+| Sidebar card — generating state (on-demand generation in flight) | Shipped |
+| On-demand digest generation from sidebar | Shipped |
+| Regenerate banner (≥3 new bookmarks since generation) | Shipped |
+| Mobile treatment (card below article list) | Shipped |
 
 ---
 
