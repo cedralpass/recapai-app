@@ -28,7 +28,7 @@ export NUM_WORKERS=2
 # fire a second time that day — the resulting DigestRun will status=skipped (benign).
 (
   DIGEST_LAST_HEARTBEAT_HOUR=""
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] daily-digest-scheduler: started — will trigger at 8am and 4pm PT daily"
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] daily-digest-scheduler: started — will trigger at 10am, 11am, 3pm and 4pm PT daily"
   while true; do
     NOW_HOUR=$(TZ=America/Los_Angeles date +%H)
     NOW_DATE=$(TZ=America/Los_Angeles date +%Y-%m-%d)
@@ -38,10 +38,10 @@ export NUM_WORKERS=2
       echo "[$(date '+%Y-%m-%d %H:%M:%S')] daily-digest-scheduler: heartbeat — PT hour=$NOW_HOUR"
       DIGEST_LAST_HEARTBEAT_HOUR="$NOW_HOUR"
     fi
-    # Fire at 8am PT and 4pm PT.
-    # Dedup key stored in Redis (TTL 4h) so container restarts during the trigger
+    # Fire at 10am, 11am, 3pm, and 4pm PT (testing schedule).
+    # Dedup key stored in Redis (TTL 2h) so container restarts during the trigger
     # hour don't cause a second send.
-    if [ "$NOW_HOUR" = "08" ] || [ "$NOW_HOUR" = "16" ]; then
+    if [ "$NOW_HOUR" = "10" ] || [ "$NOW_HOUR" = "11" ] || [ "$NOW_HOUR" = "15" ] || [ "$NOW_HOUR" = "16" ]; then
       REDIS_KEY="digest:scheduler:${NOW_KEY}"
       ALREADY_RAN=$(python -c "
 import os, redis, sys
@@ -58,7 +58,7 @@ except Exception:
 import os, redis, sys
 try:
     r = redis.from_url(os.environ.get('RECAP_REDIS_URL', 'redis://localhost:6379'))
-    r.set(sys.argv[1], '1', ex=14400)  # TTL 4 hours
+    r.set(sys.argv[1], '1', ex=3600)  # TTL 1 hour
 except Exception:
     pass
 " "$REDIS_KEY" 2>/dev/null || true
