@@ -1,0 +1,152 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light only">
+  <meta name="supported-color-schemes" content="light only">
+  <title>Your Recap — Week of {{ week_start.strftime('%B %d, %Y') }}</title>
+  <style>
+    /* Email clients that support <style>: mobile tuning + link affordance reinforcement. */
+    a { color: #2563eb; }
+    .article-link:hover { text-decoration: underline !important; }
+    @media (max-width: 620px) {
+      .container       { padding: 16px 8px !important; }
+      .card-pad-head   { padding: 28px 22px 20px !important; }
+      .card-pad-body   { padding: 22px 22px 8px !important; }
+      .card-pad-foot   { padding: 20px 22px 24px !important; }
+      .title-h1        { font-size: 30px !important; line-height: 1.1 !important; }
+      .eyebrow         { font-size: 10px !important; }
+      .narrative       { font-size: 16px !important; line-height: 1.7 !important; }
+      .cluster-label   { font-size: 14px !important; }
+      .article-row td  { padding: 14px 0 14px 14px !important; }
+      .article-link    { font-size: 13px !important; line-height: 1.45 !important; }
+      .cta-btn         { display: block !important; text-align: center !important; }
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background:#faf8f3;font-family:Georgia,'Times New Roman',serif;color:#1f2937;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
+
+  <!-- Preheader: shown as preview text in inbox lists, hidden in email body -->
+  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#faf8f3;">
+    {{ article_count }} article{{ 's' if article_count != 1 else '' }} from your week, distilled by your personal knowledge taxonomy.
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#faf8f3;">
+    <tr>
+      <td align="center" class="container" style="padding:36px 16px;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;border-radius:4px;max-width:600px;width:100%;box-shadow:0 1px 0 rgba(15,23,42,0.04);">
+
+          <!-- ─────────── MASTHEAD ─────────── -->
+          <tr>
+            <td class="card-pad-head" style="padding:40px 44px 28px;border-bottom:2px solid #0f172a;">
+              <div class="eyebrow" style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:11px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:#6b5b3a;margin-bottom:14px;">
+                Recap &middot; Week of {{ week_start.strftime('%B %d, %Y') }}
+              </div>
+              <h1 class="title-h1" style="margin:0 0 12px;font-family:Georgia,'Times New Roman',serif;font-size:38px;font-weight:700;line-height:1.08;letter-spacing:-0.01em;color:#0f172a;">
+                Your Weekly Recap
+              </h1>
+              <p style="margin:0 0 14px;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:16px;line-height:1.5;color:#475569;">
+                A digest for your morning coffee &mdash; everything you bookmarked this week, distilled into a single read.
+              </p>
+              <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:13px;line-height:1.5;color:#6b7280;">
+                <strong style="color:#0f172a;font-weight:600;">{{ article_count }} article{{ 's' if article_count != 1 else '' }}</strong>{% if clusters and clusters|length > 1 %} &nbsp;&middot;&nbsp; <strong style="color:#0f172a;font-weight:600;">{{ clusters|length }} topics</strong>{% endif %} &nbsp;&middot;&nbsp; organized by your personal knowledge taxonomy and&nbsp;AI
+              </div>
+            </td>
+          </tr>
+
+          <!-- ─────────── BODY ─────────── -->
+          <tr>
+            <td class="card-pad-body" style="padding:36px 44px 8px;">
+
+              {% for cluster in clusters %}
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:36px;">
+                <tr>
+                  <td>
+                    <!-- Cluster label -->
+                    <div class="cluster-label" style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#2563eb;margin-bottom:14px;">
+                      {{ cluster.label }}
+                    </div>
+
+                    <!-- Narrative -->
+                    {% if cluster.narrative %}
+                    <p class="narrative" style="margin:0 0 22px;font-family:Georgia,'Times New Roman',serif;font-size:17px;line-height:1.75;color:#1f2937;">
+                      {{ cluster.narrative }}
+                    </p>
+                    {% endif %}
+
+                    <!-- Sources mini-label -->
+                    <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9ca3af;margin:0 0 8px;">
+                      Sources &middot; {{ cluster.articles|length }}
+                    </div>
+
+                    <!-- Article list -->
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #e5e7eb;">
+                      {% for article in cluster.articles %}
+                      <tr class="article-row">
+                        <td style="padding:14px 0 14px 14px;border-bottom:1px solid #e5e7eb;border-left:2px solid {% if article.is_read %}#e5e7eb{% else %}#2563eb{% endif %};">
+                          <a class="article-link" href="{{ article.recap_url }}" style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;line-height:1.45;color:#2563eb;text-decoration:underline;text-underline-offset:2px;">{{ article.title }}<span style="display:inline-block;margin-left:6px;color:#2563eb;text-decoration:none;">&#8599;</span></a>
+                          {% if article.is_read %}
+                          <span style="display:inline-block;margin-left:8px;padding:2px 8px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#6b7280;background:#f3f4f6;border-radius:999px;vertical-align:1px;">Read</span>
+                          {% endif %}
+                        </td>
+                      </tr>
+                      {% endfor %}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              {% if not loop.last %}
+              <!-- Section divider (thin newspaper rule) -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:36px;">
+                <tr>
+                  <td align="center" style="padding:0;">
+                    <div style="height:1px;background:#e5e7eb;width:100%;line-height:1px;font-size:0;">&nbsp;</div>
+                  </td>
+                </tr>
+              </table>
+              {% endif %}
+              {% endfor %}
+
+            </td>
+          </tr>
+
+          <!-- ─────────── CTA ─────────── -->
+          <tr>
+            <td class="card-pad-foot" style="padding:8px 44px 40px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:2px solid #0f172a;">
+                <tr>
+                  <td style="padding-top:28px;">
+                    <p style="margin:0 0 18px;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:15px;line-height:1.5;color:#475569;">
+                      Open Recap to browse, search, or save something new.
+                    </p>
+                    <!-- Bulletproof button (works in Outlook with VML fallback omitted for brevity; renders as text-link on broken clients) -->
+                    <a class="cta-btn" href="{{ app_url|default('https://recaprai.com') }}" style="display:inline-block;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;letter-spacing:0.02em;color:#ffffff;background:#0f172a;text-decoration:none;padding:14px 22px;border-radius:4px;">
+                      Open Recap &nbsp;&rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ─────────── FOOTER ─────────── -->
+          <tr>
+            <td style="padding:24px 44px 32px;background:#faf8f3;border-top:1px solid #e5e7eb;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:#9ca3af;">
+              <div style="margin-bottom:6px;">
+                <strong style="color:#6b7280;font-weight:600;letter-spacing:0.04em;">RECAP&nbsp;AI</strong> &nbsp;&middot;&nbsp; Bookmark it. Recap will remember it.
+              </div>
+              <div>
+                You&rsquo;re receiving this because you use Recap.
+                {% if unsubscribe_url %}<a href="{{ unsubscribe_url }}" style="color:#9ca3af;text-decoration:underline;">Manage email preferences</a>.{% endif %}
+              </div>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

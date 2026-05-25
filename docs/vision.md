@@ -32,6 +32,7 @@ Recap is designed to fire off a bookmark from the browser with our Chrome extens
 - Improve taxonomy by adding article metadata and summary context to AI classification
 
 ## Digests
+- In-app digest page (`/digest`) with nav link, sidebar card, and on-demand generation — so users can reach the digest without waiting for the email
 - Daily digest sent at the time you wrap up your day
 
 ## Social & Sharing

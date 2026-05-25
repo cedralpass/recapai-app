@@ -1,0 +1,924 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recap AI — Weekly Digest entry points</title>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body, #root { height: 100%; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard } = window;
+
+// ─────────────────────────────────────────────────────────────
+// Shared styles + sample data
+// ─────────────────────────────────────────────────────────────
+const sans = 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+const serif = 'Georgia, "Times New Roman", serif';
+
+const articles = [
+  { id: 1, title: 'Grilled Picanha Steak Recipe', author: 'Hey Grill Hey', date: 'May 25, 2026',
+    category: 'Outdoor Activities & Culinary Arts',
+    summary: 'This article provides a detailed guide on how to prepare and grill Picanha steak, a popular Brazilian cut of beef known for its flavor and juiciness. It covers what Picanha is, how to buy it, and step-by-step instructions for grilli…',
+    source: 'heygrillhey.com/pic…', viewed: true },
+  { id: 2, title: 'OpenAI co-founder Andrej Karpathy joins Anthropic pre-training team', author: 'TechCrunch', date: 'May 23, 2026',
+    category: 'Model Training & AI Applications',
+    summary: 'Andrej Karpathy, a prominent AI researcher and co-founder of OpenAI, has joined Anthropic to lead a team focused on accelerating pre-training research for large language models (LLMs) like Claude. His expertise bridge…',
+    source: 'techcrunch.com/20…', viewed: true },
+  { id: 3, title: 'The hidden cost of context windows', author: 'Simon Willison', date: 'May 22, 2026',
+    category: 'AI Tools, Frameworks & Platforms',
+    summary: 'A practitioner\'s view on the real-world cost and latency tradeoffs of long-context models. Willison argues that "context is free" framing misleads teams and explores patterns for keeping prompts lean while preserving accuracy.',
+    source: 'simonwillison.net', viewed: false },
+];
+
+const categories = [
+  ['All', null], ['Career & Leadership', 30], ['Model Training & AI Applications', 18],
+  ['Business & Market Strategies', 16], ['AI Tools, Frameworks & Platforms', 15],
+  ['Outdoor Activities & Culinary Arts', 12], ['AI Industry, Ethics & Market Trends', 11],
+  ['Technology, Software Design & QA', 9], ['Model Training & Fine-tuning', 9],
+  ['Product Management & Innovation', 6],
+];
+
+const navLink = { color: '#e2e8f0', textDecoration: 'underline', fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' };
+
+// ─────────────────────────────────────────────────────────────
+// Nav — accepts a `digestSlot` to optionally inject the WD link
+// ─────────────────────────────────────────────────────────────
+const RecapNav = ({ digestSlot = null, unread = 0 }) => (
+  <nav style={{
+    display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 4,
+    background: '#000', color: '#e2e8f0', padding: '12px 20px',
+    fontFamily: sans, fontWeight: 500, fontSize: 16, width: '100%', boxSizing: 'border-box'
+  }}>
+    <div style={{ flex: 1, minWidth: 0, fontSize: 20, fontWeight: 700 }}>
+      <span style={{ fontWeight: 900 }}>Recap</span>
+      <span style={{ fontWeight: 300, opacity: 0.7 }}> AI</span>
+    </div>
+    <div style={{ display: 'flex', gap: 18, alignItems: 'center', flexShrink: 0 }}>
+      <input
+        readOnly placeholder="Search articles…"
+        style={{ background: '#1e293b', border: 'none', borderRadius: 6,
+          color: '#e2e8f0', padding: '8px 14px', fontSize: 13, width: 240, outline: 'none' }} />
+      <a href="#" style={navLink}>Home</a>
+      {digestSlot}
+      <a href="#" style={navLink}>Profile</a>
+      <a href="#" style={{ background: '#3b82f6', color: '#fff', padding: '8px 16px',
+        borderRadius: 6, textDecoration: 'none', fontWeight: 700, fontSize: 14 }}>Logout</a>
+    </div>
+  </nav>
+);
+
+// ─────────────────────────────────────────────────────────────
+// Reusable home-body that the four variants compose around
+// ─────────────────────────────────────────────────────────────
+const SaveBox = () => (
+  <div style={{
+    background: '#fff', borderRadius: 8, padding: '20px 24px',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: 16
+  }}>
+    <div style={{ fontWeight: 700, fontSize: 18, color: '#111827', marginBottom: 10 }}>Save a new article</div>
+    <div style={{ display: 'flex', gap: 10 }}>
+      <input readOnly placeholder="Paste a URL to bookmark and summarize…"
+        style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: 6, padding: '11px 14px',
+          fontSize: 15, fontFamily: 'inherit', outline: 'none', color: '#9ca3af' }} />
+      <button style={{ background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 6,
+        padding: '0 28px', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>Submit</button>
+    </div>
+  </div>
+);
+
+const ArticleList = () => (
+  <>
+    <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12,
+      fontSize: 14, color: '#374151' }}>
+      <input type="checkbox" />
+      Hide read articles
+    </label>
+    <div style={{ fontWeight: 700, fontSize: 16, color: '#111827', marginBottom: 10 }}>Your bookmarks</div>
+    {articles.map(a => (
+      <div key={a.id} style={{
+        background: '#fff', borderRadius: 8, padding: '14px 16px',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: 10
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginBottom: 4 }}>
+          <b style={{ fontWeight: 700, fontSize: 15, color: '#111827', lineHeight: 1.3 }}>{a.title}</b>
+          <span style={{ fontSize: 12, color: '#9ca3af', whiteSpace: 'nowrap' }}>{a.date}</span>
+        </div>
+        <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 6 }}>{a.author}</div>
+        {a.viewed && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6,
+            fontSize: 12, fontWeight: 600, color: '#3b82f6' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+            Viewed
+          </div>
+        )}
+        <p style={{ fontSize: 13.5, color: '#374151', lineHeight: 1.55, marginBottom: 10,
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{a.summary}</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+          <span style={{ background: '#f3f4f6', borderRadius: 99, padding: '4px 12px',
+            fontSize: 12, fontWeight: 600, color: '#374151' }}>{a.category}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 12, color: '#9ca3af' }}>{a.source}</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/>
+            </svg>
+            <a href="#" style={{ fontSize: 14, fontWeight: 600, color: '#3b82f6', textDecoration: 'none' }}>View →</a>
+          </div>
+        </div>
+      </div>
+    ))}
+  </>
+);
+
+const Sidebar = ({ extraTop = null }) => (
+  <aside style={{ width: 260, flexShrink: 0 }}>
+    {extraTop}
+    <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', letterSpacing: '0.06em',
+      textTransform: 'uppercase', marginBottom: 10 }}>Filter by category</div>
+    {categories.map(([c, n], i) => (
+      <a key={i} href="#" style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '10px 12px', borderRadius: 6, fontSize: 13, marginBottom: 4,
+        background: i === 0 ? '#dbeafe' : '#e5e7eb', color: i === 0 ? '#1d4ed8' : '#374151',
+        fontWeight: i === 0 ? 700 : 400, textDecoration: 'underline',
+        textDecorationColor: i === 0 ? '#1d4ed8' : '#374151'
+      }}>
+        <span style={{ flex: 1, paddingRight: 8 }}>{c}</span>
+        {n != null && <span style={{ opacity: 0.7, textDecoration: 'none' }}>{n}</span>}
+      </a>
+    ))}
+  </aside>
+);
+
+// ─────────────────────────────────────────────────────────────
+// Variant-specific WD entry-point pieces
+// ─────────────────────────────────────────────────────────────
+
+// (A) Nav link
+const NavDigestLink = ({ unread = true }) => (
+  <a href="#" style={{ ...navLink, position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+    Weekly Digest
+    {unread && <span style={{ width: 7, height: 7, borderRadius: 99, background: '#f59e0b',
+      boxShadow: '0 0 0 2px #000' }} />}
+  </a>
+);
+
+// (B) Callout box under Save (mirrors digest's serif/cream feel)
+const DigestCallout = () => (
+  <a href="#" style={{
+    display: 'flex', alignItems: 'stretch', textDecoration: 'none', color: 'inherit',
+    background: '#faf8f3', borderRadius: 8, marginBottom: 16,
+    border: '1px solid #e7e2d4', boxShadow: '0 1px 4px rgba(0,0,0,0.04)', overflow: 'hidden'
+  }}>
+    <div style={{ width: 6, background: '#0f172a', flexShrink: 0 }} />
+    <div style={{ padding: '18px 22px', flex: 1 }}>
+      <div style={{ fontFamily: sans, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.16em',
+        textTransform: 'uppercase', color: '#6b5b3a', marginBottom: 8 }}>
+        Recap · Week of May 18
+      </div>
+      <div style={{ fontFamily: serif, fontSize: 22, fontWeight: 700, color: '#0f172a',
+        letterSpacing: '-0.01em', lineHeight: 1.15, marginBottom: 6 }}>
+        Your Weekly Recap is ready
+      </div>
+      <div style={{ fontFamily: serif, fontStyle: 'italic', fontSize: 14.5, color: '#475569',
+        lineHeight: 1.5 }}>
+        7 articles · 3 topics — distilled for your morning coffee.
+      </div>
+    </div>
+    <div style={{ display: 'flex', alignItems: 'center', padding: '0 26px', flexShrink: 0 }}>
+      <span style={{ fontFamily: sans, fontSize: 14, fontWeight: 700, color: '#0f172a',
+        borderBottom: '2px solid #0f172a', paddingBottom: 2 }}>Read digest →</span>
+    </div>
+  </a>
+);
+
+// (C) Action button — "Recap my week"
+const RecapMyWeekBar = () => (
+  <div style={{
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
+    background: '#fff', borderRadius: 8, padding: '14px 18px', marginBottom: 16,
+    boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+    borderLeft: '3px solid #3b82f6'
+  }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+      <div style={{ width: 36, height: 36, borderRadius: 8, background: '#eff6ff',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2"
+          strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+        </svg>
+      </div>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 15, color: '#111827' }}>Recap my week</div>
+        <div style={{ fontSize: 13, color: '#6b7280' }}>
+          Generate a digest of the last 7 days now — don't wait for Monday.
+        </div>
+      </div>
+    </div>
+    <button style={{ background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 6,
+      padding: '10px 18px', fontWeight: 700, fontSize: 14, cursor: 'pointer', flexShrink: 0,
+      whiteSpace: 'nowrap' }}>
+      ✨ Recap now
+    </button>
+  </div>
+);
+
+// (D) Sidebar card for the combined option
+const SidebarDigestCard = ({ articleCount = 7, topicCount = 3, weekLabel = 'Your Monday digest is ready.' }) => (
+  <div style={{
+    background: '#0f172a', borderRadius: 8, padding: '16px 16px', marginBottom: 20,
+    color: '#fff'
+  }}>
+    <div style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, letterSpacing: '0.16em',
+      textTransform: 'uppercase', color: '#fbbf24', marginBottom: 8 }}>
+      This Week · Recap
+    </div>
+    <div style={{ fontFamily: serif, fontSize: 18, fontWeight: 700, color: '#fff',
+      lineHeight: 1.15, marginBottom: 6 }}>
+      {articleCount} articles, {topicCount} topics
+    </div>
+    <div style={{ fontFamily: serif, fontStyle: 'italic', fontSize: 13, color: '#cbd5e1',
+      lineHeight: 1.5, marginBottom: 12 }}>
+      {weekLabel}
+    </div>
+    <a href="#" style={{ display: 'inline-block', fontFamily: sans, fontSize: 13,
+      fontWeight: 700, color: '#fff', textDecoration: 'none',
+      borderBottom: '2px solid #fbbf24', paddingBottom: 2 }}>
+      Read digest →
+    </a>
+  </div>
+);
+
+// (D-empty) — no digest yet, invite the user to generate one
+const SidebarDigestEmpty = ({ readyCount = 4 }) => (
+  <div style={{
+    background: '#fff', borderRadius: 8, padding: '16px 16px', marginBottom: 20,
+    border: '1px dashed #cbd5e1'
+  }}>
+    <div style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, letterSpacing: '0.16em',
+      textTransform: 'uppercase', color: '#64748b', marginBottom: 8 }}>
+      This Week · Recap
+    </div>
+    <div style={{ fontFamily: serif, fontSize: 18, fontWeight: 700, color: '#0f172a',
+      lineHeight: 1.2, marginBottom: 6 }}>
+      No digest yet
+    </div>
+    <div style={{ fontFamily: serif, fontStyle: 'italic', fontSize: 13, color: '#475569',
+      lineHeight: 1.5, marginBottom: 14 }}>
+      Mondays at 8am — or generate one now from your {readyCount} recent bookmarks.
+    </div>
+    <button style={{
+      width: '100%', background: '#0f172a', color: '#fff', border: 'none', borderRadius: 6,
+      padding: '10px 12px', fontFamily: sans, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+    }}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/>
+      </svg>
+      Generate recap now
+    </button>
+    <div style={{ fontFamily: sans, fontSize: 11, color: '#94a3b8', marginTop: 8,
+      textAlign: 'center' }}>
+      Takes ~30 seconds
+    </div>
+  </div>
+);
+
+// ─────────────────────────────────────────────────────────────
+// Full home page composer — variants A / B / C / D / E (fresh) / F (empty)
+// ─────────────────────────────────────────────────────────────
+const HomePage = ({ variant, width = 1280, height = 900 }) => {
+  const isB = variant === 'B';
+  const isC = variant === 'C';
+  const isD = variant === 'D';
+  const isE = variant === 'E';   // A + sidebar (fresh digest state)
+  const isF = variant === 'F';   // A + sidebar (no digest yet state)
+  const showNavLink = ['A', 'D', 'E', 'F'].includes(variant);
+
+  let sidebarTop = null;
+  if (isD || isE) sidebarTop = <SidebarDigestCard />;
+  if (isF) sidebarTop = <SidebarDigestEmpty />;
+
+  return (
+    <div style={{
+      width, height, background: '#f9fafb', fontFamily: sans, overflow: 'hidden',
+      display: 'flex', flexDirection: 'column'
+    }}>
+      <RecapNav digestSlot={showNavLink ? <NavDigestLink unread={isE} /> : null} />
+      <div style={{ padding: '20px 32px', flex: 1, overflow: 'hidden' }}>
+        <SaveBox />
+        {isB && <DigestCallout />}
+        {isC && <RecapMyWeekBar />}
+        <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
+          <div style={{ flex: 1, minWidth: 0, maxWidth: 720 }}>
+            <ArticleList />
+          </div>
+          <Sidebar extraTop={sidebarTop} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────
+// Mobile home — sidebar card moves to bottom under the article list
+// Filter UX: "All ▽" affordance next to the section heading; opens a
+// bottom sheet (separate artboard).
+// ─────────────────────────────────────────────────────────────
+const MobileHome = ({ state = 'fresh', width = 390, height = 880, sheetOpen = false }) => {
+  const showFresh = state === 'fresh';
+  const showEmpty = state === 'empty';
+  return (
+    <div style={{
+      width, height, background: '#f9fafb', fontFamily: sans, overflow: 'hidden',
+      display: 'flex', flexDirection: 'column', position: 'relative'
+    }}>
+      {/* Mobile nav — matches desktop nav layout but compact */}
+      <nav style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        background: '#000', color: '#e2e8f0', padding: '12px 14px',
+        fontFamily: sans, fontWeight: 500, fontSize: 13, width: '100%'
+      }}>
+        <div style={{ fontSize: 16, fontWeight: 700, flexShrink: 0 }}>
+          <span style={{ fontWeight: 900 }}>Recap</span>
+          <span style={{ fontWeight: 300, opacity: 0.7 }}> AI</span>
+        </div>
+        <input readOnly placeholder="Search…"
+          style={{ flex: 1, minWidth: 0, background: '#1e293b', border: 'none', borderRadius: 6,
+            color: '#e2e8f0', padding: '6px 10px', fontSize: 12, outline: 'none' }} />
+        <a href="#" style={{ ...navLink, fontSize: 12 }}>Home</a>
+        <NavDigestLink unread={showFresh} />
+        <a href="#" style={{ background: '#3b82f6', color: '#fff', padding: '5px 10px',
+          borderRadius: 6, textDecoration: 'none', fontWeight: 700, fontSize: 12 }}>Logout</a>
+      </nav>
+
+      <div style={{ padding: '14px 14px', flex: 1, overflow: 'hidden',
+        opacity: sheetOpen ? 0.55 : 1 }}>
+        {/* Save box */}
+        <div style={{ background: '#fff', borderRadius: 8, padding: '14px 16px',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: 14 }}>
+          <div style={{ fontWeight: 700, fontSize: 16, color: '#111827', marginBottom: 10 }}>
+            Save a new article
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input readOnly placeholder="Paste a URL to bookmark and summarize…"
+              style={{ flex: 1, minWidth: 0, border: '1px solid #d1d5db', borderRadius: 6,
+                padding: '9px 11px', fontSize: 13, color: '#9ca3af' }} />
+            <button style={{ background: '#3b82f6', color: '#fff', border: 'none',
+              borderRadius: 6, padding: '0 16px', fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
+              Submit
+            </button>
+          </div>
+        </div>
+
+        {/* Hide-read */}
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12,
+          fontSize: 13, color: '#374151' }}>
+          <input type="checkbox" />
+          Hide read articles
+        </label>
+
+        {/* Section header — title left, "All ▽" filter trigger right */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          marginBottom: 10 }}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: '#111827' }}>Your bookmarks</div>
+          <button style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            fontSize: 14, fontWeight: 500, color: '#111827', padding: '4px 0'
+          }}>
+            All
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* Article cards */}
+        {articles.slice(0, 2).map(a => (
+          <div key={a.id} style={{
+            background: '#fff', borderRadius: 8, padding: '12px 14px',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: 8
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+              <b style={{ fontSize: 14, color: '#111827', lineHeight: 1.3 }}>{a.title}</b>
+              <span style={{ fontSize: 11, color: '#9ca3af', whiteSpace: 'nowrap' }}>{a.date}</span>
+            </div>
+            <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>{a.author}</div>
+            <p style={{ fontSize: 12.5, color: '#374151', lineHeight: 1.55, marginBottom: 8,
+              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+              {a.summary}
+            </p>
+            <span style={{ background: '#f3f4f6', borderRadius: 99, padding: '3px 10px',
+              fontSize: 11, fontWeight: 600, color: '#374151' }}>{a.category}</span>
+          </div>
+        ))}
+
+        {/* Sidebar card lives at the BOTTOM on mobile */}
+        <div style={{ marginTop: 16 }}>
+          {showFresh && <SidebarDigestCard />}
+          {showEmpty && <SidebarDigestEmpty readyCount={2} />}
+        </div>
+      </div>
+
+      {/* Filter bottom sheet (only when sheetOpen) */}
+      {sheetOpen && (
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0,
+          background: '#fff', borderTopLeftRadius: 16, borderTopRightRadius: 16,
+          boxShadow: '0 -6px 24px rgba(0,0,0,0.15)', padding: '10px 0 20px',
+          maxHeight: '70%', overflow: 'hidden'
+        }}>
+          <div style={{ width: 40, height: 4, background: '#cbd5e1', borderRadius: 99,
+            margin: '6px auto 14px' }} />
+          <div style={{ fontWeight: 700, fontSize: 17, color: '#111827',
+            padding: '0 18px', marginBottom: 14 }}>
+            Filter by category
+          </div>
+          {categories.slice(0, 8).map(([c, n], i) => (
+            <a key={i} href="#" style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '14px 18px', fontSize: 14,
+              background: i === 0 ? '#eff6ff' : 'transparent',
+              color: i === 0 ? '#1d4ed8' : '#111827',
+              fontWeight: i === 0 ? 700 : 400, textDecoration: 'underline'
+            }}>
+              <span>{c}</span>
+              {n != null && <span style={{ opacity: 0.7 }}>{n}</span>}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+// ─────────────────────────────────────────────────────────────
+const DigestPage = ({ width = 1280, height = 1100, hasNewBookmarks = true }) => (
+  <div style={{ width, height, background: '#faf8f3', fontFamily: sans,
+    overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+    <RecapNav digestSlot={<NavDigestLink unread={false} />} />
+    <div style={{ padding: '32px 32px 0', flex: 1, overflow: 'hidden' }}>
+      <a href="#" style={{ display: 'inline-flex', alignItems: 'center', gap: 6,
+        fontFamily: sans, fontSize: 13, color: '#475569', textDecoration: 'none',
+        marginBottom: 20 }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
+        Back to bookmarks
+      </a>
+
+      <div style={{ maxWidth: 760, margin: '0 auto', background: '#fff', borderRadius: 4,
+        boxShadow: '0 1px 0 rgba(15,23,42,0.04)', overflow: 'hidden' }}>
+
+        {/* Regenerate banner */}
+        {hasNewBookmarks && (
+          <div style={{
+            background: '#fffbeb', borderBottom: '1px solid #fcd34d',
+            padding: '14px 28px', display: 'flex', alignItems: 'center',
+            justifyContent: 'space-between', gap: 16
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b45309"
+                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+              </svg>
+              <div style={{ fontSize: 13.5, color: '#78350f', lineHeight: 1.45 }}>
+                <b>3 new bookmarks</b> since this digest was generated.
+                Regenerate to include them.
+              </div>
+            </div>
+            <button style={{ background: '#0f172a', color: '#fff', border: 'none',
+              borderRadius: 6, padding: '8px 14px', fontWeight: 700, fontSize: 13,
+              cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6,
+              whiteSpace: 'nowrap' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12a9 9 0 11-3-6.7L21 8"/><path d="M21 3v5h-5"/>
+              </svg>
+              Regenerate
+            </button>
+          </div>
+        )}
+
+        {/* Masthead (matches email) */}
+        <div style={{ padding: '40px 44px 28px', borderBottom: '2px solid #0f172a' }}>
+          <div style={{ fontFamily: sans, fontSize: 11, fontWeight: 700, letterSpacing: '0.16em',
+            textTransform: 'uppercase', color: '#6b5b3a', marginBottom: 14 }}>
+            Recap · Week of May 18, 2026
+          </div>
+          <h1 style={{ fontFamily: serif, fontSize: 38, fontWeight: 700, lineHeight: 1.08,
+            letterSpacing: '-0.01em', color: '#0f172a', marginBottom: 12 }}>
+            Your Weekly Recap
+          </h1>
+          <p style={{ fontFamily: serif, fontStyle: 'italic', fontSize: 16, lineHeight: 1.5,
+            color: '#475569', marginBottom: 14 }}>
+            A digest for your morning coffee — everything you bookmarked this week,
+            distilled into a single read.
+          </p>
+          <div style={{ fontFamily: sans, fontSize: 13, lineHeight: 1.5, color: '#6b7280' }}>
+            <b style={{ color: '#0f172a', fontWeight: 600 }}>7 articles</b> &nbsp;·&nbsp;
+            <b style={{ color: '#0f172a', fontWeight: 600 }}>3 topics</b> &nbsp;·&nbsp;
+            organized by your personal knowledge taxonomy and&nbsp;AI
+          </div>
+        </div>
+
+        {/* One cluster preview */}
+        <div style={{ padding: '36px 44px 28px' }}>
+          <div style={{ fontFamily: sans, fontSize: 15, fontWeight: 700, letterSpacing: '0.14em',
+            textTransform: 'uppercase', color: '#2563eb', marginBottom: 14 }}>
+            Model Training & AI Applications
+          </div>
+          <p style={{ fontFamily: serif, fontSize: 17, lineHeight: 1.75, color: '#1f2937',
+            marginBottom: 22 }}>
+            This week's reading converged on a single arc: the talent and tooling
+            consolidation around frontier model training. Karpathy's move to Anthropic
+            isn't isolated — it tracks a broader pattern of post-training research
+            specialists moving toward labs with the most compute, while open-source
+            frameworks race to make distillation accessible to teams without it.
+          </p>
+          <div style={{ fontFamily: sans, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em',
+            textTransform: 'uppercase', color: '#9ca3af', marginBottom: 8 }}>
+            Sources · 3
+          </div>
+          <div style={{ borderTop: '1px solid #e7e2d4' }}>
+            {['OpenAI co-founder Andrej Karpathy joins Anthropic pre-training team',
+              'The hidden cost of context windows',
+              'Why post-training is the new pre-training'
+            ].map((t, i) => (
+              <div key={i} style={{ padding: '14px 0', borderBottom: '1px solid #e7e2d4',
+                fontFamily: serif, fontSize: 15, color: '#0f172a' }}>
+                {t}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// ─────────────────────────────────────────────────────────────
+// Notes panel for each artboard
+// ─────────────────────────────────────────────────────────────
+const Notes = ({ title, pros, cons, rec }) => (
+  <div style={{
+    width: 360, padding: '24px 26px', background: '#fff',
+    fontFamily: sans, fontSize: 13, color: '#374151', lineHeight: 1.55,
+    border: '1px solid #e5e7eb', borderRadius: 8
+  }}>
+    <div style={{ fontWeight: 800, fontSize: 16, color: '#111827', marginBottom: 14 }}>{title}</div>
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+        color: '#059669', marginBottom: 6 }}>Pros</div>
+      <ul style={{ paddingLeft: 16, margin: 0 }}>
+        {pros.map((p, i) => <li key={i} style={{ marginBottom: 4 }}>{p}</li>)}
+      </ul>
+    </div>
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+        color: '#b91c1c', marginBottom: 6 }}>Trade-offs</div>
+      <ul style={{ paddingLeft: 16, margin: 0 }}>
+        {cons.map((p, i) => <li key={i} style={{ marginBottom: 4 }}>{p}</li>)}
+      </ul>
+    </div>
+    <div>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+        color: '#3b82f6', marginBottom: 6 }}>When this wins</div>
+      <p>{rec}</p>
+    </div>
+  </div>
+);
+
+// ─────────────────────────────────────────────────────────────
+// App
+// ─────────────────────────────────────────────────────────────
+function App() {
+  return (
+    <DesignCanvas>
+
+      <DCSection id="intro" title="Designer's note">
+        <DCArtboard id="brief" label="The question" width={920} height={420}>
+          <div style={{ width: 920, height: 420, padding: '40px 48px', background: '#fff',
+            fontFamily: sans, color: '#111827', overflow: 'hidden' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em',
+              textTransform: 'uppercase', color: '#6b7280', marginBottom: 10 }}>
+              Recap AI · in-app surface for the Weekly Digest
+            </div>
+            <h1 style={{ fontSize: 30, fontWeight: 800, lineHeight: 1.15, marginBottom: 14,
+              letterSpacing: '-0.01em' }}>
+              How should the Weekly Digest live inside the app?
+            </h1>
+            <p style={{ fontSize: 15, color: '#374151', lineHeight: 1.6, marginBottom: 18, maxWidth: 760 }}>
+              The email digest is doing real work — users like reading their week distilled.
+              But email is a passive channel. If we want users to <i>return</i> to it (re-read,
+              share, generate one on-demand), the digest needs a clear front door in the product.
+              Three candidate entry points below, plus a combined option.
+            </p>
+            <div style={{ display: 'flex', gap: 16, fontSize: 13, color: '#374151' }}>
+              <div style={{ flex: 1, padding: '12px 14px', background: '#f9fafb', borderRadius: 6,
+                border: '1px solid #e5e7eb' }}>
+                <b style={{ color: '#111827' }}>A · Nav link</b>
+                <div style={{ marginTop: 4 }}>Persistent, always-reachable, low ceremony.</div>
+              </div>
+              <div style={{ flex: 1, padding: '12px 14px', background: '#f9fafb', borderRadius: 6,
+                border: '1px solid #e5e7eb' }}>
+                <b style={{ color: '#111827' }}>B · Home callout</b>
+                <div style={{ marginTop: 4 }}>Big, on-brand, weekly moment of delight.</div>
+              </div>
+              <div style={{ flex: 1, padding: '12px 14px', background: '#f9fafb', borderRadius: 6,
+                border: '1px solid #e5e7eb' }}>
+                <b style={{ color: '#111827' }}>C · Recap-now action</b>
+                <div style={{ marginTop: 4 }}>Active. On-demand. Doesn't wait for Monday.</div>
+              </div>
+              <div style={{ flex: 1, padding: '12px 14px', background: '#f9fafb', borderRadius: 6,
+                border: '1px solid #e5e7eb' }}>
+                <b style={{ color: '#111827' }}>D · A + C</b>
+                <div style={{ marginTop: 4 }}>Combined — persistent nav + on-demand button.</div>
+              </div>
+            </div>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="a" title="Option A · Top-nav link">
+        <DCArtboard id="a-desktop" label="Desktop  1280×900" width={1280} height={900}>
+          <HomePage variant="A" />
+        </DCArtboard>
+        <DCArtboard id="a-notes" label="Notes" width={360} height={520}>
+          <Notes
+            title="A · 'Weekly Digest' in the top nav"
+            pros={[
+              'Reachable from every screen — feels first-class.',
+              'Smallest visual footprint; doesn\'t crowd the home page.',
+              'A small unread dot is a gentle, well-understood signal.',
+              'Familiar pattern; almost no learning cost.',
+            ]}
+            cons={[
+              'Easy to miss if the user isn\'t scanning the nav.',
+              'Doesn\'t express what the digest IS — feels like another tab.',
+              'No on-demand affordance; user still has to wait for Monday.',
+              'Nav is getting busy (Home, Profile, Logout, search).',
+            ]}
+            rec="Best as the foundation — pair with B or C. Alone it under-sells the feature."
+          />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="b" title="Option B · Home-page callout">
+        <DCArtboard id="b-desktop" label="Desktop  1280×900" width={1280} height={900}>
+          <HomePage variant="B" />
+        </DCArtboard>
+        <DCArtboard id="b-notes" label="Notes" width={360} height={520}>
+          <Notes
+            title="B · Callout under 'Save a new article'"
+            pros={[
+              'Unmissable. The biggest, warmest moment on the page.',
+              'Borrows the digest\'s own typography (serif + cream) so it teases the content.',
+              'Great pull-through to the email aesthetic — feels intentional.',
+              'Disappears when read — no permanent clutter.',
+            ]}
+            cons={[
+              'Only visible on the home page; no global access.',
+              'Real estate cost — pushes bookmarks below the fold.',
+              'If shown every week, can feel like noise after months.',
+            ]}
+            rec="Best when the digest is a flagship feature you want users to find on day 1. Show it as a 'fresh' state for ~7 days after each new digest, then collapse to nav."
+          />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="c" title="Option C · 'Recap my week' action">
+        <DCArtboard id="c-desktop" label="Desktop  1280×900" width={1280} height={900}>
+          <HomePage variant="C" />
+        </DCArtboard>
+        <DCArtboard id="c-notes" label="Notes" width={360} height={520}>
+          <Notes
+            title="C · On-demand 'Recap my week' button"
+            pros={[
+              'Active, not passive — user controls when to recap.',
+              'Useful for new users who don\'t have a Monday email yet.',
+              'Powerful for power-users: "recap my last 7 days" anytime.',
+              'Pairs naturally with the Save box — both are "do something" actions.',
+            ]}
+            cons={[
+              'Doesn\'t advertise the email digest itself — different mental model.',
+              'Generating on demand is a compute cost; needs rate limiting.',
+              'If always shown, can feel demanding ("do this") rather than offering.',
+            ]}
+            rec="Best paired with A. The button covers on-demand; the nav link covers historical digests."
+          />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="d" title="Option D · Everything everywhere (max coverage)">
+        <DCArtboard id="d-desktop" label="Desktop  1280×900" width={1280} height={900}>
+          <HomePage variant="D" />
+        </DCArtboard>
+        <DCArtboard id="d-notes" label="Notes" width={360} height={520}>
+          <Notes
+            title="D · Nav link + 'Recap my week' + sidebar card"
+            pros={[
+              'Both passive (read the latest digest) and active (recap now) covered.',
+              'Sidebar card surfaces freshness without consuming primary real estate.',
+              'Nav link gives a permanent home for the feature.',
+              'Layered visibility scales with user engagement.',
+            ]}
+            cons={[
+              'More surfaces to maintain and copy to write.',
+              'Risk of repetition if all three appear at once — needs rules.',
+              'Sidebar card is desktop-only; mobile needs its own treatment.',
+            ]}
+            rec="Recommended. Ship A + C first (lowest risk, highest reach). Add the sidebar card (D) when you have a fresh digest to advertise. Keep B as a one-shot onboarding moment after first digest is delivered."
+          />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="picked" title="★ A + Sidebar — recommended direction">
+        <DCArtboard id="picked-fresh" label="Home · digest is fresh (unread)" width={1280} height={900}>
+          <HomePage variant="E" />
+        </DCArtboard>
+        <DCArtboard id="picked-empty" label="Home · no digest yet" width={1280} height={900}>
+          <HomePage variant="F" />
+        </DCArtboard>
+        <DCArtboard id="picked-digest" label="Digest page · with regenerate banner" width={1280} height={1100}>
+          <DigestPage hasNewBookmarks={true} />
+        </DCArtboard>
+        <DCArtboard id="picked-notes" label="Why this works" width={420} height={680}>
+          <div style={{ width: 420, height: 680, padding: '28px 30px', background: '#fff',
+            fontFamily: sans, fontSize: 13.5, color: '#374151', lineHeight: 1.6,
+            border: '1px solid #e5e7eb', borderRadius: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em',
+              textTransform: 'uppercase', color: '#3b82f6', marginBottom: 8 }}>
+              The picked direction
+            </div>
+            <div style={{ fontSize: 19, fontWeight: 800, color: '#111827', marginBottom: 14,
+              lineHeight: 1.25 }}>
+              Nav link as the permanent home. Sidebar card as the contextual nudge.
+            </div>
+            <p style={{ marginBottom: 14 }}>
+              The home page stays calm — no new banner over the Save box, no extra button
+              competing with the bookmarks. All the digest energy lives in one focused
+              place: the sidebar card, which the eye naturally rests on after scanning bookmarks.
+            </p>
+
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
+              textTransform: 'uppercase', color: '#059669', marginTop: 18, marginBottom: 8 }}>
+              Two sidebar states
+            </div>
+            <p style={{ marginBottom: 10 }}>
+              <b style={{ color: '#111827' }}>Fresh (dark card).</b> A digest exists and hasn't been
+              opened. Serif eyebrow + article/topic count teases the content. Nav link gets
+              its unread dot.
+            </p>
+            <p style={{ marginBottom: 14 }}>
+              <b style={{ color: '#111827' }}>Empty (dashed card).</b> No digest yet — first week,
+              or last one already read. CTA to generate one on demand from recent bookmarks.
+              "Takes ~30 seconds" sets the right expectation.
+            </p>
+
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
+              textTransform: 'uppercase', color: '#b45309', marginTop: 18, marginBottom: 8 }}>
+              Regenerate on the digest page
+            </div>
+            <p style={{ marginBottom: 14 }}>
+              When the user opens the digest and has saved new articles since it was generated,
+              an amber banner above the masthead surfaces a "Regenerate" action. It's the right
+              moment — the user is already evaluating the digest's freshness.
+            </p>
+
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
+              textTransform: 'uppercase', color: '#6366f1', marginTop: 18, marginBottom: 8 }}>
+              Decided
+            </div>
+            <ul style={{ paddingLeft: 18, margin: 0 }}>
+              <li style={{ marginBottom: 4 }}><b>Rate limit:</b> none for now — add later if cost is a problem.</li>
+              <li style={{ marginBottom: 4 }}><b>Regenerate threshold:</b> 3+ new bookmarks (tunable).</li>
+              <li><b>Mobile:</b> sidebar card slides to the bottom; nav link carries the unread state.</li>
+            </ul>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="mobile" title="Mobile — sidebar card lives at the bottom">
+        <DCArtboard id="mobile-fresh" label="Mobile · fresh digest" width={390} height={880}>
+          <MobileHome state="fresh" />
+        </DCArtboard>
+        <DCArtboard id="mobile-empty" label="Mobile · no digest yet" width={390} height={880}>
+          <MobileHome state="empty" />
+        </DCArtboard>
+        <DCArtboard id="mobile-filter" label="Mobile · filter sheet open" width={390} height={880}>
+          <MobileHome state="fresh" sheetOpen={true} />
+        </DCArtboard>
+        <DCArtboard id="mobile-notes" label="Notes" width={360} height={420}>
+          <div style={{ width: 360, height: 420, padding: '24px 26px', background: '#fff',
+            fontFamily: sans, fontSize: 13, color: '#374151', lineHeight: 1.6,
+            border: '1px solid #e5e7eb', borderRadius: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
+              textTransform: 'uppercase', color: '#3b82f6', marginBottom: 8 }}>
+              Mobile rules
+            </div>
+            <ul style={{ paddingLeft: 18, margin: 0 }}>
+              <li style={{ marginBottom: 8 }}>
+                <b style={{ color: '#111827' }}>Nav link stays visible</b> with the unread dot —
+                it's the primary entry point on mobile.
+              </li>
+              <li style={{ marginBottom: 8 }}>
+                <b style={{ color: '#111827' }}>Sidebar card moves to the bottom</b> of the list,
+                not above the bookmarks. Bookmarks are the job — the digest is a follow-up.
+              </li>
+              <li style={{ marginBottom: 8 }}>
+                <b style={{ color: '#111827' }}>Same card, same states.</b> Fresh = dark with
+                unread teaser. Empty = dashed with "Generate now" CTA. No mobile-only variants.
+              </li>
+              <li>
+                <b style={{ color: '#111827' }}>Hide entirely</b> if the digest has already been
+                opened and there are no new bookmarks — let the nav link carry it.
+              </li>
+            </ul>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="states" title="Sidebar card — both states side by side">
+        <DCArtboard id="state-fresh" label="State · fresh digest" width={320} height={260}>
+          <div style={{ width: 320, height: 260, padding: 16, background: '#f9fafb' }}>
+            <SidebarDigestCard />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="state-empty" label="State · no digest yet" width={320} height={260}>
+          <div style={{ width: 320, height: 260, padding: 16, background: '#f9fafb' }}>
+            <SidebarDigestEmpty />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="state-generating" label="State · generating (after click)" width={320} height={260}>
+          <div style={{ width: 320, height: 260, padding: 16, background: '#f9fafb' }}>
+            <div style={{
+              background: '#fff', borderRadius: 8, padding: '16px 16px',
+              border: '1px dashed #cbd5e1'
+            }}>
+              <div style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, letterSpacing: '0.16em',
+                textTransform: 'uppercase', color: '#64748b', marginBottom: 8 }}>
+                This Week · Recap
+              </div>
+              <div style={{ fontFamily: serif, fontSize: 18, fontWeight: 700, color: '#0f172a',
+                lineHeight: 1.2, marginBottom: 6 }}>
+                Brewing your recap…
+              </div>
+              <div style={{ fontFamily: serif, fontStyle: 'italic', fontSize: 13, color: '#475569',
+                lineHeight: 1.5, marginBottom: 14 }}>
+                Reading your bookmarks, finding the threads.
+              </div>
+              <div style={{ height: 6, background: '#e2e8f0', borderRadius: 99, overflow: 'hidden' }}>
+                <div style={{ width: '64%', height: '100%', background: '#0f172a' }} />
+              </div>
+              <div style={{ fontFamily: sans, fontSize: 11, color: '#94a3b8', marginTop: 8,
+                textAlign: 'center' }}>
+                ~12 seconds remaining
+              </div>
+            </div>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="zoom" title="Detail — earlier patterns up close">
+        <DCArtboard id="z-nav" label="A · Nav link with unread dot" width={620} height={120}>
+          <div style={{ width: 620, height: 120, display: 'flex', alignItems: 'center',
+            justifyContent: 'center', background: '#000' }}>
+            <NavDigestLink unread={true} />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="z-callout" label="B · Magazine-style callout" width={760} height={180}>
+          <div style={{ width: 760, height: 180, padding: 16, background: '#f9fafb' }}>
+            <DigestCallout />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="z-button" label="C · Recap-now action bar" width={760} height={120}>
+          <div style={{ width: 760, height: 120, padding: 16, background: '#f9fafb' }}>
+            <RecapMyWeekBar />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="z-sidebar" label="D · Sidebar fresh-digest card" width={320} height={260}>
+          <div style={{ width: 320, height: 260, padding: 16, background: '#f9fafb' }}>
+            <SidebarDigestCard />
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
