@@ -9,7 +9,7 @@ EXPOSE 8000/tcp
 
 # curl for health checks; bash/procps for worker_monitor.sh; libxml2/libxslt and build deps for lxml (readability-lxml); libgomp1 for scikit-learn parallelism
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    bash curl procps libxml2-dev libxslt-dev gcc libgomp1 tzdata \
+    bash curl procps libxml2-dev libxslt-dev gcc libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory in the container
