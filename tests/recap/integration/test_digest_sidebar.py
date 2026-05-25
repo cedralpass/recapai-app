@@ -59,21 +59,23 @@ class TestDigestSidebarEmptyState:
 @pytest.mark.integration
 @pytest.mark.recap
 class TestDigestSidebarOpenedState:
-    def test_empty_card_absent_when_digest_opened(self, recap_app, seeded_user, opened_digest_run):
+    def test_card_shown_when_digest_opened(self, recap_app, seeded_user, opened_digest_run):
         client = recap_app.test_client()
         client.post("/auth/login", data={"username": "seeduser", "password": "seedpass123"})
         response = client.get("/")
         assert response.status_code == 200
-        # Neither fresh card nor generate button should appear
+        # Card still shown, but no generate button and shows "read again" copy
         assert b"Generate recap now" not in response.data
-        assert b'id="digest-card"' not in response.data
+        assert b'id="digest-card"' in response.data
+        assert b"Read again" in response.data
 
-    def test_mobile_card_absent_when_digest_opened(self, recap_app, seeded_user, opened_digest_run):
+    def test_mobile_card_shown_when_digest_opened(self, recap_app, seeded_user, opened_digest_run):
         client = recap_app.test_client()
         client.post("/auth/login", data={"username": "seeduser", "password": "seedpass123"})
         response = client.get("/")
         assert response.status_code == 200
-        assert b'id="digest-card-mobile"' not in response.data
+        assert b'id="digest-card-mobile"' in response.data
+        assert b"Read again" in response.data
 
 
 @pytest.mark.integration

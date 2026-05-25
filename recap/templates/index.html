@@ -36,29 +36,53 @@
     <aside class="hidden md:block w-56 shrink-0 sticky top-4 self-start">
         {% if latest_digest and latest_digest.opened_at is none %}
         <div id="digest-card" class="bg-slate-900 rounded-lg p-4 mb-5 text-white">
-          <div class="text-[10px] font-bold tracking-[0.16em] uppercase text-amber-400 mb-2">This Week &middot; Recap</div>
-          <div class="font-serif text-lg font-bold leading-tight mb-1.5">
-            {{ latest_digest.article_count }} articles{% if latest_digest.cluster_count %}, {{ latest_digest.cluster_count }} topics{% endif %}
+          <div class="font-serif text-base font-bold leading-tight mb-1.5">Your Weekly Digest</div>
+          <div class="font-serif italic text-[13px] text-slate-400 leading-snug mb-1">Your bookmarks, organized just for you.</div>
+          <div class="font-semibold text-[13px] text-amber-400 mb-3">
+            {% if latest_digest.cluster_count %}{{ latest_digest.cluster_count }} topic{{ 's' if latest_digest.cluster_count != 1 else '' }} &middot; {% endif %}{{ latest_digest.article_count }} article{{ 's' if latest_digest.article_count != 1 else '' }}
           </div>
-          <div class="font-serif italic text-[13px] text-slate-300 leading-relaxed mb-3">Your Monday digest is ready.</div>
           <a href="{{ url_for('routes.digest') }}"
              class="inline-block text-[13px] font-bold text-white no-underline border-b-2 border-amber-400 pb-0.5">
             Read digest &rarr;
           </a>
         </div>
-        {% elif current_user.is_authenticated and not latest_digest %}
-        <div id="digest-card" class="bg-white rounded-lg p-4 mb-5 border border-dashed border-slate-300">
-          <div class="text-[10px] font-bold tracking-[0.16em] uppercase text-slate-500 mb-2">This Week &middot; Recap</div>
-          <div class="font-serif text-lg font-bold text-slate-900 leading-snug mb-1.5">No digest yet</div>
-          <div class="font-serif italic text-[13px] text-slate-600 leading-relaxed mb-3.5">
-            Mondays at 8am — or generate one now from your {{ recent_bookmark_count }} recent bookmarks.
+        {% elif latest_digest %}
+        <div id="digest-card" class="bg-slate-900 rounded-lg p-4 mb-5 text-white">
+          <div class="text-[10px] font-bold tracking-[0.16em] uppercase text-amber-400 mb-2">This Week &middot; Recap</div>
+          <div class="font-serif text-lg font-bold leading-tight mb-1.5">
+            {{ latest_digest.article_count }} article{{ 's' if latest_digest.article_count != 1 else '' }}{% if latest_digest.cluster_count %}, {{ latest_digest.cluster_count }} topic{{ 's' if latest_digest.cluster_count != 1 else '' }}{% endif %}
           </div>
-          <button type="button" id="digest-generate-btn"
-                  class="w-full bg-slate-900 text-white border-none rounded-md py-2.5 px-3 text-[13px] font-bold cursor-pointer flex items-center justify-center gap-1.5">
-            Generate recap now
-          </button>
-          <div class="text-[11px] text-slate-400 mt-2 text-center">Takes ~30 seconds</div>
+          <div class="font-serif italic text-[13px] text-slate-500 leading-relaxed mb-3">Caught up — read it again anytime.</div>
+          <a href="{{ url_for('routes.digest') }}"
+             class="inline-block text-[13px] font-bold text-white no-underline border-b-2 border-amber-400 pb-0.5">
+            Read again &rarr;
+          </a>
         </div>
+        {% elif current_user.is_authenticated %}
+          {% if recent_bookmark_count and recent_bookmark_count > 0 %}
+          <div id="digest-card" class="bg-white rounded-lg p-4 mb-5 border border-dashed border-slate-300">
+            <div class="font-serif text-xl font-bold text-slate-900 leading-snug tracking-tight mb-2">No digest yet</div>
+            <div class="font-serif italic text-[13px] text-slate-600 leading-relaxed mb-3.5">
+              Mondays at 8am — or generate one now from your
+              <span class="not-italic font-semibold text-slate-900">{{ recent_bookmark_count }} recent bookmark{{ 's' if recent_bookmark_count != 1 else '' }}</span>.
+            </div>
+            <button type="button" id="digest-generate-btn"
+                    class="w-full bg-slate-900 text-white border-none rounded-md py-2.5 px-3 text-[13px] font-bold cursor-pointer flex items-center justify-center gap-1.5">
+              Generate recap now
+            </button>
+            <div class="text-[11px] text-slate-400 mt-2 text-center">Takes ~30 seconds</div>
+          </div>
+          {% else %}
+          <div id="digest-card" class="bg-white rounded-lg p-4 mb-5 border border-dashed border-slate-300">
+            <div class="font-serif text-xl font-bold text-slate-900 leading-snug tracking-tight mb-2">Save an article to start your digest</div>
+            <div class="font-serif italic text-[13px] text-slate-600 leading-relaxed mb-3.5">
+              Recap turns your bookmarks into a weekly summary, organized by your personal taxonomy. Save one article above to get started.
+            </div>
+            <div class="text-[11px] text-slate-500 leading-relaxed">
+              <span class="font-semibold text-slate-700">Tip:</span> save 3+ articles before Monday and you'll get your first digest by email.
+            </div>
+          </div>
+          {% endif %}
         {% endif %}
         <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 px-1">Filter by category</div>
         {% if groupings is not none %}
@@ -81,24 +105,41 @@
 {% if latest_digest and latest_digest.opened_at is none %}
 <div class="md:hidden mt-4">
   <div id="digest-card-mobile" class="bg-slate-900 rounded-lg p-4 text-white">
-    <div class="text-[10px] font-bold tracking-[0.16em] uppercase text-amber-400 mb-2">This Week &middot; Recap</div>
-    <div class="font-serif text-lg font-bold leading-tight mb-1.5">
-      {{ latest_digest.article_count }} articles{% if latest_digest.cluster_count %}, {{ latest_digest.cluster_count }} topics{% endif %}
+    <div class="font-serif text-xl font-bold leading-tight tracking-tight mb-2">View your Weekly Digest</div>
+    <div class="font-serif italic text-[13px] text-slate-300 leading-relaxed mb-3.5">
+      A short summary of everything you bookmarked, organized by your personal taxonomy.
+      <span class="not-italic font-semibold text-amber-400">
+        {% if latest_digest.cluster_count %}{{ latest_digest.cluster_count }} topic{{ 's' if latest_digest.cluster_count != 1 else '' }} &middot; {% endif %}{{ latest_digest.article_count }} article{{ 's' if latest_digest.article_count != 1 else '' }}
+      </span>
     </div>
-    <div class="font-serif italic text-[13px] text-slate-300 leading-relaxed mb-3">Your Monday digest is ready.</div>
     <a href="{{ url_for('routes.digest') }}"
        class="inline-block text-[13px] font-bold text-white no-underline border-b-2 border-amber-400 pb-0.5">
       Read digest &rarr;
     </a>
   </div>
 </div>
-{% elif current_user.is_authenticated and not latest_digest %}
+{% elif latest_digest %}
 <div class="md:hidden mt-4">
+  <div id="digest-card-mobile" class="bg-slate-900 rounded-lg p-4 text-white">
+    <div class="text-[10px] font-bold tracking-[0.16em] uppercase text-amber-400 mb-2">This Week &middot; Recap</div>
+    <div class="font-serif text-lg font-bold leading-tight mb-1.5">
+      {{ latest_digest.article_count }} article{{ 's' if latest_digest.article_count != 1 else '' }}{% if latest_digest.cluster_count %}, {{ latest_digest.cluster_count }} topic{{ 's' if latest_digest.cluster_count != 1 else '' }}{% endif %}
+    </div>
+    <div class="font-serif italic text-[13px] text-slate-500 leading-relaxed mb-3">Caught up — read it again anytime.</div>
+    <a href="{{ url_for('routes.digest') }}"
+       class="inline-block text-[13px] font-bold text-white no-underline border-b-2 border-amber-400 pb-0.5">
+      Read again &rarr;
+    </a>
+  </div>
+</div>
+{% elif current_user.is_authenticated %}
+<div class="md:hidden mt-4">
+  {% if recent_bookmark_count and recent_bookmark_count > 0 %}
   <div id="digest-card-mobile" class="bg-white rounded-lg p-4 border border-dashed border-slate-300">
-    <div class="text-[10px] font-bold tracking-[0.16em] uppercase text-slate-500 mb-2">This Week &middot; Recap</div>
-    <div class="font-serif text-lg font-bold text-slate-900 leading-snug mb-1.5">No digest yet</div>
+    <div class="font-serif text-xl font-bold text-slate-900 leading-snug tracking-tight mb-2">No digest yet</div>
     <div class="font-serif italic text-[13px] text-slate-600 leading-relaxed mb-3.5">
-      Mondays at 8am — or generate one now from your {{ recent_bookmark_count }} recent bookmarks.
+      Mondays at 8am — or generate one now from your
+      <span class="not-italic font-semibold text-slate-900">{{ recent_bookmark_count }} recent bookmark{{ 's' if recent_bookmark_count != 1 else '' }}</span>.
     </div>
     <button type="button" id="digest-generate-btn-mobile"
             class="w-full bg-slate-900 text-white border-none rounded-md py-2.5 px-3 text-[13px] font-bold cursor-pointer flex items-center justify-center gap-1.5">
@@ -106,6 +147,17 @@
     </button>
     <div class="text-[11px] text-slate-400 mt-2 text-center">Takes ~30 seconds</div>
   </div>
+  {% else %}
+  <div id="digest-card-mobile" class="bg-white rounded-lg p-4 border border-dashed border-slate-300">
+    <div class="font-serif text-xl font-bold text-slate-900 leading-snug tracking-tight mb-2">Save an article to start your digest</div>
+    <div class="font-serif italic text-[13px] text-slate-600 leading-relaxed mb-3.5">
+      Recap turns your bookmarks into a weekly summary, organized by your personal taxonomy. Save one article above to get started.
+    </div>
+    <div class="text-[11px] text-slate-500 leading-relaxed">
+      <span class="font-semibold text-slate-700">Tip:</span> save 3+ articles before Monday and you'll get your first digest by email.
+    </div>
+  </div>
+  {% endif %}
 </div>
 {% endif %}
 
