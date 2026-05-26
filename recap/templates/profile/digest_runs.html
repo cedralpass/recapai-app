@@ -305,9 +305,19 @@ function updateRow(jobId, data) {
   if (card) card.innerHTML = mobileCardInner(data);
 }
 
+const POLL_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes — after this, give up and re-enable buttons
+
 function startPolling(jobId) {
   if (activePolls[jobId]) return;
+  const deadline = Date.now() + POLL_TIMEOUT_MS;
   activePolls[jobId] = setInterval(async () => {
+    if (Date.now() > deadline) {
+      // Job appears stuck — stop polling, re-enable buttons, leave row as-is
+      clearInterval(activePolls[jobId]);
+      delete activePolls[jobId];
+      if (Object.keys(activePolls).length === 0) setButtonsDisabled(false);
+      return;
+    }
     try {
       const res = await fetch(`/settings/digest-runs/poll/${jobId}`);
       const data = await res.json();
