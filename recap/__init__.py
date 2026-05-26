@@ -61,21 +61,23 @@ def create_app(env="dev"):
 
     @app.context_processor
     def inject_digest_state():
-        if current_user.is_authenticated:
-            import sqlalchemy as sa
+        # current_user is None outside a request context (e.g. RQ worker calling
+        # render_template for the digest email). Guard before accessing attributes.
+        if current_user is None or not current_user.is_authenticated:
+            return {"has_unread_digest": False, "latest_digest": None}
+        import sqlalchemy as sa
 
-            from recap.models import DigestRun
+        from recap.models import DigestRun
 
-            latest = db.session.scalar(
-                sa.select(DigestRun)
-                .where(DigestRun.user_id == current_user.id, DigestRun.status == "completed")
-                .order_by(DigestRun.created_at.desc())
-            )
-            return {
-                "has_unread_digest": latest is not None and latest.opened_at is None,
-                "latest_digest": latest,
-            }
-        return {"has_unread_digest": False, "latest_digest": None}
+        latest = db.session.scalar(
+            sa.select(DigestRun)
+            .where(DigestRun.user_id == current_user.id, DigestRun.status == "completed")
+            .order_by(DigestRun.created_at.desc())
+        )
+        return {
+            "has_unread_digest": latest is not None and latest.opened_at is None,
+            "latest_digest": latest,
+        }
 
     from . import routes
 
