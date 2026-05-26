@@ -333,6 +333,7 @@ def weekly_digest_task(user_id: int, send_email_flag: bool = False):
         run.completed_at = datetime.now(timezone.utc)
         db.session.commit()
     except Exception:
+        app.logger.exception("weekly_digest_task: exception for user_id=%s run_id=%s", user_id, run.id)
         run.status = "failed"
         run.completed_at = datetime.now(timezone.utc)
         db.session.commit()
@@ -365,7 +366,7 @@ def schedule_weekly_digests_task():
             "recap.tasks.weekly_digest_task",
             user.id,
             True,  # send_email_flag
-            job_timeout=600,
+            job_timeout=1800,  # 30 min — large accounts with many articles need more time
         )
         app.logger.info(
             "schedule_weekly_digests_task: enqueued user_id=%s job_id=%s",

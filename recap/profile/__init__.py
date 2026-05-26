@@ -216,7 +216,7 @@ def suggest_splits(username):
         "recap.tasks.suggest_splits_task",
         current_user.id,
         threshold,
-        job_timeout=600,
+        job_timeout=1800,
     )
     return render_template(
         "profile/taxonomy_processing.html",
@@ -367,7 +367,7 @@ def trigger_weekly_digest(username):
         "recap.tasks.weekly_digest_task",
         current_user.id,
         False,  # send_email_flag — False for manual/debug runs
-        job_timeout=600,
+        job_timeout=1800,
     )
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         from flask import jsonify
@@ -388,7 +388,7 @@ def trigger_weekly_digest_send(username):
         "recap.tasks.weekly_digest_task",
         current_user.id,
         True,  # send_email_flag — True: sends the real email
-        job_timeout=600,
+        job_timeout=1800,
     )
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         from flask import jsonify
