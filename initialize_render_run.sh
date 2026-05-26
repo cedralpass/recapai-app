@@ -39,29 +39,22 @@ export NUM_WORKERS=2
       DIGEST_LAST_HEARTBEAT_HOUR="$NOW_HOUR"
     fi
     # Fire at 10am, 11am, 3pm, and 4pm PT (testing schedule).
-    # Dedup key stored in Redis (TTL 2h) so container restarts during the trigger
-    # hour don't cause a second send.
+    # Atomic SET NX acquires a 1-hour lock so two container instances racing at
+    # the same second cannot both fire the coordinator.
     if [ "$NOW_HOUR" = "10" ] || [ "$NOW_HOUR" = "11" ] || [ "$NOW_HOUR" = "15" ] || [ "$NOW_HOUR" = "16" ]; then
       REDIS_KEY="digest:scheduler:${NOW_KEY}"
-      ALREADY_RAN=$(python -c "
+      GOT_LOCK=$(python -c "
 import os, redis, sys
 try:
     r = redis.from_url(os.environ.get('RECAP_REDIS_URL', 'redis://localhost:6379'))
-    print('1' if r.get(sys.argv[1]) else '')
+    # SET NX is atomic — only one winner even if two processes race
+    print('1' if r.set(sys.argv[1], '1', nx=True, ex=3600) else '')
 except Exception:
     print('')
 " "$REDIS_KEY" 2>/dev/null)
-      if [ -z "$ALREADY_RAN" ]; then
+      if [ -n "$GOT_LOCK" ]; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] daily-digest-scheduler: triggering coordinator (PT hour=$NOW_HOUR)"
         flask --app recap digest run-now
-        python -c "
-import os, redis, sys
-try:
-    r = redis.from_url(os.environ.get('RECAP_REDIS_URL', 'redis://localhost:6379'))
-    r.set(sys.argv[1], '1', ex=3600)  # TTL 1 hour
-except Exception:
-    pass
-" "$REDIS_KEY" 2>/dev/null || true
       else
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] daily-digest-scheduler: already ran for ${NOW_KEY}, skipping"
       fi
