@@ -38,7 +38,7 @@ class TestScheduleWeeklyDigestsTask:
                 "recap.tasks.weekly_digest_task",
                 user.id,
                 True,
-                job_timeout=600,
+                job_timeout=1800,
             )
 
     @patch("recap.tasks.db")
