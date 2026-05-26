@@ -61,9 +61,15 @@ def create_app(env="dev"):
 
     @app.context_processor
     def inject_digest_state():
-        # current_user is None outside a request context (e.g. RQ worker calling
-        # render_template for the digest email). Guard before accessing attributes.
-        if current_user is None or not current_user.is_authenticated:
+        # current_user is a Werkzeug LocalProxy — it is never None itself, so
+        # `current_user is None` always returns False. In an RQ worker (app context
+        # but no request context) accessing .is_authenticated raises AttributeError.
+        # Use try/except to handle both the unauthenticated and no-request-context cases.
+        try:
+            authenticated = current_user.is_authenticated
+        except AttributeError:
+            return {"has_unread_digest": False, "latest_digest": None}
+        if not authenticated:
             return {"has_unread_digest": False, "latest_digest": None}
         import sqlalchemy as sa
 
