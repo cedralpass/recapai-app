@@ -65,3 +65,32 @@ def run_now():
         job_timeout=60,
     )
     click.echo(f"run-now: coordinator enqueued immediately (job_id={job.id}).")
+
+
+@digest_cli.command("cleanup-stuck")
+def cleanup_stuck():
+    """Mark DigestRun rows stuck in 'running' for >35 min as failed.
+
+    Run this manually when SIGKILL-terminated jobs leave orphaned rows.
+    The coordinator also does this automatically at the start of each run.
+    """
+    from datetime import timedelta
+
+    import sqlalchemy as sa
+
+    from recap import db
+    from recap.models import DigestRun
+
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=35)
+    stuck = db.session.scalars(
+        sa.select(DigestRun).where(DigestRun.status == "running").where(DigestRun.created_at < cutoff)
+    ).all()
+    if not stuck:
+        click.echo("cleanup-stuck: no stuck runs found.")
+        return
+    for run in stuck:
+        run.status = "failed"
+        run.completed_at = datetime.now(timezone.utc)
+        click.echo(f"cleanup-stuck: run_id={run.id} user_id={run.user_id} created={run.created_at} → failed")
+    db.session.commit()
+    click.echo(f"cleanup-stuck: marked {len(stuck)} run(s) as failed.")

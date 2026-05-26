@@ -350,11 +350,32 @@ def schedule_weekly_digests_task():
     bash loop is the sole scheduling mechanism, which avoids dependence on
     RQ's --with-scheduler flag and its Redis lock-acquisition quirks.
     """
+    from datetime import timedelta
+
     import sqlalchemy as sa
 
-    from recap.models import User
+    from recap.models import DigestRun, User
 
     app.logger.info("schedule_weekly_digests_task: starting coordinator run")
+
+    # Clean up DigestRun rows stuck in "running" state.  RQ kills timed-out
+    # workers with SIGKILL, which bypasses except blocks, so the status never
+    # gets flipped to "failed" automatically.  Any run still "running" after
+    # 35 minutes is assumed dead and marked failed here.
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=35)
+    stuck = db.session.scalars(
+        sa.select(DigestRun).where(DigestRun.status == "running").where(DigestRun.created_at < cutoff)
+    ).all()
+    for run in stuck:
+        run.status = "failed"
+        run.completed_at = datetime.now(timezone.utc)
+        app.logger.warning(
+            "schedule_weekly_digests_task: marked stuck run_id=%s (user_id=%s) as failed",
+            run.id,
+            run.user_id,
+        )
+    if stuck:
+        db.session.commit()
 
     users = db.session.scalars(
         sa.select(User).where(User.digest_enabled == True)  # noqa: E712
