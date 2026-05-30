@@ -28,7 +28,7 @@ export NUM_WORKERS=2
 # fire a second time that day — the resulting DigestRun will status=skipped (benign).
 (
   DIGEST_LAST_HEARTBEAT_HOUR=""
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] daily-digest-scheduler: started — will trigger at 10am, 11am, 3pm and 4pm PT daily"
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] daily-digest-scheduler: started — will trigger at 4pm PT daily"
   while true; do
     NOW_HOUR=$(TZ=America/Los_Angeles date +%H)
     NOW_DATE=$(TZ=America/Los_Angeles date +%Y-%m-%d)
@@ -38,10 +38,10 @@ export NUM_WORKERS=2
       echo "[$(date '+%Y-%m-%d %H:%M:%S')] daily-digest-scheduler: heartbeat — PT hour=$NOW_HOUR"
       DIGEST_LAST_HEARTBEAT_HOUR="$NOW_HOUR"
     fi
-    # Fire at 10am, 11am, 3pm, and 4pm PT (testing schedule).
+    # Fire once daily at 4pm PT.
     # Atomic SET NX acquires a 1-hour lock so two container instances racing at
     # the same second cannot both fire the coordinator.
-    if [ "$NOW_HOUR" = "10" ] || [ "$NOW_HOUR" = "11" ] || [ "$NOW_HOUR" = "15" ] || [ "$NOW_HOUR" = "16" ]; then
+    if [ "$NOW_HOUR" = "16" ]; then
       REDIS_KEY="digest:scheduler:${NOW_KEY}"
       GOT_LOCK=$(python -c "
 import os, redis, sys
