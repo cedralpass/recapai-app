@@ -1,5 +1,6 @@
 Flask==3.1.2  #flask development framework
 flask-sqlalchemy==3.1.1
+SQLAlchemy==2.0.46 # pinned: 2.1 defaults postgresql:// to psycopg 3, which is not installed
 flask-migrate==4.1.0
 psycopg2-binary==2.9.9 # driver to postgres
 pgvector==0.3.6 # pgvector SQLAlchemy type for vector(1536) embeddings
