@@ -28,6 +28,7 @@ Recap is designed to fire off a bookmark from the browser with our Chrome extens
 - Add an iPhone / iPad share extension to save articles from your mobile device
 - Pull newsletters from Gmail and extract their articles into your memory
 - Expand to podcasts and videos, pulling transcripts into memory
+- Fallback sources for sites that block us (paste article text, Medium RSS). Deferred until the Chrome extension content capture ships; see `tech_design/extension-content-capture.md`
 
 ## Taxonomy & Organization
 - Improve taxonomy by adding article metadata and summary context to AI classification
