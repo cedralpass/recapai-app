@@ -559,3 +559,100 @@ class TestClassifyUrlSiteDown:
 
         data = mock_post.call_args[1]["data"]
         assert "content" not in data
+
+    @patch("recap.aiapi_helper.httpx.post")
+    def test_blocked_sends_skip_fetch_and_title_hint(self, mock_post, recap_app):
+        """A 403 tells aiapi not to re-fetch the URL and passes the slug as a title hint."""
+        mock_post.return_value.json.return_value = dict(self._AI_RESULT)
+        url = "https://medium.com/blogflyer/12-claude-code-techniques-that-make-ai-coding-feel-more-like-engineering-3f1ab92cc301"
+
+        with recap_app.app_context():
+            from recap.aiapi_helper import SITE_BLOCKED, AiApiHelper
+
+            with patch("recap.aiapi_helper.fetch_article_content", return_value=SITE_BLOCKED):
+                AiApiHelper.ClassifyUrl(url, "ref-1")
+
+        data = mock_post.call_args[1]["data"]
+        assert data["skip_fetch"] == "1"
+        assert data["title_hint"] == "12 claude code techniques that make ai coding feel more like engineering"
+
+    @patch("recap.aiapi_helper.httpx.post")
+    @patch("recap.aiapi_helper.fetch_article_content", return_value=False)
+    def test_site_down_sends_skip_fetch(self, mock_fetch, mock_post, recap_app):
+        mock_post.return_value.json.return_value = dict(self._AI_RESULT)
+
+        with recap_app.app_context():
+            from recap.aiapi_helper import AiApiHelper
+
+            AiApiHelper.ClassifyUrl("https://cq2.co/blog/the-best-way-to-have-complex-discussions", "ref-1")
+
+        assert mock_post.call_args[1]["data"]["skip_fetch"] == "1"
+
+    @patch("recap.aiapi_helper.httpx.post")
+    @patch("recap.aiapi_helper.fetch_article_content", return_value=None)
+    def test_empty_extraction_does_not_skip_fetch(self, mock_fetch, mock_post, recap_app):
+        """None can mean readability is missing on this side, so aiapi may still try its own fetch."""
+        mock_post.return_value.json.return_value = dict(self._AI_RESULT)
+
+        with recap_app.app_context():
+            from recap.aiapi_helper import AiApiHelper
+
+            AiApiHelper.ClassifyUrl("https://example.com/some-long-post-title", "ref-1")
+
+        data = mock_post.call_args[1]["data"]
+        assert "skip_fetch" not in data
+        assert data["title_hint"] == "some long post title"
+
+    @patch("recap.aiapi_helper.httpx.post")
+    @patch("recap.aiapi_helper.fetch_article_content", return_value="Full article text here.")
+    def test_content_present_sends_no_title_hint(self, mock_fetch, mock_post, recap_app):
+        mock_post.return_value.json.return_value = dict(self._AI_RESULT)
+
+        with recap_app.app_context():
+            from recap.aiapi_helper import AiApiHelper
+
+            AiApiHelper.ClassifyUrl("https://example.com/some-long-post-title", "ref-1")
+
+        data = mock_post.call_args[1]["data"]
+        assert "title_hint" not in data
+        assert "skip_fetch" not in data
+
+
+@pytest.mark.unit
+class TestTitleFromUrl:
+    @pytest.mark.parametrize(
+        "url, expected",
+        [
+            (
+                "https://medium.com/blogflyer/12-claude-code-techniques-that-make-ai-coding-feel-more-like-engineering-3f1ab92cc301",
+                "12 claude code techniques that make ai coding feel more like engineering",
+            ),
+            (
+                "https://kaustavmukherjee-66179.medium.com/improve-retrieval-of-documents-from-vectordb-using-maximum-marginal-relevance-mmr-for-balancing-f6ae56fb9512",
+                "improve retrieval of documents from vectordb using maximum marginal relevance mmr for balancing",
+            ),
+            ("https://example.com/blog/how_to_write_tests.html", "how to write tests"),
+            ("https://example.com/posts/scaling-postgres-at-work-123456/", "scaling postgres at work"),
+            ("https://example.com/2024/05/Why-Rust-Wins", "why rust wins"),
+            ("https://example.com/news/2025-in-review", "2025 in review"),
+        ],
+    )
+    def test_descriptive_slugs(self, url, expected):
+        from recap.aiapi_helper import title_from_url
+
+        assert title_from_url(url) == expected
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "https://medium.com/p/3f1ab92cc301",
+            "https://example.com/",
+            "https://example.com/2024/",
+            "https://example.com/about-us",
+            "https://www.youtube.com/watch?v=abc123",
+        ],
+    )
+    def test_opaque_slugs_return_none(self, url):
+        from recap.aiapi_helper import title_from_url
+
+        assert title_from_url(url) is None

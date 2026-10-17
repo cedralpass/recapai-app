@@ -282,7 +282,7 @@ class TestClassifyUrl:
         than no classification at all.
         """
         from recap import tasks
-        from recap.tasks import classify_url
+        from recap.tasks import URL_ONLY_DOWN_PREFIX, classify_url
 
         mock_article = MagicMock()
         mock_article.classified = None  # not yet classified
@@ -290,7 +290,7 @@ class TestClassifyUrl:
 
         classify_result = {
             "site_down": True,
-            "summary": "Site Down – Classifying by URL Only",
+            "summary": "How to structure complex discussions.",
             "blog_title": "Complex Discussions",
             "author": "Unknown",
             "category": "Technology",
@@ -307,7 +307,7 @@ class TestClassifyUrl:
         # Classification should proceed (save + commit called)
         mock_db.session.commit.assert_called_once()
         mock_redis.setex.assert_not_called()  # no flash for a new article
-        assert mock_article.summary == "Site Down – Classifying by URL Only"
+        assert mock_article.summary == URL_ONLY_DOWN_PREFIX + "How to structure complex discussions."
 
     @patch("recap.tasks._build_category_list", return_value=["Technology"])
     @patch("recap.tasks.AiApiHelper")
@@ -394,18 +394,15 @@ class TestClassifyUrl:
     @patch("recap.tasks.AiApiHelper")
     @patch("recap.tasks.Article")
     @patch("recap.tasks.db")
-    def test_bot_blocked_sets_blocked_title_for_new_article(
+    def test_bot_blocked_keeps_model_title_for_new_article(
         self, mock_db, mock_Article, mock_AiApiHelper, mock_build_cats, recap_app
     ):
-        """For a brand-new article blocked by Medium, title is set to 'Medium Blocked – <url>'.
-
-        The article is classified from the URL slug, but the title is overridden so the
-        user immediately sees that the content was inaccessible due to bot detection.
-        """
+        """For a brand-new article blocked by Medium, the model's URL-based title is kept
+        and the summary is marked as URL-only (no more 'Medium Blocked – <url>' titles)."""
         from recap import tasks
-        from recap.tasks import classify_url
+        from recap.tasks import URL_ONLY_BLOCKED_PREFIX, classify_url
 
-        url = "https://kaustavmukherjee-66179.medium.com/improve-retrieval-of-documents-from-vectordb-using-maximum-marginal-relevance-mmr-for-balancing-f6ae56fb9512"
+        url = "https://medium.com/blogflyer/12-claude-code-techniques-that-make-ai-coding-feel-more-like-engineering-3f1ab92cc301"
 
         mock_article = MagicMock()
         mock_article.classified = None  # never classified
@@ -413,10 +410,10 @@ class TestClassifyUrl:
 
         mock_AiApiHelper.ClassifyUrl.return_value = {
             "site_blocked": True,
-            "summary": "Bot Blocked – Classifying by URL Only",
-            "blog_title": "AI-guessed title",
+            "summary": "Practical Claude Code techniques for more disciplined AI-assisted coding.",
+            "blog_title": "12 Claude Code Techniques That Make AI Coding Feel More Like Engineering",
             "author": "Unknown",
-            "category": "Artificial Intelligence",
+            "category": "AI Tools",
             "key_topics": [],
             "sub_categories": [],
         }
@@ -426,17 +423,127 @@ class TestClassifyUrl:
             with recap_app.app_context():
                 classify_url(url, 3)
 
-        # Classification should proceed (commit called)
         mock_db.session.commit.assert_called_once()
         mock_redis.setex.assert_not_called()  # no flash for a new article
+        assert mock_article.title == "12 Claude Code Techniques That Make AI Coding Feel More Like Engineering"
+        assert mock_article.summary == (
+            URL_ONLY_BLOCKED_PREFIX + "Practical Claude Code techniques for more disciplined AI-assisted coding."
+        )
 
-        # Title must reflect the block, not the AI guess
-        saved_title = mock_article.title
-        assert "Medium" in saved_title
-        assert "Blocked" in saved_title
-        assert url in saved_title
-        # Summary must also reflect the block reason
-        assert mock_article.summary == "Bot Blocked – Classifying by URL Only"
+    @patch("recap.tasks._build_category_list", return_value=["Technology"])
+    @patch("recap.tasks.AiApiHelper")
+    @patch("recap.tasks.Article")
+    @patch("recap.tasks.db")
+    def test_bot_blocked_falls_back_to_slug_title_when_model_unknown(
+        self, mock_db, mock_Article, mock_AiApiHelper, mock_build_cats, recap_app
+    ):
+        """If the model returns 'Unknown' for the title, the URL slug becomes the title."""
+        from recap import tasks
+        from recap.tasks import URL_ONLY_BLOCKED_PREFIX, classify_url
+
+        url = "https://medium.com/blogflyer/12-claude-code-techniques-that-make-ai-coding-feel-more-like-engineering-3f1ab92cc301"
+
+        mock_article = MagicMock()
+        mock_article.classified = None
+        mock_Article.get_article_by_url_path.return_value = mock_article
+
+        mock_AiApiHelper.ClassifyUrl.return_value = {
+            "site_blocked": True,
+            "summary": "Unknown",
+            "blog_title": "Unknown",
+            "author": "Unknown",
+            "category": "AI Tools",
+            "key_topics": [],
+            "sub_categories": [],
+        }
+
+        with patch.object(tasks.app, "redis", MagicMock()):
+            with recap_app.app_context():
+                classify_url(url, 3)
+
+        assert mock_article.title == "12 claude code techniques that make ai coding feel more like engineering"
+        assert mock_article.summary.startswith(URL_ONLY_BLOCKED_PREFIX)
+        assert "Unknown" not in mock_article.summary
+
+    @patch("recap.tasks._build_category_list", return_value=["Technology"])
+    @patch("recap.tasks.AiApiHelper")
+    @patch("recap.tasks.Article")
+    @patch("recap.tasks.db")
+    def test_bot_blocked_falls_back_to_site_blocked_title_for_opaque_slug(
+        self, mock_db, mock_Article, mock_AiApiHelper, mock_build_cats, recap_app
+    ):
+        """No usable title from the model or the slug → '<Site> Blocked – <url>'."""
+        from recap import tasks
+        from recap.tasks import classify_url
+
+        url = "https://medium.com/p/3f1ab92cc301"
+
+        mock_article = MagicMock()
+        mock_article.classified = None
+        mock_Article.get_article_by_url_path.return_value = mock_article
+
+        mock_AiApiHelper.ClassifyUrl.return_value = {
+            "site_blocked": True,
+            "summary": "Unknown",
+            "blog_title": "Unknown",
+            "author": "Unknown",
+            "category": "Technology",
+            "key_topics": [],
+            "sub_categories": [],
+        }
+
+        with patch.object(tasks.app, "redis", MagicMock()):
+            with recap_app.app_context():
+                classify_url(url, 3)
+
+        assert mock_article.title == f"Medium Blocked – {url}"
+
+    @pytest.mark.parametrize(
+        "old_summary",
+        [
+            "Bot Blocked – Classifying by URL Only",
+            "Site Down – Classifying by URL Only",
+            "[URL only – site blocked] An earlier guess.",
+        ],
+    )
+    @patch("recap.tasks._build_category_list", return_value=["Technology"])
+    @patch("recap.tasks.AiApiHelper")
+    @patch("recap.tasks.Article")
+    @patch("recap.tasks.db")
+    def test_bot_blocked_reclassify_replaces_url_only_placeholder(
+        self, mock_db, mock_Article, mock_AiApiHelper, mock_build_cats, old_summary, recap_app
+    ):
+        """Reclassifying an article whose existing data is itself a URL-only placeholder
+        overwrites it, so old 'Medium Blocked' entries can be repaired from Reclassify."""
+        from datetime import datetime, timezone
+
+        from recap import tasks
+        from recap.tasks import classify_url
+
+        mock_article = MagicMock()
+        mock_article.classified = datetime(2026, 10, 10, tzinfo=timezone.utc)
+        mock_article.summary = old_summary
+        mock_article.title = "Medium Blocked – https://medium.com/blogflyer/some-post-3f1ab92cc301"
+        mock_Article.get_article_by_url_path.return_value = mock_article
+
+        mock_AiApiHelper.ClassifyUrl.return_value = {
+            "site_blocked": True,
+            "summary": "A post about something.",
+            "blog_title": "Some Post",
+            "author": "Unknown",
+            "category": "Technology",
+            "key_topics": [],
+            "sub_categories": [],
+        }
+
+        mock_redis = MagicMock()
+        with patch.object(tasks.app, "redis", mock_redis):
+            with recap_app.app_context():
+                classify_url("https://medium.com/blogflyer/some-post-3f1ab92cc301", 3)
+
+        mock_db.session.commit.assert_called_once()
+        mock_redis.setex.assert_not_called()
+        assert mock_article.title == "Some Post"
 
 
 @pytest.mark.unit

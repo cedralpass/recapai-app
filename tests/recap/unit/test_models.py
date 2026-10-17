@@ -350,3 +350,34 @@ class TestUserResetPasswordToken:
             token = user.get_reset_password_token(expires_in=-1)
             result = User.verify_reset_password_token(token)
             assert result is None
+
+
+@pytest.mark.unit
+@pytest.mark.recap
+class TestArticleUrlOnly:
+    MEDIUM_URL = "https://medium.com/blogflyer/12-claude-code-techniques-3f1ab92cc301"
+
+    @pytest.mark.parametrize(
+        "summary, expected",
+        [
+            ("[URL only – site blocked] A guess.", "blocked"),
+            ("[URL only – site unreachable] A guess.", "down"),
+            ("Bot Blocked – Classifying by URL Only", "blocked"),
+            ("Site Down – Classifying by URL Only", "down"),
+            ("A normal summary.", None),
+            (None, None),
+        ],
+    )
+    def test_url_only_reason(self, summary, expected):
+        assert Article(url_path=self.MEDIUM_URL, summary=summary).url_only_reason == expected
+
+    def test_url_guess_summary_strips_prefix(self):
+        article = Article(url_path=self.MEDIUM_URL, summary="[URL only – site blocked] A guess.")
+        assert article.url_guess_summary == "A guess."
+
+    def test_url_guess_summary_none_for_legacy_placeholder(self):
+        article = Article(url_path=self.MEDIUM_URL, summary="Bot Blocked – Classifying by URL Only")
+        assert article.url_guess_summary is None
+
+    def test_site_name(self):
+        assert Article(url_path=self.MEDIUM_URL).site_name == "Medium"

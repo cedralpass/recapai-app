@@ -529,6 +529,7 @@ Shown in place of the card list when `articles` is empty. Centered, muted, and p
 - `px-3 pt-3 pb-3 mb-2` padding/margin rhythm
 - Bottom margin (`mb-2`) stacks cards with a small gap
 - Cards are scannable: title + date on top row, author below, 2-line summary teaser (`line-clamp-2`), category badge + source URL + action link on bottom row
+- URL-only articles (site blocked or down, `article.url_only_reason` set) replace the summary teaser with a compact notice — see [URL-only notice](#712-info-boxes)
 
 ### 7.6 Badges & Tags
 
@@ -742,6 +743,25 @@ Characteristics:
 - `text-blue-700` — medium-dark blue, high contrast against pale background
 - `rounded-lg` — more rounded than the standard `rounded` used on cards
 - `p-4` — generous padding on all sides
+
+**URL-only notice** (site blocked our crawler or was unreachable, so the entry is a guess from the URL).
+Text lives in `templates/_url_only_notice.html`, e.g. *"Summary not available — Medium is blocking our crawler."*
+
+Card and search results, compact variant replacing the summary teaser:
+```html
+<p class="text-xs text-blue-700 bg-blue-50 rounded px-2 py-1 mb-2">{% include "_url_only_notice.html" %}</p>
+```
+
+Article detail, full info box followed by the model's guess in muted text:
+```html
+<div class="p-4 bg-blue-50 text-blue-700 rounded-lg mb-6">
+  <p class="font-semibold">{% include "_url_only_notice.html" %}</p>
+  <p class="text-sm mt-1">The title and category are our best guess from the link. …</p>
+</div>
+<div class="text-gray-500 text-sm leading-relaxed mb-6">
+  <span class="font-semibold text-gray-600">Guess from the link:</span> {{ article.url_guess_summary }}
+</div>
+```
 
 ### 7.13 Pagination
 

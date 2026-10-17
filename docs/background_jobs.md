@@ -70,7 +70,7 @@ In the Render dashboard, filter logs for `WORKER_MONITOR:` to see worker start/r
 
 | Task function | Queue | Trigger | What it does |
 |---|---|---|---|
-| `classify_url` | `RECAP2-Classify` | Article saved (web/extension) | Fetches article, calls OpenAI, stores classification + embedding |
+| `classify_url` | `RECAP2-Classify` | Article saved (web/extension) | Fetches article, calls OpenAI, stores classification + embedding. If the site blocks us (403) or is down, classifies from the URL alone and marks the summary `[URL only – …]` |
 | `organize_taxonomy_task` | `RECAP2-Classify` | User clicks "Consolidate" | AI consolidates categories into a cleaner taxonomy |
 | `suggest_splits_task` | `RECAP2-Classify` | User clicks "Split" | AI suggests sub-groups for large categories |
 | `weekly_digest_task` | `RECAP2-Classify` | Manual trigger (UI) or scheduled coordinator | LangGraph agent clusters articles, synthesises narratives, composes digest email |

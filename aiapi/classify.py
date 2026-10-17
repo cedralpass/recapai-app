@@ -134,9 +134,14 @@ def classify_url():
 
     categories_raw = request.form.get("categories")
     categories = [c.strip() for c in categories_raw.split(",")] if categories_raw else []
+    title_hint = (request.form.get("title_hint") or "").strip() or None
+    skip_fetch = request.form.get("skip_fetch") == "1"
 
-    # If content was not passed in the form, try to fetch and extract it here (fallback)
-    if not content and url:
+    # If content was not passed in the form, try to fetch and extract it here (fallback),
+    # unless the caller already knows the site is blocked or down.
+    if not content and url and skip_fetch:
+        current_app.logger.debug("classify: skip_fetch set, using URL-only prompt for %s", url)
+    elif not content and url:
         current_app.logger.debug("classify: no content in request, fetching url for fallback: %s", url)
         content = fetch_article_content(url)
         if content:
@@ -154,7 +159,7 @@ def classify_url():
     # make OpenAI Call
     response = client.chat.completions.create(
         model=AIAPIConfig.AI_OPEN_AI_MODEL,
-        messages=build_prompt(url, content=content, categories=categories),
+        messages=build_prompt(url, content=content, categories=categories, title_hint=title_hint),
         response_format={"type": "json_object"},
         temperature=0.25,
         max_tokens=512,
@@ -205,7 +210,7 @@ def _category_instruction(categories):
     return "Choose the most appropriate category for this content. Create a specific, descriptive category name."
 
 
-def build_prompt(url, content=None, categories=None):
+def build_prompt(url, content=None, categories=None, title_hint=None):
     category_instruction = _category_instruction(categories)
     if content:
         system_content = (
@@ -218,8 +223,15 @@ def build_prompt(url, content=None, categories=None):
         )
         user_content = f"Classify the following article. URL: {url}\n\nArticle text:\n\n{content}"
     else:
+        hint_instruction = (
+            f"The URL slug suggests the title: '{title_hint}'. Use it to infer the article's intent, "
+            "and return it as blog_title with proper title capitalization (e.g. 'ai' → 'AI'). "
+            if title_hint
+            else ""
+        )
         system_content = (
             "You are given ONLY the URL of a blog post; the article text is not provided. "
+            f"{hint_instruction}"
             f"{category_instruction} "
             "Do NOT invent or assume acronym meanings, author, title, or details. "
             "If you cannot infer something from the URL alone, use 'Unknown' for fields you cannot determine. "

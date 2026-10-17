@@ -16,6 +16,29 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from recap import Config, db, login_manager
 
+# Summary prefixes marking a classification made from the URL alone (site blocked or down).
+# Phase 1 of tech_design/extension-content-capture.md replaces these with a fetch_status column.
+URL_ONLY_BLOCKED_PREFIX = "[URL only – site blocked] "
+URL_ONLY_DOWN_PREFIX = "[URL only – site unreachable] "
+# Placeholder summaries written by earlier versions of classify_url.
+_LEGACY_URL_ONLY_SUMMARIES = {
+    "Bot Blocked – Classifying by URL Only": "blocked",
+    "Site Down – Classifying by URL Only": "down",
+}
+
+
+def url_only_reason(summary):
+    """Return 'blocked' or 'down' when a summary marks a URL-only classification, else None."""
+    if not isinstance(summary, str):
+        return None
+    if summary in _LEGACY_URL_ONLY_SUMMARIES:
+        return _LEGACY_URL_ONLY_SUMMARIES[summary]
+    if summary.startswith(URL_ONLY_BLOCKED_PREFIX):
+        return "blocked"
+    if summary.startswith(URL_ONLY_DOWN_PREFIX):
+        return "down"
+    return None
+
 
 class User(UserMixin, db.Model):
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
@@ -131,6 +154,26 @@ class Article(db.Model):
         )
         article = db.session.execute(stmt).scalar()
         return article
+
+    @property
+    def url_only_reason(self):
+        """'blocked' / 'down' when this article was classified from its URL alone, else None."""
+        return url_only_reason(self.summary)
+
+    @property
+    def url_guess_summary(self):
+        """The model's URL-based guess with the marker prefix removed (None for legacy placeholders)."""
+        for prefix in (URL_ONLY_BLOCKED_PREFIX, URL_ONLY_DOWN_PREFIX):
+            if self.summary and self.summary.startswith(prefix):
+                return self.summary[len(prefix) :]
+        return None
+
+    @property
+    def site_name(self):
+        """Human-readable site name for the article's URL, e.g. 'Medium'."""
+        from recap.aiapi_helper import _site_name_from_url
+
+        return _site_name_from_url(self.url_path)
 
     def get_sub_categories_json(self):
         sub_categories_json = None

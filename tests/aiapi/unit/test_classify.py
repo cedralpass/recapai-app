@@ -224,3 +224,64 @@ class TestClassify:
         user_msg = next((m["content"] for m in messages if m["role"] == "user"), "")
         assert "Model Context Protocol" in user_msg or "MCP" in user_msg
         assert "This article explains" in user_msg
+
+
+class TestClassifySkipFetchAndTitleHint:
+    def _mock_completion(self, mock_openai):
+        mock_completion = MagicMock()
+        mock_completion.choices = [MagicMock()]
+        mock_completion.choices[0].message.content = json.dumps(
+            {
+                "author": "Unknown",
+                "blog_title": "T",
+                "category": "C",
+                "summary": "S",
+                "key_topics": [],
+                "sub_categories": [],
+            }
+        )
+        mock_openai.return_value.chat.completions.create.return_value = mock_completion
+
+    @patch("aiapi.classify.fetch_article_content")
+    @patch("aiapi.classify.OpenAI")
+    def test_skip_fetch_skips_fallback_fetch(self, mock_openai, mock_fetch, aiapi_client):
+        self._mock_completion(mock_openai)
+        response = aiapi_client.post(
+            "/classify_url",
+            data={"url": "https://medium.com/x/some-post", "secret": "test-token", "ref_key": "1", "skip_fetch": "1"},
+        )
+        assert response.status_code == 200
+        mock_fetch.assert_not_called()
+
+    @patch("aiapi.classify.fetch_article_content", return_value=None)
+    @patch("aiapi.classify.OpenAI")
+    def test_without_skip_fetch_still_falls_back(self, mock_openai, mock_fetch, aiapi_client):
+        self._mock_completion(mock_openai)
+        aiapi_client.post(
+            "/classify_url",
+            data={"url": "https://example.com/some-post", "secret": "test-token", "ref_key": "1"},
+        )
+        mock_fetch.assert_called_once()
+
+    @patch("aiapi.classify.OpenAI")
+    def test_title_hint_reaches_url_only_prompt(self, mock_openai, aiapi_client):
+        self._mock_completion(mock_openai)
+        aiapi_client.post(
+            "/classify_url",
+            data={
+                "url": "https://medium.com/blogflyer/12-claude-code-techniques-3f1ab92cc301",
+                "secret": "test-token",
+                "ref_key": "1",
+                "skip_fetch": "1",
+                "title_hint": "12 claude code techniques",
+            },
+        )
+        messages = mock_openai.return_value.chat.completions.create.call_args[1]["messages"]
+        assert "'12 claude code techniques'" in messages[0]["content"]
+
+    def test_title_hint_ignored_when_content_present(self, aiapi_client):
+        from aiapi.classify import build_prompt
+
+        with aiapi_client.application.app_context():
+            messages = build_prompt("https://example.com/post", content="Body.", title_hint="some hint")
+        assert "some hint" not in messages[0]["content"]

@@ -44,6 +44,28 @@ def _site_name_from_url(url):
         return "Site"
 
 
+_TRAILING_ID = re.compile(r"[-_](?:[0-9a-f]{8,16}|\d{4,})$")  # Medium hex ids, numeric post ids
+_FILE_EXT = re.compile(r"\.(?:html?|php|aspx?)$", re.IGNORECASE)
+
+
+def title_from_url(url):
+    """Turn a URL slug into a lower-case title, or None if the slug is not descriptive.
+
+    medium.com/blogflyer/12-claude-code-techniques-...-engineering-3f1ab92cc301
+      → '12 claude code techniques that make ai coding feel more like engineering'
+    """
+    try:
+        path = urlparse(url).path.rstrip("/")
+    except Exception:
+        return None
+    slug = _FILE_EXT.sub("", path.rsplit("/", 1)[-1])
+    slug = _TRAILING_ID.sub("", slug)
+    words = [w for w in re.split(r"[-_+]+", slug) if w]
+    if len(words) < 3:  # 'p/abc', '/2024/', etc. — not a real title
+        return None
+    return " ".join(words).lower()
+
+
 def fetch_article_content(url, max_chars=12000, timeout=18):
     """
     Fetch a URL and extract main article text using readability-lxml.
@@ -114,6 +136,13 @@ class AiApiHelper:
         request_data = {"url": url, "ref_key": reference, "secret": "abc123"}
         if content:  # only truthy strings (real text) reach here; sentinels are falsy
             request_data["content"] = content
+        else:
+            title_hint = title_from_url(url)
+            if title_hint:
+                request_data["title_hint"] = title_hint
+        if site_down or site_blocked:
+            # We already know the site won't serve us — stop aiapi from fetching it a second time.
+            request_data["skip_fetch"] = "1"
         if categories:
             request_data["categories"] = ", ".join(categories)
             current_app.logger.debug("AiApiHelper: sending %d categories to classify", len(categories))

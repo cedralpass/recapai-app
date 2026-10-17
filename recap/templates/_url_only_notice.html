@@ -1,0 +1,2 @@
+{# Shown in place of a summary when the article was classified from its URL alone. #}
+{% if article.url_only_reason == 'blocked' %}Summary not available — {{ article.site_name }} is blocking our crawler.{% else %}Summary not available — {{ article.site_name }} couldn't be reached.{% endif %}

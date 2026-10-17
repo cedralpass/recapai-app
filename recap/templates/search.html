@@ -32,7 +32,9 @@
                 {% if article.author_name %}
                 <div class="text-xs text-gray-500 mb-1.5">{{ article.author_name }}</div>
                 {% endif %}
-                {% if article.summary %}
+                {% if article.url_only_reason %}
+                <p class="text-xs text-blue-700 bg-blue-50 rounded px-2 py-1 mb-2">{% include "_url_only_notice.html" %}</p>
+                {% elif article.summary %}
                 <p class="text-xs text-gray-600 leading-relaxed mb-2 line-clamp-2">{{ article.summary }}</p>
                 {% endif %}
                 <div class="flex justify-between items-center gap-2">

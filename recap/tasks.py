@@ -11,7 +11,7 @@ from recap.aiapi_helper import AiApiHelper
 from recap.article_text import build_article_text
 from recap.auth.email import send_password_reset_email
 from recap.config import Config
-from recap.models import Article, User
+from recap.models import URL_ONLY_BLOCKED_PREFIX, URL_ONLY_DOWN_PREFIX, Article, User, url_only_reason
 
 app = create_app()
 app.app_context().push()
@@ -91,8 +91,9 @@ def classify_url(url, user_id):
         site_down = classify_result.get("site_down")
         site_blocked = classify_result.get("site_blocked")
         # If the site is unreachable or blocking us and the article is already classified,
-        # keep the existing data rather than overwriting with a URL-only guess.
-        if (site_down or site_blocked) and article.classified is not None:
+        # keep the existing data rather than overwriting with a URL-only guess — unless the
+        # existing data is itself a URL-only placeholder, which a fresh guess can only improve.
+        if (site_down or site_blocked) and article.classified is not None and not _is_url_only_placeholder(article):
             if site_blocked:
                 msg = f"The site at {url} is blocking our bot — your existing classification has been kept."
             else:
@@ -104,15 +105,10 @@ def classify_url(url, user_id):
             )
             app.redis.setex(f"user_flash:{user_id}", 300, msg)
             return None
-        # For new articles where content couldn't be fetched, set a descriptive summary
-        # and (for bot-blocked) a marked title so users understand the classification is URL-only.
-        if site_down:
-            classify_result["summary"] = "Site Down – Classifying by URL Only"
-        elif site_blocked:
-            from recap.aiapi_helper import _site_name_from_url
-
-            classify_result["summary"] = "Bot Blocked – Classifying by URL Only"
-            classify_result["blog_title"] = f"{_site_name_from_url(url)} Blocked – {url}"
+        # Content couldn't be fetched: keep the model's URL-based title and summary, but mark
+        # the summary so users understand it is a guess from the URL alone.
+        if site_down or site_blocked:
+            _apply_url_only_result(classify_result, url, site_blocked=site_blocked)
         # save results to article found
         app.logger.debug("saving results to article")
         app.logger.debug(classify_result["summary"])
@@ -132,6 +128,35 @@ def classify_url(url, user_id):
     except Exception as e:
         app.logger.debug("Error in Classification Service: %s", e)
     return classify_result
+
+
+def _is_unknown(value):
+    return not value or str(value).strip().lower() in ("unknown", "n/a", "none")
+
+
+def _is_url_only_placeholder(article):
+    """True when the article's current classification was made from the URL alone."""
+    return url_only_reason(article.summary) is not None
+
+
+def _apply_url_only_result(classify_result, url, site_blocked):
+    """Mark a URL-only classification and make sure it has a readable title."""
+    from recap.aiapi_helper import _site_name_from_url, title_from_url
+
+    prefix = URL_ONLY_BLOCKED_PREFIX if site_blocked else URL_ONLY_DOWN_PREFIX
+    summary = classify_result.get("summary")
+    if _is_unknown(summary):
+        summary = "Recap couldn't read this page, so this entry is based on its URL."
+    classify_result["summary"] = prefix + summary
+
+    if _is_unknown(classify_result.get("blog_title")):
+        slug_title = title_from_url(url)
+        if slug_title:
+            classify_result["blog_title"] = slug_title.capitalize()
+        elif site_blocked:
+            classify_result["blog_title"] = f"{_site_name_from_url(url)} Blocked – {url}"[:255]
+        else:
+            classify_result["blog_title"] = url[:255]
 
 
 def save_classification_result(classify_result, article):

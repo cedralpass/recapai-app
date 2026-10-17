@@ -4,7 +4,7 @@
 
 | Phase | Scope | Status |
 |---|---|---|
-| 0 | Readable titles for blocked articles (URL slug → title) | Planned |
+| 0 | Readable titles for blocked articles (URL slug → title) | Built |
 | 1 | Store article text; accept HTML via API; save the same URL again → update | Planned |
 | 2 | Chrome extension captures page HTML | Planned |
 | 3 | Promote the extension on blocked articles | Planned |
@@ -87,9 +87,27 @@ them with placeholder text. Instead:
 
 ### Remove the second fetch
 
-Add a `skip_fetch=1` form field. `AiApiHelper.ClassifyUrl` sets it whenever recap already tried to
-fetch (blocked, down or empty), and aiapi's `classify_url` skips its fallback fetch when it's present.
-Once Phase 1 lands, it's also set whenever stored content exists.
+Add a `skip_fetch=1` form field. `AiApiHelper.ClassifyUrl` sets it when recap's fetch returned
+blocked or down, and aiapi's `classify_url` skips its fallback fetch when it's present. An empty
+extraction (`None`) doesn't set it, because `None` can also mean readability isn't installed on
+the recap side, so aiapi still gets a chance. Once Phase 1 lands, it's also set whenever stored
+content exists.
+
+### "Summary not available" notice
+
+`Article.url_only_reason` (`'blocked'` / `'down'` / `None`) reads the summary prefix, including
+the old placeholder summaries. When it's set, the index card and search results show
+*"Summary not available — Medium is blocking our crawler."* (or *"… couldn't be reached."*)
+instead of the summary (`templates/_url_only_notice.html`). The detail page shows the same notice
+in a blue info box, with the model's guess underneath labeled *"Guess from the link:"*. Phase 3
+adds the extension prompt to this notice instead of adding a second one.
+
+### Repairing existing blocked articles
+
+When a fetch fails, `classify_url` keeps an article's existing classification, unless that
+classification is itself a URL-only placeholder (the old `Bot Blocked – …` / `Site Down – …`
+summaries, or the new `[URL only – …]` prefix). Running **Settings → Reclassify** on old
+`Medium Blocked – <url>` articles therefore replaces them with the better URL-based title.
 
 **Files:** `recap/aiapi_helper.py`, `recap/tasks.py`, `aiapi/classify.py`
 

@@ -241,6 +241,8 @@ recap/              ← Main Flask app (web UI)
   __init__.py       ← App factory, blueprint registration, CORS, RQ setup;
                        inject_digest_state context processor (has_unread_digest, latest_digest)
   models.py         ← SQLAlchemy models (User, Article, DigestRun)
+                       Article.url_only_reason / url_guess_summary detect URL-only classifications
+                       (site blocked or down — see tech_design/extension-content-capture.md)
                        DigestRun has opened_at (first-view timestamp) + cluster_count columns
   api_v1.py         ← REST API blueprint: POST /api/v1/articles (Bearer token auth)
   profile/          ← Profile/settings blueprint (incl. /settings/api-token)
