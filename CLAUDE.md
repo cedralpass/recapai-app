@@ -245,6 +245,7 @@ recap/              ← Main Flask app (web UI)
                        (site blocked or down — see tech_design/extension-content-capture.md)
                        Article.content_text / content_source / fetch_status store extracted text (private)
                        Article.upsert_for_user() — one row per URL (tracking params ignored)
+                       Article.__table_args__ declares the pgvector HNSW index (keeps autogenerate from dropping it)
                        User.extension_last_seen — last request from the Chrome extension
                        DigestRun has opened_at (first-view timestamp) + cluster_count columns
   api_v1.py         ← REST API blueprint: POST /api/v1/articles (Bearer token auth; optional page

@@ -126,6 +126,19 @@ class User(UserMixin, db.Model):
 
 
 class Article(db.Model):
+    # Declared so Alembic autogenerate knows about the pgvector HNSW index (created in raw SQL by
+    # migration a1b2c3d4e5f6) and doesn't drop it again, as 72b0938ea777 did. On SQLite (tests)
+    # the postgresql_* options are ignored and a plain index is created.
+    __table_args__ = (
+        sa.Index(
+            "article_embedding_hnsw_idx",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_with={"m": 16, "ef_construction": 64},
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+        ),
+    )
+
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey(User.id), index=True)
     created: so.Mapped[datetime] = so.mapped_column(index=True, default=lambda: datetime.now(timezone.utc))

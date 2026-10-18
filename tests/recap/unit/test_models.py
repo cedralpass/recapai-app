@@ -381,3 +381,17 @@ class TestArticleUrlOnly:
 
     def test_site_name(self):
         assert Article(url_path=self.MEDIUM_URL).site_name == "Medium"
+
+
+@pytest.mark.unit
+@pytest.mark.recap
+class TestArticleIndexes:
+    def test_hnsw_embedding_index_is_declared(self):
+        """The pgvector HNSW index must stay declared on the model, or Alembic autogenerate
+        drops it (as migration 72b0938ea777 did)."""
+        index = next(i for i in Article.__table__.indexes if i.name == "article_embedding_hnsw_idx")
+        assert [c.name for c in index.columns] == ["embedding"]
+        opts = index.dialect_options["postgresql"]
+        assert opts["using"] == "hnsw"
+        assert opts["ops"] == {"embedding": "vector_cosine_ops"}
+        assert opts["with"] == {"m": 16, "ef_construction": 64}
