@@ -65,7 +65,7 @@ def create_article():
     current_app.task_queue.enqueue(
         "recap.tasks.classify_url",
         description="using AI to classify url",
-        kwargs={"url": url, "user_id": user.id},
+        kwargs={"url": url, "user_id": user.id, "article_id": article.id},
     )
 
     return jsonify({"status": "queued", "article_id": article.id}), 201

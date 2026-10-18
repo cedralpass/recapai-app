@@ -155,6 +155,15 @@ class Article(db.Model):
         article = db.session.execute(stmt).scalar()
         return article
 
+    @staticmethod
+    def url_only_clause():
+        """SQL filter matching articles classified from their URL alone (see url_only_reason)."""
+        return sa.or_(
+            Article.summary.in_(list(_LEGACY_URL_ONLY_SUMMARIES)),
+            Article.summary.startswith(URL_ONLY_BLOCKED_PREFIX),
+            Article.summary.startswith(URL_ONLY_DOWN_PREFIX),
+        )
+
     @property
     def url_only_reason(self):
         """'blocked' / 'down' when this article was classified from its URL alone, else None."""

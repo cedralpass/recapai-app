@@ -75,13 +75,21 @@ def send_password_reset_email_task(user_id):
     send_password_reset_email(user)
 
 
-def classify_url(url, user_id):
+def classify_url(url, user_id, article_id=None):
     app.logger.debug("inside classify_url")
     classify_result = None
     try:
-        # find article by url_ref for user
-        app.logger.debug("finding article to classify for %s", url)
-        article = Article.get_article_by_url_path(url, user_id)
+        # Look up by id when given: with duplicate saves of the same URL, a URL lookup returns the
+        # newest row, so reclassifying an older copy would update the wrong article. Jobs queued
+        # before article_id existed still fall back to the URL lookup.
+        app.logger.debug("finding article to classify for %s (article_id=%s)", url, article_id)
+        if article_id is not None:
+            article = db.session.get(Article, article_id)
+            if article is None or article.user_id != user_id:
+                app.logger.warning("classify_url: article %s not found for user %s", article_id, user_id)
+                return None
+        else:
+            article = Article.get_article_by_url_path(url, user_id)
         print(article)
         # classify artitle using  AiAPIHelper
         categories = _build_category_list(user_id)

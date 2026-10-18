@@ -31,6 +31,7 @@ Displays the paginated article table.
 |---|---|---|
 | `page` | `1` | Pagination page |
 | `sort` | `oldest` | `oldest` (classified ASC, nulls first) or `newest` (classified DESC) |
+| `show` | `all` | `attention` limits the list to URL-only (blocked/down) and never-classified articles. Added with [extension-content-capture.md](extension-content-capture.md) Phase 0 |
 
 **Logic:**
 ```python

@@ -40,6 +40,7 @@ def index():
             description="using AI to classify url",
             url=article.url_path,
             user_id=current_user.id,
+            article_id=article.id,
         )
         current_app.logger.debug("task launched to classify %s for article.url_path %s", job.id, article.url_path)
         session["latest_job_id"] = job.id
@@ -245,7 +246,11 @@ def reclassify(id):
     # current_app.logger.info("calling async Classification Service for article %s", article['url_path'])
     # recap.tasks.classify_url(url_path, g.user['id'])
     job = launch_task(
-        name="recap.tasks.classify_url", description="url classification", url=article.url_path, user_id=current_user.id
+        name="recap.tasks.classify_url",
+        description="url classification",
+        url=article.url_path,
+        user_id=current_user.id,
+        article_id=article.id,
     )
     print("Job is Executing " + job.id + " its status " + job.get_status(refresh=True))
     job_url = url_for("routes.job_show", id=job.id)

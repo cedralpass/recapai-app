@@ -30,22 +30,39 @@
 
     <!-- Sort toggle -->
     <div class="flex items-center gap-2 text-sm">
-      <a href="{{ url_for('profile.reclassify_articles', sort='oldest', page=1) }}"
+      <a href="{{ url_for('profile.reclassify_articles', sort='oldest', show=show, page=1) }}"
          class="{{ 'font-semibold text-indigo-600' if sort == 'oldest' else 'text-gray-500 hover:text-gray-700' }}">
         Oldest first
       </a>
       <span class="text-gray-300">|</span>
-      <a href="{{ url_for('profile.reclassify_articles', sort='newest', page=1) }}"
+      <a href="{{ url_for('profile.reclassify_articles', sort='newest', show=show, page=1) }}"
          class="{{ 'font-semibold text-indigo-600' if sort == 'newest' else 'text-gray-500 hover:text-gray-700' }}">
         Newest first
       </a>
     </div>
   </div>
 
+  <!-- Filter toggle -->
+  <div class="flex items-center gap-2 mb-4 text-xs">
+    <a href="{{ url_for('profile.reclassify_articles', sort=sort, show='all', page=1) }}"
+       class="rounded-full px-3 py-1 border {{ 'bg-indigo-600 border-indigo-600 text-white font-semibold' if show == 'all' else 'border-gray-200 text-gray-600 hover:bg-gray-50' }}">
+      All articles
+    </a>
+    <a href="{{ url_for('profile.reclassify_articles', sort=sort, show='attention', page=1) }}"
+       class="rounded-full px-3 py-1 border {{ 'bg-indigo-600 border-indigo-600 text-white font-semibold' if show == 'attention' else 'border-gray-200 text-gray-600 hover:bg-gray-50' }}">
+      Needs attention
+    </a>
+    <span class="text-gray-400">Blocked sites and articles that never finished classifying</span>
+  </div>
+
   {% if pagination.total == 0 %}
   <!-- Empty state -->
   <div class="bg-white rounded-xl shadow-sm border border-gray-100 px-6 py-12 text-center">
+    {% if show == 'attention' %}
+    <p class="text-gray-400 text-sm">Nothing needs attention — every article has a full summary.</p>
+    {% else %}
     <p class="text-gray-400 text-sm">No articles yet. Add some from the home page.</p>
+    {% endif %}
   </div>
   {% else %}
 
@@ -82,6 +99,11 @@
                  title="{{ article.title or article.url_path }}">
                 {{ article.title or article.url_path }}
               </a>
+              {% if article.url_only_reason %}
+              <span class="inline-block mt-1 bg-blue-50 text-blue-700 rounded px-1.5 py-0.5 text-xs">
+                {{ 'Blocked' if article.url_only_reason == 'blocked' else 'Site unreachable' }} — summary from URL only
+              </span>
+              {% endif %}
             </td>
             <td class="px-4 py-3">
               {% if article.category %}
@@ -109,7 +131,7 @@
     {% if pagination.pages > 1 %}
     <div class="flex items-center justify-center gap-1 mb-4 text-sm">
       {% if pagination.has_prev %}
-        <a href="{{ url_for('profile.reclassify_articles', page=pagination.prev_num, sort=sort) }}"
+        <a href="{{ url_for('profile.reclassify_articles', page=pagination.prev_num, sort=sort, show=show) }}"
            class="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
           &laquo; Prev
         </a>
@@ -117,7 +139,7 @@
 
       {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
         {% if p %}
-          <a href="{{ url_for('profile.reclassify_articles', page=p, sort=sort) }}"
+          <a href="{{ url_for('profile.reclassify_articles', page=p, sort=sort, show=show) }}"
              class="px-3 py-1.5 rounded-lg border transition-colors
                     {{ 'bg-indigo-600 border-indigo-600 text-white font-semibold' if p == pagination.page else 'border-gray-200 text-gray-600 hover:bg-gray-50' }}">
             {{ p }}
@@ -128,7 +150,7 @@
       {% endfor %}
 
       {% if pagination.has_next %}
-        <a href="{{ url_for('profile.reclassify_articles', page=pagination.next_num, sort=sort) }}"
+        <a href="{{ url_for('profile.reclassify_articles', page=pagination.next_num, sort=sort, show=show) }}"
            class="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
           Next &raquo;
         </a>

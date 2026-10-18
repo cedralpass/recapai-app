@@ -548,6 +548,77 @@ class TestClassifyUrl:
 
 @pytest.mark.unit
 @pytest.mark.recap
+class TestClassifyUrlByArticleId:
+    """classify_url(article_id=...) targets the exact row, even when the URL was saved twice."""
+
+    _RESULT = {
+        "summary": "S",
+        "blog_title": "T",
+        "author": "A",
+        "category": "C",
+        "key_topics": [],
+        "sub_categories": [],
+    }
+
+    @patch("recap.tasks._build_category_list", return_value=[])
+    @patch("recap.tasks.AiApiHelper")
+    @patch("recap.tasks.Article")
+    @patch("recap.tasks.db")
+    def test_uses_article_id_instead_of_url_lookup(
+        self, mock_db, mock_Article, mock_AiApiHelper, mock_build_cats, recap_app
+    ):
+        from recap.tasks import classify_url
+
+        mock_article = MagicMock()
+        mock_article.user_id = 7
+        mock_db.session.get.return_value = mock_article
+        mock_AiApiHelper.ClassifyUrl.return_value = dict(self._RESULT)
+
+        with recap_app.app_context():
+            classify_url("https://example.com/dup", 7, article_id=42)
+
+        mock_db.session.get.assert_called_once_with(mock_Article, 42)
+        mock_Article.get_article_by_url_path.assert_not_called()
+        assert mock_article.title == "T"
+
+    @patch("recap.tasks._build_category_list", return_value=[])
+    @patch("recap.tasks.AiApiHelper")
+    @patch("recap.tasks.Article")
+    @patch("recap.tasks.db")
+    def test_other_users_article_is_ignored(self, mock_db, mock_Article, mock_AiApiHelper, mock_build_cats, recap_app):
+        from recap.tasks import classify_url
+
+        mock_article = MagicMock()
+        mock_article.user_id = 99  # belongs to someone else
+        mock_db.session.get.return_value = mock_article
+
+        with recap_app.app_context():
+            result = classify_url("https://example.com/dup", 7, article_id=42)
+
+        assert result is None
+        mock_AiApiHelper.ClassifyUrl.assert_not_called()
+
+    @patch("recap.tasks._build_category_list", return_value=[])
+    @patch("recap.tasks.AiApiHelper")
+    @patch("recap.tasks.Article")
+    @patch("recap.tasks.db")
+    def test_legacy_jobs_without_article_id_use_url_lookup(
+        self, mock_db, mock_Article, mock_AiApiHelper, mock_build_cats, recap_app
+    ):
+        from recap.tasks import classify_url
+
+        mock_Article.get_article_by_url_path.return_value = MagicMock()
+        mock_AiApiHelper.ClassifyUrl.return_value = dict(self._RESULT)
+
+        with recap_app.app_context():
+            classify_url("https://example.com/old-job", 7)
+
+        mock_Article.get_article_by_url_path.assert_called_once_with("https://example.com/old-job", 7)
+        mock_db.session.get.assert_not_called()
+
+
+@pytest.mark.unit
+@pytest.mark.recap
 class TestMaybePingAiapi:
     """Tests for maybe_ping_aiapi() — Redis-throttled keep-alive enqueue logic."""
 

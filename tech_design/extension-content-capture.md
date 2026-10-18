@@ -109,6 +109,15 @@ classification is itself a URL-only placeholder (the old `Bot Blocked – …` /
 summaries, or the new `[URL only – …]` prefix). Running **Settings → Reclassify** on old
 `Medium Blocked – <url>` articles therefore replaces them with the better URL-based title.
 
+The Reclassify page has a **Needs attention** filter (`?show=attention`, using
+`Article.url_only_clause()`). It lists URL-only articles, each with a "Blocked — summary from URL
+only" badge, plus articles that never finished classifying.
+
+Reclassify jobs now pass `article_id`, and `classify_url` looks the article up by ID. Before this,
+the job looked the article up by URL, which returns the newest row, so reclassifying one copy of a
+URL saved twice updated the other copy. This part of the Phase 1 `classify_url` changes shipped
+early. Stopping duplicates from being created is still Phase 1 (upsert).
+
 **Files:** `recap/aiapi_helper.py`, `recap/tasks.py`, `aiapi/classify.py`
 
 ---
@@ -186,8 +195,8 @@ stored.
 
 ### `classify_url` changes
 
-- Accept `article_id` and look the article up by ID. Keep `url` as a fallback for jobs already in
-  the queue. This also clears the `TODO : should be the article id` comment.
+- ~~Accept `article_id` and look the article up by ID~~ — done in Phase 0 (all four enqueue sites
+  pass it; `url` lookup kept for jobs queued before the change).
 - If `article.content_text` exists, send it as `content` with `skip_fetch=1` and **don't crawl**.
 - Otherwise crawl as today. On success, store `content_text` with `content_source='crawl'` and
   `fetch_status='ok'`. On a 403 or outage, set `fetch_status` and `content_source='url_only'` and

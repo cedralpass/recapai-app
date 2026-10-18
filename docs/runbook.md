@@ -48,7 +48,7 @@ curl https://<your-render-url>/aiapi/hello
 If this fails, the aiapi service may be down or sleeping (Render free tier sleeps after inactivity — the keep-alive ping prevents this but may lag on cold start).
 
 ### Step 5 — Manually reclassify
-From the article detail page, use the "Reclassify" button to re-enqueue a single article. Watch Render logs for the job.
+From the article detail page, use the "Reclassify" button to re-enqueue a single article. To fix many at once, go to **Settings → Reclassify → Needs attention**. It lists articles from blocked or unreachable sites and articles that never finished classifying; select all and reclassify. Watch Render logs for the jobs.
 
 ---
 

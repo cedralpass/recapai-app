@@ -141,3 +141,5 @@ class TestPostArticleApi:
         call_kwargs = mock_enqueue.call_args
         # First positional arg is the task name
         assert call_kwargs[0][0] == "recap.tasks.classify_url"
+        # The job targets the new row by id, not just by URL
+        assert call_kwargs[1]["kwargs"]["article_id"] is not None

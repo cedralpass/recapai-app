@@ -457,9 +457,7 @@ class TestApplyTaxonomyWithSeedData:
 
         counts_after = _article_counts_by_category(recap_app, seeded_user.id)
         stale = {cat for cat in changed if cat in counts_after}
-        assert stale == set(), (
-            f"These old categories were NOT remapped — apply_taxonomy failed to " f"update them: {stale}"
-        )
+        assert stale == set(), f"These old categories were NOT remapped — apply_taxonomy failed to update them: {stale}"
 
     def test_merged_categories_combine_article_counts(self, seeded_authenticated_client, seeded_user, recap_app):
         """
@@ -474,9 +472,9 @@ class TestApplyTaxonomyWithSeedData:
         # Derive the merged cooking category name from the fixture itself
         merged_name = mapping.get("Cooking Techniques")
         assert merged_name is not None, "Fixture must map 'Cooking Techniques'"
-        assert mapping.get("Culinary Arts") == merged_name, (
-            f"Expected 'Culinary Arts' to merge into '{merged_name}', " f"got '{mapping.get('Culinary Arts')}'"
-        )
+        assert (
+            mapping.get("Culinary Arts") == merged_name
+        ), f"Expected 'Culinary Arts' to merge into '{merged_name}', got '{mapping.get('Culinary Arts')}'"
 
         self._set_mapping_in_session(seeded_authenticated_client, mapping)
         seeded_authenticated_client.post("/apply_taxonomy", follow_redirects=True)
@@ -1060,6 +1058,70 @@ class TestReclassifyArticlesRoute:
         assert mock_enqueue.call_count == 2
         assert mock_enqueue.call_args_list[0][0][0] == "recap.tasks.classify_url"
         assert b"queued for reclassification" in response.data
+        # Jobs target each selected row by id (duplicate URLs must not hit the wrong row)
+        assert sorted(c[1]["article_id"] for c in mock_enqueue.call_args_list) == sorted(ids)
+
+    def test_reclassify_needs_attention_filter(self, authenticated_client, recap_app, test_user):
+        """show=attention lists only URL-only (blocked/down) and never-classified articles."""
+        from datetime import datetime, timezone
+
+        now = datetime(2026, 10, 17, tzinfo=timezone.utc)
+        with recap_app.app_context():
+            db.session.add_all(
+                [
+                    Article(
+                        url_path="https://medium.com/a/blocked-post-3f1ab92cc301",
+                        title="Blocked Post",
+                        summary="[URL only – site blocked] A guess.",
+                        classified=now,
+                        user_id=test_user.id,
+                    ),
+                    Article(
+                        url_path="https://www.fastcompany.com/1/legacy-blocked",
+                        title="Legacy Blocked",
+                        summary="Bot Blocked – Classifying by URL Only",
+                        classified=now,
+                        user_id=test_user.id,
+                    ),
+                    Article(url_path="https://example.com/never-classified", user_id=test_user.id),
+                    Article(
+                        url_path="https://example.com/healthy",
+                        title="Healthy Article",
+                        summary="A real summary.",
+                        classified=now,
+                        user_id=test_user.id,
+                    ),
+                ]
+            )
+            db.session.commit()
+
+        html = authenticated_client.get("/settings/reclassify?show=attention").get_data(as_text=True)
+        assert "Blocked Post" in html
+        assert "Legacy Blocked" in html
+        assert "https://example.com/never-classified" in html
+        assert "Healthy Article" not in html
+        assert "Blocked — summary from URL only" in html
+
+        all_html = authenticated_client.get("/settings/reclassify").get_data(as_text=True)
+        assert "Healthy Article" in all_html
+
+    def test_reclassify_needs_attention_empty_state(self, authenticated_client, recap_app, test_user):
+        from datetime import datetime, timezone
+
+        with recap_app.app_context():
+            db.session.add(
+                Article(
+                    url_path="https://example.com/healthy",
+                    title="Healthy Article",
+                    summary="A real summary.",
+                    classified=datetime(2026, 10, 17, tzinfo=timezone.utc),
+                    user_id=test_user.id,
+                )
+            )
+            db.session.commit()
+
+        html = authenticated_client.get("/settings/reclassify?show=attention").get_data(as_text=True)
+        assert "Nothing needs attention" in html
 
     def test_reclassify_articles_post_ownership(self, authenticated_client, recap_app, test_user, mocker):
         """POST with an article owned by another user skips it — nothing is queued."""

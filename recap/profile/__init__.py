@@ -448,18 +448,20 @@ def api_token():
 def reclassify_articles():
     page = request.args.get("page", 1, type=int)
     sort = request.args.get("sort", "oldest")
-    stmt = (
-        sa.select(Article)
-        .where(Article.user_id == current_user.id)
-        .order_by(
-            Article.classified.asc().nulls_first() if sort == "oldest" else Article.classified.desc().nulls_first()
-        )
+    show = "attention" if request.args.get("show") == "attention" else "all"
+    stmt = sa.select(Article).where(Article.user_id == current_user.id)
+    if show == "attention":
+        # Blocked/down (classified from the URL alone) or never successfully classified
+        stmt = stmt.where(sa.or_(Article.url_only_clause(), Article.classified.is_(None)))
+    stmt = stmt.order_by(
+        Article.classified.asc().nulls_first() if sort == "oldest" else Article.classified.desc().nulls_first()
     )
     pagination = db.paginate(stmt, page=page, per_page=20, error_out=False)
     return render_template(
         "profile/reclassify_articles.html",
         pagination=pagination,
         sort=sort,
+        show=show,
     )
 
 
@@ -484,6 +486,7 @@ def reclassify_articles_post():
             "recap.tasks.classify_url",
             article.url_path,
             current_user.id,
+            article_id=article.id,
             job_timeout=120,
         )
         queued += 1
