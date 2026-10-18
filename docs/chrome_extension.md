@@ -169,13 +169,22 @@ curl -X POST http://localhost:8080/api/v1/articles \
   -d '{"url": "https://example.com/some-article"}'
 
 # Expected response (201)
-{"article_id": 42, "status": "queued"}
+{"article_id": 42, "status": "queued", "content_captured": false}
 ```
+
+The body can also include the page's HTML (`"html": "<!doctype html>..."`). The server extracts
+the article text, stores it privately on the article, and classifies that text instead of crawling
+the URL, which sites like Medium block. Raw HTML is never stored, and the text is never returned.
+Sending an `X-Recap-Client: chrome-extension/<version>` header records that the user has the
+extension. Saving a URL that's already in the list (tracking params like `utm_*` or `?source=` are
+ignored) updates that article instead of creating a duplicate.
 
 **Common response codes:**
 
 | Code | Meaning |
 |------|---------|
-| 201 | Article queued successfully |
-| 400 | Missing or empty `url` field in request body |
+| 201 | New article queued (`status: queued`) |
+| 200 | Already in the list: `status: updated` (new text captured, reclassifying) or `status: exists` (nothing new, no job) |
+| 400 | Missing or empty `url`, non-HTTPS URL, or URL longer than 255 characters |
 | 401 | Token missing, invalid, or not associated with any user |
+| 413 | Request body larger than 5 MB |

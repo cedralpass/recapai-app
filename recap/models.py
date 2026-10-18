@@ -49,6 +49,8 @@ class User(UserMixin, db.Model):
     api_token: so.Mapped[Optional[str]] = so.mapped_column(sa.String(64), nullable=True, unique=True, index=True)
     taxonomy_preferences: so.Mapped[Optional[str]] = so.mapped_column(sa.Text(), nullable=True)
     digest_enabled: so.Mapped[bool] = so.mapped_column(sa.Boolean, default=True, server_default="true", nullable=False)
+    # Last request from the Chrome extension (X-Recap-Client header); tailors the blocked-site prompt.
+    extension_last_seen: so.Mapped[Optional[datetime]] = so.mapped_column(sa.DateTime(), nullable=True)
 
     articles: so.WriteOnlyMapped["Article"] = so.relationship(back_populates="user")
     digest_runs: so.WriteOnlyMapped["DigestRun"] = so.relationship(back_populates="user")
@@ -139,9 +141,39 @@ class Article(db.Model):
     is_viewed: so.Mapped[bool] = so.mapped_column(sa.Boolean, default=False, server_default="0")
     is_read: so.Mapped[bool] = so.mapped_column(sa.Boolean, default=False, server_default="0")
     embedding: so.Mapped[Optional[list]] = so.mapped_column(Vector(1536), nullable=True)
+    # Extracted article text. Private: never include it in shared views or API responses.
+    content_text: so.Mapped[Optional[str]] = so.mapped_column(sa.Text(), nullable=True)
+    content_source: so.Mapped[Optional[str]] = so.mapped_column(
+        sa.String(20), nullable=True
+    )  # crawl/extension/url_only
+    fetch_status: so.Mapped[Optional[str]] = so.mapped_column(sa.String(20), nullable=True)  # ok/blocked/down/empty
 
     def __repr__(self):
         return "<Article {}>".format(self.url_path)
+
+    @staticmethod
+    def upsert_for_user(url, user):
+        """Find this user's article for `url` (ignoring tracking params) or create it.
+
+        Returns (article, created). New articles store the normalized URL. The caller commits.
+        """
+        from recap.aiapi_helper import normalize_url
+
+        normalized = normalize_url(url)
+        existing = (
+            db.session.execute(
+                sa.select(Article)
+                .where(Article.user_id == user.id, Article.url_path.in_({normalized, url}))
+                .order_by(Article.id.desc())
+            )
+            .scalars()
+            .first()
+        )
+        if existing is not None:
+            return existing, False
+        article = Article(url_path=normalized, user=user)
+        db.session.add(article)
+        return article, True
 
     @staticmethod
     def get_article_by_url_path(url_path, user_id):

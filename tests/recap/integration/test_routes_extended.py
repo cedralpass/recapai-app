@@ -284,3 +284,28 @@ class TestJobShowRoute:
         response = recap_client.get("/job/some-id/show")
         assert response.status_code == 302
         assert "/auth/login" in response.headers["Location"]
+
+
+@pytest.mark.integration
+@pytest.mark.recap
+class TestIndexFormDuplicates:
+    """Saving a URL that's already in the list (even with tracking params) doesn't create a duplicate."""
+
+    def test_resaving_url_flashes_and_creates_no_duplicate(self, authenticated_client, recap_app, test_user, mocker):
+        import sqlalchemy as sa
+
+        from recap import db
+        from recap.models import Article
+
+        mock_launch = mocker.patch("recap.routes.launch_task")
+        mock_launch.return_value.id = "00000000-0000-0000-0000-000000000000"
+        url = "https://medium.com/blogflyer/some-post-3f1ab92cc301"
+
+        authenticated_client.post("/index", data={"url_path": url}, follow_redirects=True)
+        response = authenticated_client.post("/index", data={"url_path": url + "?source=rss"}, follow_redirects=True)
+
+        assert b"already in your list" in response.data
+        assert mock_launch.call_count == 1
+        with recap_app.app_context():
+            rows = db.session.scalars(sa.select(Article).where(Article.user_id == test_user.id)).all()
+            assert [a.url_path for a in rows] == [url]

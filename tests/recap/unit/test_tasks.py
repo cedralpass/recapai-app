@@ -126,7 +126,7 @@ class TestClassifyUrl:
         assert result == classify_result
         mock_Article.get_article_by_url_path.assert_called_once_with("https://example.com/article", 1)
         mock_AiApiHelper.ClassifyUrl.assert_called_once_with(
-            "https://example.com/article", 1, categories=["Technology", "AI"]
+            "https://example.com/article", 1, categories=["Technology", "AI"], content=None
         )
 
     @patch("recap.tasks._build_category_list", return_value=["Technology"])
@@ -615,6 +615,79 @@ class TestClassifyUrlByArticleId:
 
         mock_Article.get_article_by_url_path.assert_called_once_with("https://example.com/old-job", 7)
         mock_db.session.get.assert_not_called()
+
+
+@pytest.mark.unit
+@pytest.mark.recap
+class TestClassifyUrlContentStorage:
+    """classify_url uses stored text when present, stores crawled text, and records the fetch result."""
+
+    _RESULT = {
+        "summary": "S",
+        "blog_title": "T",
+        "author": "A",
+        "category": "C",
+        "key_topics": [],
+        "sub_categories": [],
+    }
+
+    def _run(self, recap_app, mock_db, mock_AiApiHelper, article, result):
+        from recap import tasks
+        from recap.tasks import classify_url
+
+        mock_db.session.get.return_value = article
+        mock_AiApiHelper.ClassifyUrl.return_value = result
+        with patch.object(tasks.app, "redis", MagicMock()):
+            with recap_app.app_context():
+                return classify_url("https://medium.com/x/post", 7, article_id=1)
+
+    @patch("recap.tasks._build_category_list", return_value=[])
+    @patch("recap.tasks.AiApiHelper")
+    @patch("recap.tasks.Article")
+    @patch("recap.tasks.db")
+    def test_stored_extension_text_is_classified_without_crawl(
+        self, mock_db, mock_Article, mock_AiApiHelper, mock_build_cats, recap_app
+    ):
+        article = MagicMock(user_id=7, content_text="Text captured by the extension.", content_source="extension")
+        self._run(recap_app, mock_db, mock_AiApiHelper, article, dict(self._RESULT))
+
+        assert mock_AiApiHelper.ClassifyUrl.call_args[1]["content"] == "Text captured by the extension."
+        assert article.content_source == "extension"  # unchanged
+        assert article.content_text == "Text captured by the extension."
+
+    @patch("recap.tasks._build_category_list", return_value=[])
+    @patch("recap.tasks.AiApiHelper")
+    @patch("recap.tasks.Article")
+    @patch("recap.tasks.db")
+    def test_crawled_text_is_stored_and_kept_out_of_job_result(
+        self, mock_db, mock_Article, mock_AiApiHelper, mock_build_cats, recap_app
+    ):
+        article = MagicMock(user_id=7, content_text=None)
+        result = self._run(
+            recap_app, mock_db, mock_AiApiHelper, article, {**self._RESULT, "fetched_content": "Crawled text."}
+        )
+
+        assert article.content_text == "Crawled text."
+        assert article.content_source == "crawl"
+        assert article.fetch_status == "ok"
+        assert "fetched_content" not in result
+
+    @pytest.mark.parametrize(
+        "flags, expected_status",
+        [({"site_blocked": True}, "blocked"), ({"site_down": True}, "down"), ({}, "empty")],
+    )
+    @patch("recap.tasks._build_category_list", return_value=[])
+    @patch("recap.tasks.AiApiHelper")
+    @patch("recap.tasks.Article")
+    @patch("recap.tasks.db")
+    def test_failed_crawl_records_fetch_status(
+        self, mock_db, mock_Article, mock_AiApiHelper, mock_build_cats, flags, expected_status, recap_app
+    ):
+        article = MagicMock(user_id=7, content_text=None, classified=None)
+        self._run(recap_app, mock_db, mock_AiApiHelper, article, {**self._RESULT, **flags})
+
+        assert article.content_source == "url_only"
+        assert article.fetch_status == expected_status
 
 
 @pytest.mark.unit

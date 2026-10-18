@@ -615,7 +615,7 @@ class TestClassifyUrlSiteDown:
 
         data = mock_post.call_args[1]["data"]
         assert "title_hint" not in data
-        assert "skip_fetch" not in data
+        assert data["skip_fetch"] == "1"  # aiapi already has the text
 
 
 @pytest.mark.unit
@@ -656,3 +656,91 @@ class TestTitleFromUrl:
         from recap.aiapi_helper import title_from_url
 
         assert title_from_url(url) is None
+
+
+@pytest.mark.unit
+class TestNormalizeUrl:
+    @pytest.mark.parametrize(
+        "url, expected",
+        [
+            (
+                "https://medium.com/blogflyer/post-3f1ab92cc301?source=rss----abc&gi=123",
+                "https://medium.com/blogflyer/post-3f1ab92cc301",
+            ),
+            (
+                "https://example.com/a?utm_source=x&utm_medium=email&id=7#comments",
+                "https://example.com/a?id=7",
+            ),
+            ("https://example.com/a?fbclid=abc", "https://example.com/a"),
+            ("https://example.com/watch?v=abc123", "https://example.com/watch?v=abc123"),
+            ("https://example.com/plain", "https://example.com/plain"),
+        ],
+    )
+    def test_strips_tracking_params_and_fragment(self, url, expected):
+        from recap.aiapi_helper import normalize_url
+
+        assert normalize_url(url) == expected
+
+
+@pytest.mark.unit
+class TestExtractArticleText:
+    def test_extracts_text_from_real_article_fixture(self, recap_app):
+        from pathlib import Path
+
+        from recap.aiapi_helper import extract_article_text
+
+        html = (Path(__file__).parents[2] / "fixtures" / "flask_tutorial_part1.html").read_text()
+        with recap_app.app_context():
+            text = extract_article_text(html)
+        assert text and len(text) > 1000
+        assert "Flask" in text
+        assert "<" not in text[:200]  # plain text, not HTML
+
+    def test_respects_max_chars(self, recap_app):
+        from pathlib import Path
+
+        from recap.aiapi_helper import extract_article_text
+
+        html = (Path(__file__).parents[2] / "fixtures" / "flask_tutorial_part1.html").read_text()
+        with recap_app.app_context():
+            assert len(extract_article_text(html, max_chars=500)) == 500
+
+    @pytest.mark.parametrize("html", ["", None, "<html><body></body></html>"])
+    def test_returns_none_without_article_text(self, html, recap_app):
+        from recap.aiapi_helper import extract_article_text
+
+        with recap_app.app_context():
+            assert extract_article_text(html) is None
+
+
+@pytest.mark.unit
+class TestClassifyUrlStoredContent:
+    _AI_RESULT = {"author": "A", "blog_title": "T", "category": "C", "summary": "S"}
+
+    @patch("recap.aiapi_helper.httpx.post")
+    @patch("recap.aiapi_helper.fetch_article_content")
+    def test_stored_content_skips_crawl_and_is_truncated(self, mock_fetch, mock_post, recap_app):
+        mock_post.return_value.json.return_value = dict(self._AI_RESULT)
+
+        with recap_app.app_context():
+            from recap.aiapi_helper import CLASSIFY_MAX_CHARS, AiApiHelper
+
+            result = AiApiHelper.ClassifyUrl("https://medium.com/x/post", "ref", content="word " * 10_000)
+
+        mock_fetch.assert_not_called()
+        data = mock_post.call_args[1]["data"]
+        assert len(data["content"]) == CLASSIFY_MAX_CHARS
+        assert data["skip_fetch"] == "1"
+        assert "fetched_content" not in result  # nothing new was fetched
+
+    @patch("recap.aiapi_helper.httpx.post")
+    @patch("recap.aiapi_helper.fetch_article_content", return_value="Crawled article text.")
+    def test_crawled_text_returned_for_storage(self, mock_fetch, mock_post, recap_app):
+        mock_post.return_value.json.return_value = dict(self._AI_RESULT)
+
+        with recap_app.app_context():
+            from recap.aiapi_helper import AiApiHelper
+
+            result = AiApiHelper.ClassifyUrl("https://example.com/post", "ref")
+
+        assert result["fetched_content"] == "Crawled article text."

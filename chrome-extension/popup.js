@@ -66,6 +66,19 @@ saveBtn.addEventListener('click', async () => {
       return;
     }
 
+    if (response.status === 200) {
+      // Already in the list: "updated" (new text captured, re-summarizing) or "exists" (nothing new).
+      let body = {};
+      try { body = await response.json(); } catch (_) { /* ignore parse errors */ }
+      showStatus(
+        body.status === 'updated'
+          ? '✅ Updated with full text — re-summarizing.'
+          : '✅ Already in your RecapAI list.',
+        'success'
+      );
+      return;
+    }
+
     // Try to get a helpful error message from the JSON body
     let errMsg = `Server error (${response.status})`;
     try {

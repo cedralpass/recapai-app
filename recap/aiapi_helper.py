@@ -1,5 +1,5 @@
 import re
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 import httpx
 from environs import Env
@@ -66,7 +66,48 @@ def title_from_url(url):
     return " ".join(words).lower()
 
 
-def fetch_article_content(url, max_chars=12000, timeout=18):
+# Max characters of article text stored on the article, and sent to the classifier.
+CONTENT_STORE_MAX_CHARS = 100_000
+CLASSIFY_MAX_CHARS = 12_000
+
+# Query params that only track where a click came from; dropped so the same article saved
+# twice is recognised as one URL (and long tracking strings don't overflow url_path).
+_TRACKING_PARAMS = {"source", "fbclid", "gclid", "gi", "sk", "ref", "ref_src", "mc_cid", "mc_eid"}
+
+
+def normalize_url(url):
+    """Drop the fragment and tracking params (utm_*, source, fbclid, gclid, gi, sk, …) from a URL."""
+    try:
+        parsed = urlparse(url.strip())
+    except Exception:
+        return url
+    query = [
+        (k, v)
+        for k, v in parse_qsl(parsed.query, keep_blank_values=True)
+        if not k.lower().startswith("utm_") and k.lower() not in _TRACKING_PARAMS
+    ]
+    return urlunparse(parsed._replace(query=urlencode(query), fragment=""))
+
+
+def extract_article_text(html, max_chars=CONTENT_STORE_MAX_CHARS):
+    """Readability-extract the main article text from raw HTML. Returns str, or None if nothing usable."""
+    if not _HAS_READABILITY or not html:
+        return None
+    try:
+        summary_html = Document(html).summary()
+        if not summary_html or not summary_html.strip():
+            return None
+        text = lxml_html.fromstring(summary_html).text_content()
+        text = re.sub(r"\s+", " ", text).strip()
+        if not text:
+            return None
+        return text[:max_chars]
+    except Exception as e:
+        current_app.logger.debug("extract_article_text: extraction failed: %s", e)
+        return None
+
+
+def fetch_article_content(url, max_chars=CONTENT_STORE_MAX_CHARS, timeout=18):
     """
     Fetch a URL and extract main article text using readability-lxml.
 
@@ -100,28 +141,20 @@ def fetch_article_content(url, max_chars=12000, timeout=18):
     except Exception as e:
         current_app.logger.debug("fetch_article_content failed for %s: %s", url, e)
         return None
-    try:
-        doc = Document(response.text)
-        summary_html = doc.summary()
-        if not summary_html or not summary_html.strip():
-            current_app.logger.debug("fetch_article_content: empty summary for %s", url)
-            return None
-        tree = lxml_html.fromstring(summary_html)
-        text = tree.text_content()
-        text = re.sub(r"\s+", " ", text).strip()
-        if not text:
-            return None
-        if len(text) > max_chars:
-            text = text[:max_chars]
-        return text
-    except Exception as e:
-        current_app.logger.debug("fetch_article_content: content extraction failed for %s: %s", url, e)
-        return None
+    text = extract_article_text(response.text, max_chars=max_chars)
+    if text is None:
+        current_app.logger.debug("fetch_article_content: no article text extracted for %s", url)
+    return text
 
 
 class AiApiHelper:
     @staticmethod
-    def ClassifyUrl(url, reference, categories=None):
+    def ClassifyUrl(url, reference, categories=None, content=None):
+        """Classify an article. Uses `content` (stored article text) when given; otherwise crawls the URL.
+
+        When a crawl succeeds, the extracted text is returned under "fetched_content" so the caller
+        can store it; site_down / site_blocked flag a failed crawl.
+        """
         current_app.logger.debug(
             "AiApiHelper: calling service to classify for url: %s and reference %s", url, reference
         )
@@ -130,12 +163,19 @@ class AiApiHelper:
         ai_url = env("RECAP_AI_API_URL") + "/classify_url"
         current_app.logger.debug("AiApiHelper: calling post to %s", ai_url)
         results_json = {}
-        content = fetch_article_content(url)
+        fetched_content = None
+        if content:
+            current_app.logger.debug("AiApiHelper: using stored content (%d chars), not crawling", len(content))
+        else:
+            content = fetch_article_content(url)
+            if content:
+                fetched_content = content
         site_down = content is False  # connection error / timeout / 5xx
         site_blocked = content is SITE_BLOCKED  # 403 bot-blocked
         request_data = {"url": url, "ref_key": reference, "secret": "abc123"}
         if content:  # only truthy strings (real text) reach here; sentinels are falsy
-            request_data["content"] = content
+            request_data["content"] = content[:CLASSIFY_MAX_CHARS]
+            request_data["skip_fetch"] = "1"  # aiapi already has the text — no need to fetch
         else:
             title_hint = title_from_url(url)
             if title_hint:
@@ -167,6 +207,8 @@ class AiApiHelper:
             results_json["site_down"] = True
         if site_blocked:
             results_json["site_blocked"] = True
+        if fetched_content and results_json:  # only alongside a real classification; {} still means "failed"
+            results_json["fetched_content"] = fetched_content
         return results_json
 
     @staticmethod

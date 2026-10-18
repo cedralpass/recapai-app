@@ -1,4 +1,5 @@
 import pytest
+import sqlalchemy as sa
 
 from recap import db
 from recap.models import Article, User
@@ -143,3 +144,118 @@ class TestPostArticleApi:
         assert call_kwargs[0][0] == "recap.tasks.classify_url"
         # The job targets the new row by id, not just by URL
         assert call_kwargs[1]["kwargs"]["article_id"] is not None
+
+
+@pytest.mark.integration
+@pytest.mark.recap
+class TestCreateArticleContentCapture:
+    """Phase 1: page HTML from the extension, duplicate handling, and the X-Recap-Client header."""
+
+    URL = "https://medium.com/blogflyer/some-post-3f1ab92cc301"
+
+    def _token(self, recap_app, user):
+        with recap_app.app_context():
+            return user.get_or_create_api_token()
+
+    def _html(self):
+        from pathlib import Path
+
+        return (Path(__file__).parents[2] / "fixtures" / "flask_tutorial_part1.html").read_text()
+
+    def test_html_is_extracted_and_stored(self, recap_client, test_user, recap_app, mocker):
+        mocker.patch.object(recap_app.task_queue, "enqueue")
+        token = self._token(recap_app, test_user)
+        response = recap_client.post(
+            "/api/v1/articles",
+            json={"url": self.URL, "html": self._html()},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 201
+        body = response.get_json()
+        assert body["content_captured"] is True
+        assert "content_text" not in body  # private — never echoed back
+        with recap_app.app_context():
+            article = db.session.get(Article, body["article_id"])
+            assert article.content_source == "extension"
+            assert "Flask" in article.content_text
+
+    def test_saving_same_url_again_returns_exists_without_duplicate(self, recap_client, test_user, recap_app, mocker):
+        mock_enqueue = mocker.patch.object(recap_app.task_queue, "enqueue")
+        token = self._token(recap_app, test_user)
+        headers = {"Authorization": f"Bearer {token}"}
+        first = recap_client.post("/api/v1/articles", json={"url": self.URL}, headers=headers)
+        # Same article with Medium tracking params added
+        second = recap_client.post("/api/v1/articles", json={"url": self.URL + "?source=rss&gi=abc"}, headers=headers)
+
+        assert first.status_code == 201
+        assert second.status_code == 200
+        assert second.get_json()["status"] == "exists"
+        assert second.get_json()["article_id"] == first.get_json()["article_id"]
+        assert mock_enqueue.call_count == 1  # nothing new → no second job
+        with recap_app.app_context():
+            count = db.session.scalar(sa.select(sa.func.count(Article.id)).where(Article.user_id == test_user.id))
+            assert count == 1
+
+    def test_existing_url_with_html_is_updated_and_reclassified(self, recap_client, test_user, recap_app, mocker):
+        mock_enqueue = mocker.patch.object(recap_app.task_queue, "enqueue")
+        token = self._token(recap_app, test_user)
+        headers = {"Authorization": f"Bearer {token}"}
+        first = recap_client.post("/api/v1/articles", json={"url": self.URL}, headers=headers)
+        second = recap_client.post("/api/v1/articles", json={"url": self.URL, "html": self._html()}, headers=headers)
+
+        assert second.status_code == 200
+        assert second.get_json()["status"] == "updated"
+        assert second.get_json()["content_captured"] is True
+        assert mock_enqueue.call_count == 2
+        assert mock_enqueue.call_args[1]["kwargs"]["article_id"] == first.get_json()["article_id"]
+        with recap_app.app_context():
+            article = db.session.get(Article, first.get_json()["article_id"])
+            assert article.content_source == "extension"
+
+    def test_html_without_article_text_falls_back_to_crawl(self, recap_client, test_user, recap_app, mocker):
+        mocker.patch.object(recap_app.task_queue, "enqueue")
+        token = self._token(recap_app, test_user)
+        response = recap_client.post(
+            "/api/v1/articles",
+            json={"url": self.URL, "html": "<html><body></body></html>"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 201
+        assert response.get_json()["content_captured"] is False
+        with recap_app.app_context():
+            article = db.session.get(Article, response.get_json()["article_id"])
+            assert article.content_text is None
+
+    def test_body_over_5mb_is_rejected(self, recap_client, test_user, recap_app, mocker):
+        mock_enqueue = mocker.patch.object(recap_app.task_queue, "enqueue")
+        token = self._token(recap_app, test_user)
+        response = recap_client.post(
+            "/api/v1/articles",
+            json={"url": self.URL, "html": "x" * (5 * 1024 * 1024 + 1)},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 413
+        mock_enqueue.assert_not_called()
+
+    def test_client_header_records_extension_last_seen(self, recap_client, test_user, recap_app, mocker):
+        mocker.patch.object(recap_app.task_queue, "enqueue")
+        token = self._token(recap_app, test_user)
+        recap_client.post(
+            "/api/v1/articles",
+            json={"url": self.URL},
+            headers={"Authorization": f"Bearer {token}", "X-Recap-Client": "chrome-extension/1.1.0"},
+        )
+
+        with recap_app.app_context():
+            assert db.session.get(User, test_user.id).extension_last_seen is not None
+
+    def test_no_client_header_leaves_extension_last_seen_empty(self, recap_client, test_user, recap_app, mocker):
+        mocker.patch.object(recap_app.task_queue, "enqueue")
+        token = self._token(recap_app, test_user)
+        recap_client.post("/api/v1/articles", json={"url": self.URL}, headers={"Authorization": f"Bearer {token}"})
+
+        with recap_app.app_context():
+            assert db.session.get(User, test_user.id).extension_last_seen is None

@@ -29,9 +29,14 @@ def index():
             current_app.redis.delete(f"user_flash:{current_user.id}")
     form = ArticleForm()
     if form.validate_on_submit():
-        # TODO: Validate that the form.url_path is a valid url
-        article = Article(url_path=form.url_path.data, user=current_user)
-        db.session.add(article)
+        article, created = Article.upsert_for_user(form.url_path.data, current_user)
+        if not created:
+            flash("That article is already in your list.")
+            return redirect(url_for("routes.index"))
+        if len(article.url_path) > 255:
+            db.session.rollback()
+            flash("That URL is too long to save (max 255 characters).", "error")
+            return redirect(url_for("routes.index"))
         db.session.commit()
         # TODO: Theroy is DB is asleep and task is fired off before its woken up.
         current_app.logger.debug("launching task to classify %s for article.id %s", article.url_path, article.id)

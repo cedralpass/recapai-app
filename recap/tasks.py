@@ -93,11 +93,13 @@ def classify_url(url, user_id, article_id=None):
         print(article)
         # classify artitle using  AiAPIHelper
         categories = _build_category_list(user_id)
-        classify_result = AiApiHelper.ClassifyUrl(
-            url, user_id, categories=categories
-        )  # TODO : should be the article id, but using user-id for now
+        # Stored text (from the extension or an earlier crawl) is classified directly — no crawl.
+        stored_content = article.content_text if isinstance(article.content_text, str) else None
+        classify_result = AiApiHelper.ClassifyUrl(url, user_id, categories=categories, content=stored_content)
         site_down = classify_result.get("site_down")
         site_blocked = classify_result.get("site_blocked")
+        # Keep the crawled text out of the RQ job result (it can be up to 100k characters).
+        fetched_content = classify_result.pop("fetched_content", None)
         # If the site is unreachable or blocking us and the article is already classified,
         # keep the existing data rather than overwriting with a URL-only guess — unless the
         # existing data is itself a URL-only placeholder, which a fresh guess can only improve.
@@ -117,6 +119,7 @@ def classify_url(url, user_id, article_id=None):
         # the summary so users understand it is a guess from the URL alone.
         if site_down or site_blocked:
             _apply_url_only_result(classify_result, url, site_blocked=site_blocked)
+        _record_content_source(article, stored_content, fetched_content, site_down, site_blocked)
         # save results to article found
         app.logger.debug("saving results to article")
         app.logger.debug(classify_result["summary"])
@@ -165,6 +168,19 @@ def _apply_url_only_result(classify_result, url, site_blocked):
             classify_result["blog_title"] = f"{_site_name_from_url(url)} Blocked – {url}"[:255]
         else:
             classify_result["blog_title"] = url[:255]
+
+
+def _record_content_source(article, stored_content, fetched_content, site_down, site_blocked):
+    """Store crawled text and record where the classified text came from and how the fetch went."""
+    if stored_content:
+        return  # extension/earlier crawl text was used; nothing new was fetched
+    if fetched_content:
+        article.content_text = fetched_content
+        article.content_source = "crawl"
+        article.fetch_status = "ok"
+    else:
+        article.content_source = "url_only"
+        article.fetch_status = "blocked" if site_blocked else "down" if site_down else "empty"
 
 
 def save_classification_result(classify_result, article):

@@ -243,8 +243,12 @@ recap/              ← Main Flask app (web UI)
   models.py         ← SQLAlchemy models (User, Article, DigestRun)
                        Article.url_only_reason / url_guess_summary / url_only_clause() detect URL-only classifications
                        (site blocked or down — see tech_design/extension-content-capture.md)
+                       Article.content_text / content_source / fetch_status store extracted text (private)
+                       Article.upsert_for_user() — one row per URL (tracking params ignored)
+                       User.extension_last_seen — last request from the Chrome extension
                        DigestRun has opened_at (first-view timestamp) + cluster_count columns
-  api_v1.py         ← REST API blueprint: POST /api/v1/articles (Bearer token auth)
+  api_v1.py         ← REST API blueprint: POST /api/v1/articles (Bearer token auth; optional page
+                       html → stored text; re-saving a URL updates instead of duplicating)
   profile/          ← Profile/settings blueprint (incl. /settings/api-token)
     __init__.py     ← Taxonomy routes + digest run routes (/settings/digest-runs)
                        (see docs/taxonomy_organnization.md and tech_design/weekly-synthesis-agent.md)

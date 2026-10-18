@@ -5,7 +5,7 @@
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | Readable titles for blocked articles (URL slug → title) | Built |
-| 1 | Store article text; accept HTML via API; save the same URL again → update | Planned |
+| 1 | Store article text; accept HTML via API; save the same URL again → update | Built |
 | 2 | Chrome extension captures page HTML | Planned |
 | 3 | Promote the extension on blocked articles | Planned |
 | — | Extra sources (paste text, Medium RSS, Wayback) | Deferred: later task, see [below](#deferred--other-ways-to-get-the-text) |
@@ -171,8 +171,11 @@ returns `(article, created)`. Both `POST /api/v1/articles` and the index form us
 - **Existing URL, new content uploaded:** replace `content_text` and set
   `content_source='extension'`. Reclassify the article, even if it was already classified, because
   the new text is better.
-- **Existing URL, no content:** no duplicate row. Flash *"Already in your list"* (form) or return
-  `200 {"status": "exists"}` (API).
+- **Existing URL, no content:** no duplicate row. Flash *"That article is already in your list."*
+  (form) or return `200 {"status": "exists"}` (API).
+
+URLs longer than 255 characters after normalization are rejected (`400` from the API, a flash
+from the form) instead of failing in the database.
 
 ### API changes — `POST /api/v1/articles`
 
@@ -186,7 +189,11 @@ Header:      X-Recap-Client: chrome-extension/1.1.0                 # optional
 - If `html` is present, call `extract_article_text(html)`. On success, store it with
   `content_source='extension'`. If extraction finds no text, fall back to the normal crawl.
 - Response gains `"content_captured": true|false`, so the popup can tell the user whether the full
-  text was saved.
+  text was saved. Status codes: `201 queued` (new article), `200 updated` (existing article, new
+  text, reclassified), `200 exists` (existing article, nothing new, no job). `content_text` is
+  never included in the response.
+- The current popup (v1.0) was updated to treat both `200` responses as success, so re-saving an
+  existing article doesn't show an error before Phase 2 ships.
 - When `X-Recap-Client` is present, set `User.extension_last_seen = now()` (new nullable `DateTime`
   column). Phase 3 uses it to tailor the message.
 
@@ -197,7 +204,10 @@ stored.
 
 - ~~Accept `article_id` and look the article up by ID~~ — done in Phase 0 (all four enqueue sites
   pass it; `url` lookup kept for jobs queued before the change).
-- If `article.content_text` exists, send it as `content` with `skip_fetch=1` and **don't crawl**.
+- If `article.content_text` exists, send it as `content` (first 12k characters) with `skip_fetch=1`
+  and **don't crawl**. `AiApiHelper.ClassifyUrl(..., content=...)` handles this; a successful crawl
+  returns its text under `fetched_content`, which `classify_url` stores and removes from the RQ job
+  result. If aiapi fails, no text is returned (the result stays `{}`), and a retry crawls again.
 - Otherwise crawl as today. On success, store `content_text` with `content_source='crawl'` and
   `fetch_status='ok'`. On a 403 or outage, set `fetch_status` and `content_source='url_only'` and
   apply the Phase 0 behavior.
