@@ -2,73 +2,93 @@ import SwiftUI
 
 @main
 struct RecapAIApp: App {
+    @State private var app = AppModel()
+    @State private var articles = ArticlesModel()
+    @Environment(\.scenePhase) private var scenePhase
+
+    init() {
+        // Amber dot for the Digest tab badge (mirrors the web nav indicator).
+        let item = UITabBarItemAppearance()
+        item.normal.badgeBackgroundColor = UIColor(Theme.amber)
+        item.selected.badgeBackgroundColor = UIColor(Theme.amber)
+        let appearance = UITabBarAppearance()
+        appearance.configureWithDefaultBackground()
+        appearance.stackedLayoutAppearance = item
+        appearance.inlineLayoutAppearance = item
+        appearance.compactInlineLayoutAppearance = item
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
+    }
+
     var body: some Scene {
         WindowGroup {
-            SettingsView()
+            RootView()
+                .environment(app)
+                .environment(articles)
+                .tint(Theme.tint)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                Task { await app.refreshDigestBadge() }
+            }
         }
     }
 }
 
-struct SettingsView: View {
-    @State private var serverURL = RecapSettings.serverURL
-    @State private var apiToken = RecapSettings.apiToken
-    @State private var showToken = false
-    @State private var status: String?
+enum AppTab: Hashable {
+    case articles, digest, settings
+}
 
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    TextField("https://dev.recaprai.com", text: $serverURL)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                } header: {
-                    Text("Server URL")
-                }
+/// App-wide state: selected tab, whether Recap is configured, unread-digest dot.
+@MainActor
+@Observable
+final class AppModel {
+    var selectedTab: AppTab = .articles
+    var isConfigured = RecapSettings.isConfigured
+    var hasUnreadDigest = false
+    /// Bumped when the server URL / token change so tabs reload.
+    var settingsVersion = 0
 
-                Section {
-                    HStack {
-                        Group {
-                            if showToken {
-                                TextField("Paste your API token", text: $apiToken)
-                            } else {
-                                SecureField("Paste your API token", text: $apiToken)
-                            }
-                        }
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        Button(showToken ? "Hide" : "Show") { showToken.toggle() }
-                            .buttonStyle(.borderless)
-                    }
-                } header: {
-                    Text("API Token")
-                } footer: {
-                    Text("Find your token in Recap under Settings → API Token.")
-                }
-
-                Section {
-                    Button("Save") { save() }
-                        .frame(maxWidth: .infinity)
-                        .disabled(serverURL.isEmpty || apiToken.isEmpty)
-                    if let status {
-                        Text(status).foregroundStyle(.secondary)
-                    }
-                }
-
-                Section("How to save articles") {
-                    Label("Open an article in Safari", systemImage: "safari")
-                    Label("Tap the Share button", systemImage: "square.and.arrow.up")
-                    Label("Choose Recap", systemImage: "bookmark")
-                }
-            }
-            .navigationTitle("Recap")
-        }
+    func settingsChanged() {
+        isConfigured = RecapSettings.isConfigured
+        settingsVersion += 1
+        Task { await refreshDigestBadge() }
     }
 
-    private func save() {
-        RecapSettings.serverURL = serverURL.trimmingCharacters(in: .whitespaces)
-        RecapSettings.apiToken = apiToken.trimmingCharacters(in: .whitespacesAndNewlines)
-        status = "Saved. You can now share from Safari."
+    func refreshDigestBadge() async {
+        guard RecapSettings.isConfigured else {
+            hasUnreadDigest = false
+            return
+        }
+        // Don't clear the badge while the user is looking at the digest.
+        guard selectedTab != .digest else { return }
+        if case .digest(let digest) = try? await RecapClient().latestDigest(markOpened: false) {
+            hasUnreadDigest = digest.wasUnread
+        } else {
+            hasUnreadDigest = false
+        }
+    }
+}
+
+struct RootView: View {
+    @Environment(AppModel.self) private var app
+
+    var body: some View {
+        @Bindable var app = app
+        TabView(selection: $app.selectedTab) {
+            ArticlesView()
+                .tabItem { Label("Articles", systemImage: "list.bullet") }
+                .tag(AppTab.articles)
+
+            DigestView()
+                .tabItem { Label("Digest", systemImage: "newspaper") }
+                .tag(AppTab.digest)
+                .badge(app.hasUnreadDigest ? Text(" ") : nil)
+
+            SettingsView()
+                .tabItem { Label("Settings", systemImage: "gearshape") }
+                .tag(AppTab.settings)
+        }
+        .task { await app.refreshDigestBadge() }
     }
 }

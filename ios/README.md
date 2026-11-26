@@ -9,9 +9,10 @@ extension), so blocked/paywalled sites still get summarized from what's on scree
 | Path | What |
 |------|------|
 | `project.yml` | XcodeGen spec — the `.xcodeproj` is generated, not committed |
-| `RecapAI/` | Host app: server URL + API token settings screen |
+| `RecapAI/` | Host app: Articles / Digest / Settings tabs (see `docs/ios_share_extension.md`) |
 | `RecapShare/` | Share extension (`ShareViewController.swift`) + `GetPage.js` (runs in Safari, returns URL/title/HTML) |
-| `Shared/RecapClient.swift` | Settings (App Group `group.com.gsmalling.recapai`) + API client, used by both targets |
+| `Shared/RecapClient.swift` | Settings (App Group `group.com.gsmalling.recapai`) + API client (save + read API), used by both targets |
+| `Shared/Models.swift` | Codable models for the read API |
 
 ## Build & run
 

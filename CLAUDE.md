@@ -311,7 +311,7 @@ Loaded unpacked from `chrome-extension/`. No build step required.
 
 ## iOS App & Share Extension
 
-`ios/` holds a SwiftUI host app (server URL + API token settings) and a Safari Share Extension.
+`ios/` holds a SwiftUI app (Articles / Digest / Settings tabs) and a Safari Share Extension.
 Share → Recap runs `RecapShare/GetPage.js` in the page and posts URL + rendered HTML to
 `POST /api/v1/articles` — the same contract as the Chrome extension. Full guide:
 **[docs/ios_share_extension.md](docs/ios_share_extension.md)**.
@@ -321,4 +321,5 @@ Share → Recap runs `RecapShare/GetPage.js` in the page and posts URL + rendere
 - Build for simulator: `cd ios && xcodebuild -project RecapAI.xcodeproj -scheme RecapAI -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -derivedDataPath build build | xcbeautify`
 - In the simulator, set the server URL to `http://localhost:8080` (ATS allows local networking)
 - Device builds sign with the Personal Team set in `project.yml` (`DEVELOPMENT_TEAM`); free signing expires after 7 days
-- **Next up (planned):** Articles / Article detail / Digest screens (the read API they need is shipped in `recap/api_v1.py`) — plan in [docs/ios_app_ux_plan.md](docs/ios_app_ux_plan.md), designs in `design_handoff/Recap iOS.html` + [design_handoff/ios-README.md](design_handoff/ios-README.md)
+- **App tabs:** Articles (list, pills, semantic search, detail), Digest, Settings — reads the API in `recap/api_v1.py`; plan in [docs/ios_app_ux_plan.md](docs/ios_app_ux_plan.md), designs in `design_handoff/Recap iOS.html` + [design_handoff/ios-README.md](design_handoff/ios-README.md)
+- **Simulator testing:** start `recap` (and `aiapi` for search) locally, then set server `http://localhost:8080` + a local user's token in the app's Settings

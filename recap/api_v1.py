@@ -263,6 +263,8 @@ def list_categories():
 def latest_digest():
     """Latest completed digest; marks it opened on first fetch.
 
+    Query: mark_opened=false peeks without setting opened_at (the iOS app uses it for the tab dot).
+
     Returns 200 {id, week_start, article_count, cluster_count, digest_html, bookmarks_since,
     show_regenerate, was_unread} or 404 {"status": "none", "articles_since_last": <int>}.
     """
@@ -271,7 +273,8 @@ def latest_digest():
     if digest_run is None:
         return jsonify({"status": "none", "articles_since_last": count_articles(user.id)}), 404
     was_unread = digest_run.opened_at is None
-    if was_unread:
+    mark_opened = request.args.get("mark_opened", "true").lower() != "false"
+    if was_unread and mark_opened:
         digest_run.opened_at = datetime.now(timezone.utc)
         db.session.commit()
     bookmarks_since, show_regenerate = digest_regenerate_state(digest_run)

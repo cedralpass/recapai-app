@@ -295,6 +295,13 @@ class TestDigest:
         # second fetch: already opened
         assert recap_client.get("/api/v1/digest/latest", headers=headers).get_json()["was_unread"] is False
 
+    def test_peek_does_not_mark_opened(self, recap_app, recap_client, headers, completed_digest_run):
+        body = recap_client.get("/api/v1/digest/latest?mark_opened=false", headers=headers).get_json()
+        assert body["was_unread"] is True
+        with recap_app.app_context():
+            assert db.session.get(DigestRun, completed_digest_run.id).opened_at is None
+        assert recap_client.get("/api/v1/digest/latest", headers=headers).get_json()["was_unread"] is True
+
     def test_stale_digest_offers_regenerate(self, recap_app, recap_client, headers, seeded_user):
         with recap_app.app_context():
             old = datetime(2020, 1, 1, tzinfo=timezone.utc)

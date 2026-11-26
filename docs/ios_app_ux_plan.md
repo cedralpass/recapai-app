@@ -1,6 +1,6 @@
 # Feature Plan: iOS App — Articles, Article Detail, Digest
 
-**Status:** Backend read API shipped (steps 1–2); iOS screens planned · **Designs:** `design_handoff/Recap iOS.html` + `design_handoff/ios-README.md`
+**Status:** Steps 1–6 built (API + iOS screens, verified in the Simulator); step 7 device install pending · **Designs:** `design_handoff/Recap iOS.html` + `design_handoff/ios-README.md`
 **Builds on:** the shipped iOS share extension (`ios/`, see `docs/ios_share_extension.md`)
 
 ## Goal
@@ -87,7 +87,8 @@ and return JSON. Reuse existing model/query helpers so web and app behave the sa
 - `POST …/read` with no `"read"` key toggles; a non-boolean `read` is a 400. Returns the article.
 - `DELETE` returns `{ "status": "deleted", "id": … }`.
 - Categories: `{ "categories": [{ "name", "count" }] }`, largest first, unclassified left out.
-- Digest latest also returns `was_unread` (true when this fetch set `opened_at`) for the tab badge.
+- Digest latest also returns `was_unread` (true when the digest hadn't been opened before this
+  fetch) for the tab badge; `?mark_opened=false` peeks without setting `opened_at`.
 - Generate returns `202 { "status": "queued", "job_id" }`. Job poll returns `{ "status": "finished" }`
   etc., and 404 `{ "status": "not_found" }` for unknown jobs or another user's job.
 - Article JSON never includes `content_text`.
@@ -146,10 +147,10 @@ Follow `design_handoff/ios-README.md`: native SwiftUI components with Recap toke
 |---|---|---|
 | 1 ✅ | API: articles list/detail/categories/read/delete + tests | pytest |
 | 2 ✅ | API: search + digest latest/generate/job + tests | pytest |
-| 3 | iOS: models + client calls, TabView shell, Settings tab | Simulator |
-| 4 | iOS: Articles list, pills, search, swipe actions | Simulator vs local server (seed data via `scripts/load_test_articles.py`) |
-| 5 | iOS: Article detail + Safari view + read state | Simulator |
-| 6 | iOS: Digest tab (latest/empty/generating) | Simulator with a generated digest |
+| 3 ✅ | iOS: models + client calls, TabView shell, Settings tab | Simulator |
+| 4 ✅ | iOS: Articles list, pills, search, swipe actions | Simulator vs local server (seed data via `scripts/load_test_articles.py`) |
+| 5 ✅ | iOS: Article detail + Safari view + read state | Simulator |
+| 6 ✅ | iOS: Digest tab (latest/empty/generating) | Simulator with a generated digest |
 | 7 | Device install + docs (`docs/ios_share_extension.md`, CLAUDE.md, vision.md) | iPhone |
 
 Steps 1–2 can ship independently (they're harmless additions to the API).
