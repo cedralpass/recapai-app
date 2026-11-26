@@ -52,7 +52,7 @@ class TestSearchRoute:
         _login(client)
 
         with (
-            patch("recap.routes.AiApiHelper.EmbedText", return_value=FAKE_VEC),
+            patch("recap.queries.AiApiHelper.EmbedText", return_value=FAKE_VEC),
             patch("recap.models.User.search_articles", return_value=[]),
         ):
             response = client.get("/search?q=serverless+functions")
@@ -67,7 +67,7 @@ class TestSearchRoute:
         article = _fake_article(title="Flask Web Development", category="Software Architecture")
 
         with (
-            patch("recap.routes.AiApiHelper.EmbedText", return_value=FAKE_VEC),
+            patch("recap.queries.AiApiHelper.EmbedText", return_value=FAKE_VEC),
             patch("recap.models.User.search_articles", return_value=[article]),
         ):
             response = client.get("/search?q=flask+web+development")
@@ -82,7 +82,7 @@ class TestSearchRoute:
         articles = [_fake_article(title=f"Article {i}") for i in range(3)]
 
         with (
-            patch("recap.routes.AiApiHelper.EmbedText", return_value=FAKE_VEC),
+            patch("recap.queries.AiApiHelper.EmbedText", return_value=FAKE_VEC),
             patch("recap.models.User.search_articles", return_value=articles),
         ):
             response = client.get("/search?q=something")
@@ -94,7 +94,7 @@ class TestSearchRoute:
         client = recap_app.test_client()
         _login(client)
 
-        with patch("recap.routes.AiApiHelper.EmbedText", return_value=None):
+        with patch("recap.queries.AiApiHelper.EmbedText", return_value=None):
             response = client.get("/search?q=something")
 
         assert response.status_code == 200
@@ -108,7 +108,7 @@ class TestSearchRoute:
         article = _fake_article(title="AI Article", category="AI")
 
         with (
-            patch("recap.routes.AiApiHelper.EmbedText", return_value=FAKE_VEC),
+            patch("recap.queries.AiApiHelper.EmbedText", return_value=FAKE_VEC),
             patch("recap.models.User.search_articles", return_value=[article]) as mock_search,
         ):
             response = client.get("/search?q=article&category=AI")
@@ -137,7 +137,7 @@ class TestSearchRoute:
         _login(client)
 
         with (
-            patch("recap.routes.AiApiHelper.EmbedText", return_value=FAKE_VEC),
+            patch("recap.queries.AiApiHelper.EmbedText", return_value=FAKE_VEC),
             patch("recap.models.User.search_articles", return_value=[]),
         ):
             response = client.get("/search?q=Conflict+resolution")

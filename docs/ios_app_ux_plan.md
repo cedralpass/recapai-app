@@ -1,6 +1,6 @@
 # Feature Plan: iOS App — Articles, Article Detail, Digest
 
-**Status:** Planned · **Designs:** `design_handoff/Recap iOS.html` + `design_handoff/ios-README.md`
+**Status:** Backend read API shipped (steps 1–2); iOS screens planned · **Designs:** `design_handoff/Recap iOS.html` + `design_handoff/ios-README.md`
 **Builds on:** the shipped iOS share extension (`ios/`, see `docs/ios_share_extension.md`)
 
 ## Goal
@@ -76,8 +76,21 @@ and return JSON. Reuse existing model/query helpers so web and app behave the sa
 `404 {"status": "none"}` when the user has no completed digest (app shows the empty state, with
 `articles_since_last` from a cheap count so the copy can say "You've saved N articles").
 
-**Refactor note:** pull the shared queries out of `routes.py` into small helpers (e.g.
-`recap/queries.py` or model methods) so the HTML routes and the API share one implementation.
+**Refactor note:** shared queries now live in `recap/queries.py`, used by both `routes.py` and
+`api_v1.py`. Tests: `tests/recap/integration/test_api_v1_read.py`.
+
+**As built (details beyond the shapes above):**
+- List order is `created` desc (plain newest first — unlike the web list, read articles aren't
+  moved to the end). `per_page` defaults to `ARTICLES_PER_PAGE`, capped at 50.
+- Search response: `{ "articles": [...], "query": "<q>" }`; a blank query or failed embedding
+  returns an empty list (no text-match fallback yet).
+- `POST …/read` with no `"read"` key toggles; a non-boolean `read` is a 400. Returns the article.
+- `DELETE` returns `{ "status": "deleted", "id": … }`.
+- Categories: `{ "categories": [{ "name", "count" }] }`, largest first, unclassified left out.
+- Digest latest also returns `was_unread` (true when this fetch set `opened_at`) for the tab badge.
+- Generate returns `202 { "status": "queued", "job_id" }`. Job poll returns `{ "status": "finished" }`
+  etc., and 404 `{ "status": "not_found" }` for unknown jobs or another user's job.
+- Article JSON never includes `content_text`.
 
 ### Tests (`tests/`)
 
@@ -131,8 +144,8 @@ Follow `design_handoff/ios-README.md`: native SwiftUI components with Recap toke
 
 | Step | Scope | Verify |
 |---|---|---|
-| 1 | API: articles list/detail/categories/read/delete + tests | pytest |
-| 2 | API: search + digest latest/generate/job + tests | pytest |
+| 1 ✅ | API: articles list/detail/categories/read/delete + tests | pytest |
+| 2 ✅ | API: search + digest latest/generate/job + tests | pytest |
 | 3 | iOS: models + client calls, TabView shell, Settings tab | Simulator |
 | 4 | iOS: Articles list, pills, search, swipe actions | Simulator vs local server (seed data via `scripts/load_test_articles.py`) |
 | 5 | iOS: Article detail + Safari view + read state | Simulator |

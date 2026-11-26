@@ -249,8 +249,13 @@ recap/              ← Main Flask app (web UI)
                        Article.__table_args__ declares the pgvector HNSW index (keeps autogenerate from dropping it)
                        User.extension_last_seen — last request from the Chrome extension
                        DigestRun has opened_at (first-view timestamp) + cluster_count columns
-  api_v1.py         ← REST API blueprint: POST /api/v1/articles (Bearer token auth; optional page
-                       html → stored text; re-saving a URL updates instead of duplicating)
+  api_v1.py         ← REST API blueprint (Bearer token auth, @token_required): POST /api/v1/articles
+                       (optional page html → stored text; re-saving a URL updates instead of duplicating)
+                       + read API for the iOS app: GET articles (paginated, newest first), articles/search,
+                       articles/<id>, POST articles/<id>/read, DELETE articles/<id>, GET categories,
+                       GET digest/latest, POST digest/generate, GET digest/job/<id>
+  queries.py        ← Queries shared by routes.py and api_v1.py (owned-article select, latest digest,
+                       article counts, regenerate state, semantic_search, enqueue_digest)
   profile/          ← Profile/settings blueprint (incl. /settings/api-token)
     __init__.py     ← Taxonomy routes + digest run routes (/settings/digest-runs)
                        (see docs/taxonomy_organnization.md and tech_design/weekly-synthesis-agent.md)
@@ -316,4 +321,4 @@ Share → Recap runs `RecapShare/GetPage.js` in the page and posts URL + rendere
 - Build for simulator: `cd ios && xcodebuild -project RecapAI.xcodeproj -scheme RecapAI -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -derivedDataPath build build | xcbeautify`
 - In the simulator, set the server URL to `http://localhost:8080` (ATS allows local networking)
 - Device builds sign with the Personal Team set in `project.yml` (`DEVELOPMENT_TEAM`); free signing expires after 7 days
-- **Next up (planned):** Articles / Article detail / Digest screens + read API — plan in [docs/ios_app_ux_plan.md](docs/ios_app_ux_plan.md), designs in `design_handoff/Recap iOS.html` + [design_handoff/ios-README.md](design_handoff/ios-README.md)
+- **Next up (planned):** Articles / Article detail / Digest screens (the read API they need is shipped in `recap/api_v1.py`) — plan in [docs/ios_app_ux_plan.md](docs/ios_app_ux_plan.md), designs in `design_handoff/Recap iOS.html` + [design_handoff/ios-README.md](design_handoff/ios-README.md)

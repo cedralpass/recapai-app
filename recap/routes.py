@@ -8,12 +8,19 @@ from rq import Queue, Worker
 from rq.worker_registration import clean_worker_registry
 
 from recap import db, maybe_ping_aiapi
-from recap.aiapi_helper import AiApiHelper
 from recap.auth.email import send_password_reset_email
 from recap.auth.forms import RegistrationForm
 from recap.config import Config
 from recap.forms import ArticleForm
 from recap.models import Article, DigestRun, User
+from recap.queries import (
+    count_articles,
+    digest_regenerate_state,
+    enqueue_digest,
+    latest_completed_digest,
+    semantic_search,
+    user_article_select,
+)
 
 bp = Blueprint("routes", __name__)
 
@@ -86,16 +93,9 @@ def index():
         # list grouping of categories for article for the given user
         groupings = current_user.get_categories()
 
-        latest_completed = db.session.scalar(
-            sa.select(DigestRun)
-            .where(DigestRun.user_id == current_user.id, DigestRun.status == "completed")
-            .order_by(DigestRun.created_at.desc())
-        )
+        latest_completed = latest_completed_digest(current_user.id)
         digest_card_state = "fresh" if (latest_completed and latest_completed.opened_at is None) else "empty"
-        recent_bookmark_count = min(
-            db.session.scalar(sa.select(sa.func.count(Article.id)).where(Article.user_id == current_user.id)) or 0,
-            25,
-        )
+        recent_bookmark_count = min(count_articles(current_user.id), 25)
 
     cta_form = RegistrationForm() if current_user.is_anonymous else None
     return render_template(
@@ -224,8 +224,7 @@ def show(id):
 @bp.route("/articles/<int:id>/read", methods=("GET",))
 @login_required
 def read_article(id):
-    stmt = sa.select(Article).where(Article.id == id, Article.user_id == current_user.id)
-    article = db.session.execute(stmt).scalar_one()
+    article = db.session.execute(user_article_select(current_user.id, id)).scalar_one()
     if not article.is_read:
         article.is_read = True
         db.session.commit()
@@ -235,8 +234,7 @@ def read_article(id):
 @bp.route("/articles/<int:id>/toggle-read", methods=("POST",))
 @login_required
 def toggle_read(id):
-    stmt = sa.select(Article).where(Article.id == id, Article.user_id == current_user.id)
-    article = db.session.execute(stmt).scalar_one()
+    article = db.session.execute(user_article_select(current_user.id, id)).scalar_one()
     article.is_read = not article.is_read
     db.session.commit()
     return redirect(request.referrer or url_for("routes.index"))
@@ -269,8 +267,7 @@ def reclassify(id):
 @bp.route("/<int:id>/delete", methods=("GET",))
 @login_required
 def delete(id):
-    stmt = sa.select(Article).where(Article.id == id, Article.user_id == current_user.id).order_by(Article.id.desc())
-    article = db.session.execute(stmt).scalar_one()
+    article = db.session.execute(user_article_select(current_user.id, id)).scalar_one()
     db.session.delete(article)
     db.session.commit()
     flash("Article is deteled")
@@ -376,12 +373,7 @@ def health():
 def search():
     q = request.args.get("q", "").strip()
     category = request.args.get("category", "").strip() or None
-    results = []
-
-    if q:
-        query_vec = AiApiHelper.EmbedText(q)
-        if query_vec:
-            results = current_user.search_articles(query_vec, limit=20, category=category)
+    results = semantic_search(current_user, q, category=category)
 
     return render_template(
         "search.html",
@@ -395,27 +387,14 @@ def search():
 @bp.route("/digest")
 @login_required
 def digest():
-    digest_run = db.session.scalar(
-        sa.select(DigestRun)
-        .where(DigestRun.user_id == current_user.id, DigestRun.status == "completed")
-        .order_by(DigestRun.created_at.desc())
-    )
+    digest_run = latest_completed_digest(current_user.id)
     if digest_run is None:
         flash("No digest yet — generate one from your home page.")
         return redirect(url_for("routes.index"))
     if digest_run.opened_at is None:
         digest_run.opened_at = datetime.now(timezone.utc)
         db.session.commit()
-    bookmarks_since_digest = (
-        db.session.scalar(
-            sa.select(sa.func.count(Article.id)).where(
-                Article.user_id == current_user.id,
-                Article.created > digest_run.completed_at,
-            )
-        )
-        or 0
-    )
-    show_regenerate_banner = bookmarks_since_digest >= Config.DIGEST_REGENERATE_THRESHOLD
+    bookmarks_since_digest, show_regenerate_banner = digest_regenerate_state(digest_run)
     return render_template(
         "digest.html",
         digest_run=digest_run,
@@ -427,12 +406,7 @@ def digest():
 @bp.route("/digest/generate", methods=["POST"])
 @login_required
 def digest_generate():
-    job = current_app.task_queue.enqueue(
-        "recap.tasks.weekly_digest_task",
-        current_user.id,
-        False,
-        job_timeout=600,
-    )
+    job = enqueue_digest(current_user.id)
     return jsonify({"status": "queued", "job_id": job.id})
 
 
@@ -442,12 +416,7 @@ def digest_regenerate(digest_id):
     digest_run = db.session.get(DigestRun, digest_id)
     if digest_run is None or digest_run.user_id != current_user.id:
         return jsonify({"error": "not found"}), 404
-    job = current_app.task_queue.enqueue(
-        "recap.tasks.weekly_digest_task",
-        current_user.id,
-        False,
-        job_timeout=600,
-    )
+    job = enqueue_digest(current_user.id)
     return jsonify({"status": "queued", "job_id": job.id})
 
 

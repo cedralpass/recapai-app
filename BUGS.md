@@ -1,5 +1,21 @@
 # Known Bugs
 
+## Web digest job poll never reports "finished"
+
+**Status:** Open
+
+### Description
+
+`routes.digest_job_status` (`GET /digest/job/<job_id>`) returns `str(job.get_status())`. RQ's
+`JobStatus` is a `str` Enum, so on Python 3.12 that is `"JobStatus.FINISHED"`, not `"finished"`,
+and the polling JS in `index.html` / `digest.html` (`s.status === 'finished'`) never matches. The
+API equivalent (`GET /api/v1/digest/job/<id>`) sends `status.value` and is not affected.
+
+### Suggested fix
+
+Return `job.get_status(refresh=True).value` in the web route, and add a test that asserts the
+literal `"finished"`.
+
 ## Weekly Digest — Cluster Labeling
 
 **Status:** Fixed  

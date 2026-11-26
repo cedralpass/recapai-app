@@ -71,8 +71,14 @@ class User(UserMixin, db.Model):
         return db.session.get(User, int(id))
 
     # get articles for user
-    def get_articles(self, page=1, per_page=2, category=None, include_read=True):
-        stmt = sa.select(Article).where(Article.user_id == self.id).order_by(Article.is_read.asc(), Article.id.desc())
+    def get_articles(self, page=1, per_page=2, category=None, include_read=True, unread_first=True):
+        """Paginate the user's articles. The web list puts unread first; the API passes
+        unread_first=False for a plain newest-first list."""
+        stmt = sa.select(Article).where(Article.user_id == self.id)
+        if unread_first:
+            stmt = stmt.order_by(Article.is_read.asc(), Article.id.desc())
+        else:
+            stmt = stmt.order_by(Article.created.desc(), Article.id.desc())
         if category:
             stmt = stmt.where(Article.category == category)
         if not include_read:
