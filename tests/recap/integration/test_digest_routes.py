@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
 import pytest
+from rq.job import JobStatus
 
 from recap import db
 from recap.models import Article, DigestRun
@@ -157,7 +158,7 @@ class TestDigestRegenerateRoute:
 class TestDigestJobStatusRoute:
     def test_digest_job_status_queued(self, recap_app, seeded_authenticated_client, mocker):
         mock_job = MagicMock()
-        mock_job.get_status.return_value = "queued"
+        mock_job.get_status.return_value = JobStatus.QUEUED  # real enum, as RQ returns
         mocker.patch.object(recap_app.task_queue, "fetch_job", return_value=mock_job)
 
         response = seeded_authenticated_client.get("/digest/job/some-job-id")
@@ -167,7 +168,7 @@ class TestDigestJobStatusRoute:
 
     def test_digest_job_status_finished_includes_view_url(self, recap_app, seeded_authenticated_client, mocker):
         mock_job = MagicMock()
-        mock_job.get_status.return_value = "finished"
+        mock_job.get_status.return_value = JobStatus.FINISHED
         mocker.patch.object(recap_app.task_queue, "fetch_job", return_value=mock_job)
 
         response = seeded_authenticated_client.get("/digest/job/some-job-id")

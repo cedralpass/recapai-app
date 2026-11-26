@@ -255,7 +255,7 @@ recap/              ← Main Flask app (web UI)
                        articles/<id>, POST articles/<id>/read, DELETE articles/<id>, GET categories,
                        GET digest/latest, POST digest/generate, GET digest/job/<id>
   queries.py        ← Queries shared by routes.py and api_v1.py (owned-article select, latest digest,
-                       article counts, regenerate state, semantic_search, enqueue_digest)
+                       article counts, regenerate state, semantic_search, enqueue_digest, job_status_value)
   profile/          ← Profile/settings blueprint (incl. /settings/api-token)
     __init__.py     ← Taxonomy routes + digest run routes (/settings/digest-runs)
                        (see docs/taxonomy_organnization.md and tech_design/weekly-synthesis-agent.md)

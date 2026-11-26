@@ -50,6 +50,16 @@ def semantic_search(user, q, category=None, limit=20):
     return user.search_articles(query_vec, limit=limit, category=category)
 
 
+def job_status_value(job):
+    """RQ job status as a plain string ("queued", "finished", …).
+
+    JobStatus is a str Enum, so str(status) gives "JobStatus.FINISHED"; the pollers compare
+    against the bare value.
+    """
+    status = job.get_status(refresh=True)
+    return getattr(status, "value", status)
+
+
 def enqueue_digest(user_id):
     """Queue an on-demand (not emailed) weekly digest for the user; returns the RQ job."""
     return current_app.task_queue.enqueue(

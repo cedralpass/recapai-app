@@ -17,6 +17,7 @@ from recap.queries import (
     count_articles,
     digest_regenerate_state,
     enqueue_digest,
+    job_status_value,
     latest_completed_digest,
     semantic_search,
     user_article_select,
@@ -426,8 +427,7 @@ def digest_job_status(job_id):
     job = current_app.task_queue.fetch_job(job_id=job_id)
     if job is None:
         return jsonify({"status": "not_found"}), 404
-    status = str(job.get_status(refresh=True))
-    return jsonify({"status": status, "view_url": url_for("routes.digest")})
+    return jsonify({"status": job_status_value(job), "view_url": url_for("routes.digest")})
 
 
 # TODO - understand args and kwargs better for dynamic params

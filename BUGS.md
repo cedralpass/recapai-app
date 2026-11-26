@@ -2,7 +2,8 @@
 
 ## Web digest job poll never reports "finished"
 
-**Status:** Open
+**Status:** Fixed
+**Fixed in:** `recap/queries.py` (`job_status_value`), used by `routes.digest_job_status` and the API
 
 ### Description
 
@@ -11,10 +12,11 @@
 and the polling JS in `index.html` / `digest.html` (`s.status === 'finished'`) never matches. The
 API equivalent (`GET /api/v1/digest/job/<id>`) sends `status.value` and is not affected.
 
-### Suggested fix
+### Fix applied
 
-Return `job.get_status(refresh=True).value` in the web route, and add a test that asserts the
-literal `"finished"`.
+Both job-status endpoints return `job_status_value(job)` (the enum's `.value`). The web route
+tests in `tests/recap/integration/test_digest_routes.py` now mock `get_status` with the real
+`JobStatus` enum (they used plain strings, which hid the bug).
 
 ## Weekly Digest — Cluster Labeling
 

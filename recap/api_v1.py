@@ -13,6 +13,7 @@ from recap.queries import (
     count_articles,
     digest_regenerate_state,
     enqueue_digest,
+    job_status_value,
     latest_completed_digest,
     semantic_search,
     user_article_select,
@@ -316,6 +317,4 @@ def digest_job(job_id):
     )
     if not is_users_digest_job:
         return jsonify({"status": "not_found"}), 404
-    status = job.get_status(refresh=True)
-    # JobStatus is a str Enum; str() would give "JobStatus.FINISHED", so send the value.
-    return jsonify({"status": getattr(status, "value", status)})
+    return jsonify({"status": job_status_value(job)})
