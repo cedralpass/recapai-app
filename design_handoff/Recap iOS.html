@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recap AI — iOS App</title>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="recap-ios/ios-screens.jsx"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body, #root { height: 100%; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard } = window;
+
+function App() {
+  return (
+    <DesignCanvas>
+      <DCSection id="ios1" title="iOS 01 · Articles (home)">
+        <DCArtboard id="ios-articles" label="Articles — list + filters" width={402} height={874}>
+          <ArticlesScreen state="list" />
+        </DCArtboard>
+        <DCArtboard id="ios-search" label="Articles — searching" width={402} height={874}>
+          <ArticlesScreen state="search" />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="ios2" title="iOS 02 · Article detail">
+        <DCArtboard id="ios-detail" label="Detail — summarised" width={402} height={874}>
+          <ArticleDetailScreen variant="summary" />
+        </DCArtboard>
+        <DCArtboard id="ios-detail-blocked" label="Detail — summary not available" width={402} height={874}>
+          <ArticleDetailScreen variant="blocked" />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="ios3" title="iOS 03 · Digest">
+        <DCArtboard id="ios-digest" label="Digest — latest" width={402} height={874}>
+          <DigestScreen />
+        </DCArtboard>
+        <DCArtboard id="ios-digest-empty" label="Digest — none yet" width={402} height={874}>
+          <DigestEmptyScreen />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="ios4" title="iOS 04 · Settings &amp; share (exists today, restyled)">
+        <DCArtboard id="ios-settings" label="Settings tab" width={402} height={874}>
+          <SettingsScreen />
+        </DCArtboard>
+        <DCArtboard id="ios-share" label="Safari → Share → Recap" width={402} height={874}>
+          <ShareSheetScreen />
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>

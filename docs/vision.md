@@ -27,6 +27,7 @@ Recap is designed to fire off a bookmark from the browser with our Chrome extens
 # Planned Ideas
 
 ## Content Ingestion
+- iOS app: browse and search articles, article detail, and read the weekly digest on iPhone (see `docs/ios_app_ux_plan.md`)
 - Pull newsletters from Gmail and extract their articles into your memory
 - Expand to podcasts and videos, pulling transcripts into memory
 - Fallback sources for sites that block us (paste article text, Medium RSS). Deferred until the Chrome extension content capture ships; see `tech_design/extension-content-capture.md`

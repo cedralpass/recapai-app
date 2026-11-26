@@ -35,6 +35,7 @@ The `.claude/launch.json` file is committed and ready. Use `preview_start` with 
 | `rq-worker` | — | Background job worker (Redis must be running) |
 | `tailwind` | — | CSS watch/rebuild (recompiles on template changes) |
 | `combined` | 8001 | Both apps via DispatcherMiddleware — aiapi at `/aiapi/` prefix |
+| `design` | 8091 | Static server for `design_handoff/` mockups (e.g. `/Recap%20iOS.html`) |
 
 **Important:** The launch configs use `bash -c "cd /Users/geoffreysmalling/development/recapai-app && ..."` wrappers. This is required because `preview_start` does not run from the project root and the `recap` Flask module must be importable from the project root.
 
@@ -315,3 +316,4 @@ Share → Recap runs `RecapShare/GetPage.js` in the page and posts URL + rendere
 - Build for simulator: `cd ios && xcodebuild -project RecapAI.xcodeproj -scheme RecapAI -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -derivedDataPath build build | xcbeautify`
 - In the simulator, set the server URL to `http://localhost:8080` (ATS allows local networking)
 - Device builds sign with the Personal Team set in `project.yml` (`DEVELOPMENT_TEAM`); free signing expires after 7 days
+- **Next up (planned):** Articles / Article detail / Digest screens + read API — plan in [docs/ios_app_ux_plan.md](docs/ios_app_ux_plan.md), designs in `design_handoff/Recap iOS.html` + [design_handoff/ios-README.md](design_handoff/ios-README.md)
