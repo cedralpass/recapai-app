@@ -129,6 +129,8 @@ Re-run `xcodegen generate` whenever you add or remove source files.
 
 ## Install on an iPhone
 
+Step-by-step runbook with troubleshooting: [ios_build.md](ios_build.md).
+
 One-time setup:
 
 1. Xcode → Settings → Accounts → **+** → Apple Account (a free Apple ID gives a "Personal Team").

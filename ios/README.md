@@ -16,6 +16,8 @@ extension), so blocked/paywalled sites still get summarized from what's on scree
 
 ## Build & run
 
+Full runbook (iPhone install, 7-day refresh, troubleshooting): [docs/ios_build.md](../docs/ios_build.md).
+
 ```bash
 cd ios
 xcodegen generate

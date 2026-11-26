@@ -312,6 +312,7 @@ Loaded unpacked from `chrome-extension/`. No build step required.
 ## iOS App & Share Extension
 
 `ios/` holds a SwiftUI app (Articles / Digest / Settings tabs) and a Safari Share Extension.
+**Build & install runbook (Simulator + iPhone): [docs/ios_build.md](docs/ios_build.md).**
 Share → Recap runs `RecapShare/GetPage.js` in the page and posts URL + rendered HTML to
 `POST /api/v1/articles` — the same contract as the Chrome extension. Full guide:
 **[docs/ios_share_extension.md](docs/ios_share_extension.md)**.

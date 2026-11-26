@@ -1,6 +1,6 @@
 # Feature Plan: iOS App — Articles, Article Detail, Digest
 
-**Status:** Steps 1–6 built (API + iOS screens, verified in the Simulator); step 7 device install pending · **Designs:** `design_handoff/Recap iOS.html` + `design_handoff/ios-README.md`
+**Status:** Shipped — API + iOS screens, installed on iPhone (build runbook: `docs/ios_build.md`) · **Designs:** `design_handoff/Recap iOS.html` + `design_handoff/ios-README.md`
 **Builds on:** the shipped iOS share extension (`ios/`, see `docs/ios_share_extension.md`)
 
 ## Goal
@@ -151,7 +151,7 @@ Follow `design_handoff/ios-README.md`: native SwiftUI components with Recap toke
 | 4 ✅ | iOS: Articles list, pills, search, swipe actions | Simulator vs local server (seed data via `scripts/load_test_articles.py`) |
 | 5 ✅ | iOS: Article detail + Safari view + read state | Simulator |
 | 6 ✅ | iOS: Digest tab (latest/empty/generating) | Simulator with a generated digest |
-| 7 | Device install + docs (`docs/ios_share_extension.md`, CLAUDE.md, vision.md) | iPhone |
+| 7 ✅ | Device install + docs (`docs/ios_share_extension.md`, CLAUDE.md, vision.md) | iPhone |
 
 Steps 1–2 can ship independently (they're harmless additions to the API).
 
