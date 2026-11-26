@@ -272,6 +272,7 @@ aiapi/              ← Separate AI API Flask app
       graph.py      ← build_synthesis_graph() — StateGraph assembly + routing functions
 
 chrome-extension/   ← Manifest V3 Chrome Extension (no build step)
+ios/                ← SwiftUI iOS app + Safari Share Extension (XcodeGen; see docs/ios_share_extension.md)
 tests/              ← pytest: unit + integration
   aiapi/unit/       ← test_synthesis_nodes.py (36 tests, all node functions mocked)
 migrations/         ← Alembic migrations
@@ -299,3 +300,18 @@ Loaded unpacked from `chrome-extension/`. No build step required.
 - Token-authenticated: users get their token from `/settings/api-token`
 - Calls `POST /api/v1/articles` with `Authorization: Bearer <token>`
 - See `docs/chrome_extension.md` for full setup guide
+
+---
+
+## iOS App & Share Extension
+
+`ios/` holds a SwiftUI host app (server URL + API token settings) and a Safari Share Extension.
+Share → Recap runs `RecapShare/GetPage.js` in the page and posts URL + rendered HTML to
+`POST /api/v1/articles` — the same contract as the Chrome extension. Full guide:
+**[docs/ios_share_extension.md](docs/ios_share_extension.md)**.
+
+- **Toolchain:** Xcode 26+, XcodeGen, xcbeautify (`brew install xcodegen xcbeautify`)
+- The `.xcodeproj` is generated from `ios/project.yml` and gitignored — run `xcodegen generate` after adding/removing files
+- Build for simulator: `cd ios && xcodebuild -project RecapAI.xcodeproj -scheme RecapAI -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -derivedDataPath build build | xcbeautify`
+- In the simulator, set the server URL to `http://localhost:8080` (ATS allows local networking)
+- Device builds sign with the Personal Team set in `project.yml` (`DEVELOPMENT_TEAM`); free signing expires after 7 days

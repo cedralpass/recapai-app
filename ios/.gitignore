@@ -1,0 +1,4 @@
+build/
+RecapAI.xcodeproj/
+*.xcuserstate
+xcuserdata/

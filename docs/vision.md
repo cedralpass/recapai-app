@@ -14,6 +14,7 @@ Recap is designed to fire off a bookmark from the browser with our Chrome extens
 
 - Login and create account
 - Save article from web form and Chrome extension
+- Save from Safari on iPhone via the Recap share extension (Share → Recap) — sends the page's rendered text, so blocked sites still get summarized
 - Browse and filter articles by personal taxonomy
 - Organize taxonomy automatically leveraging AI (consolidate and split)
 - Read/viewed state on articles so you can track what you have read and clean up your list
@@ -26,7 +27,6 @@ Recap is designed to fire off a bookmark from the browser with our Chrome extens
 # Planned Ideas
 
 ## Content Ingestion
-- Add an iPhone / iPad share extension to save articles from your mobile device
 - Pull newsletters from Gmail and extract their articles into your memory
 - Expand to podcasts and videos, pulling transcripts into memory
 - Fallback sources for sites that block us (paste article text, Medium RSS). Deferred until the Chrome extension content capture ships; see `tech_design/extension-content-capture.md`
